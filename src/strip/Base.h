@@ -12,9 +12,9 @@
 
 namespace Strip {
 
-    class WS2812 : public Strip {
+    class Base : public Strip {
     public:
-        WS2812(Pin pin, unsigned short length);
+        Base(Pin pin, unsigned short length);
 
         void fill(Color c) const override;
 

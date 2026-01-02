@@ -17,7 +17,7 @@ namespace Strip {
     public:
         virtual ~Strip() = default;
 
-        virtual void fill(Color c) const = 0;
+        virtual void fill(Color color) const = 0;
 
         virtual void setPixelColor(PixelIndex pixel_index, Color color);
 
