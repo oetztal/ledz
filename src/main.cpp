@@ -6,6 +6,9 @@
 
 #include "Network.h"
 #include "Status.h"
+#include "Timer.h"
+#include "../../../../.platformio/packages/toolchain-riscv32-esp@8.4.0+2021r2-patch5/riscv32-esp-elf/include/c++/8.4.0/codecvt"
+#include "show/Chaos.h"
 #include "show/ColorRun.h"
 #include "show/Mandelbrot.h"
 #include "strip/Base.h"
@@ -20,16 +23,39 @@ std::unique_ptr<Strip::Strip> base{new Strip::Base(MOSI, NUMPIXELS)};
 std::unique_ptr<Strip::Strip> layout{new Strip::Layout(*base)};
 bool reverse = false;
 
-unsigned int iteration = 0;
 
 std::unique_ptr<Show::Show> show;
 
 [[noreturn]] void ledShowTask(void *pvParameters) {
+    unsigned int iteration = 0;
+    unsigned long total_execution_time = 0;
+    unsigned long total_show_time = 0;
+
+    unsigned long start_time = millis();
+    unsigned long last_show_stats = millis();
+
     while (true) {
-        // Serial.println("show loop");
         // layout.reset(new Strip::Layout(*base, true, true));
+        auto timer = Support::Timer();
+
         show->execute(*layout, iteration++);
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        auto execution_time = timer.lap();
+
+        layout->show();
+        auto show_time = timer.lap();
+
+        total_execution_time += execution_time;
+        total_show_time += show_time;
+        auto delay = 10 - std::min(10ul, timer.elapsed());
+        if (timer.start_time - last_show_stats > 10000) {
+            Serial.printf(
+                "Durations: execution %lu ms (avg: %lu ms), show %lu ms (avg: %lu ms), avg. cycle %lu ms, delay %lu ms\n",
+                execution_time, total_execution_time / iteration,
+                show_time, total_show_time / iteration,
+                (timer.start_time - start_time) / iteration, delay);
+            last_show_stats = timer.start_time;
+        }
+        vTaskDelay(delay / portTICK_PERIOD_MS);
     }
 }
 
@@ -42,8 +68,9 @@ Network network("Xenia", "Internet!bei!uns", status);
 void setup() {
     // Serial.begin(115200);
 
-    // show.reset(new Show::Rainbow());
-    show.reset(new Show::Mandelbrot::Mandelbrot(-1.05, -0.3616, -0.3156));
+    show.reset(new Show::Rainbow());
+    //show.reset(new Show::Mandelbrot(-1.05, -0.3616, -0.3156));
+    //show.reset(new Show::Chaos());
 
     // Create Task1 on Core 0
     xTaskCreatePinnedToCore(
@@ -67,7 +94,24 @@ void setup() {
     );
 }
 
+unsigned int effect = 0;
+
 void loop() {
     Serial.println("main loop");
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(60000 / portTICK_PERIOD_MS);
+
+    switch (effect++ % 4) {
+        case 0:
+            show.reset(new Show::Mandelbrot(-1.05, -0.3616, -0.3156));
+            break;
+        case 1:
+            show.reset(new Show::Chaos());
+            break;
+        case 2:
+            show.reset(new Show::Rainbow());
+            break;
+        case 3:
+            show.reset(new Show::ColorRun());
+            break;
+    }
 }

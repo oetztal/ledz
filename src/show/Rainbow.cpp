@@ -15,6 +15,5 @@ namespace Show {
 
             strip.setPixelColor(index, color);
         }
-        strip.show();
     }
 }

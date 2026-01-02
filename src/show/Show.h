@@ -6,6 +6,7 @@
 #define UNTITLED_SHOW_H
 
 #include <memory>
+#include "strip/Strip.h"
 
 namespace Show {
     typedef uint64_t Iteration;

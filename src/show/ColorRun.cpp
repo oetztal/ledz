@@ -42,8 +42,6 @@ namespace Show {
         }
 
         clean_up_state(strip.length(), iteration);
-
-        strip.show();
     }
 
     void ColorRun::clean_up_state(Strip::PixelIndex length, Iteration iteration) {
