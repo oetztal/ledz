@@ -19,18 +19,19 @@ namespace Show {
 
         public:
             Strip::Color color;
+
             State(Iteration start, float speed, Strip::Color color)
                 : start(start),
                   speed(speed),
                   color(color) {
             }
 
-
             Strip::PixelIndex position(Iteration iteration) const;
         };
+
         std::uniform_int_distribution<> randomPercent;
-        std::uniform_int_distribution<> randomPhase; // (0, phases.size() - 1);
-        std::uniform_int_distribution<> randomSpeed; //(20, 60);
+        std::uniform_int_distribution<> randomPhase;
+        std::uniform_int_distribution<> randomSpeed;
 
     public:
         ColorRun();

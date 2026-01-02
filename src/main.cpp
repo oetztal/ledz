@@ -17,17 +17,41 @@
 
 std::unique_ptr<Strip::Strip> strip{new Strip::WS2812(MOSI, NUMPIXELS)};
 
-std::unique_ptr<Show::Show> show;
-void setup() {
-    // show.reset(new Show::Rainbow());
-    show.reset(new Show::ColorRun());
-}
 
 unsigned int iteration = 0;
 
-void loop() {
-    show->execute(*strip, iteration);
+std::unique_ptr<Show::Show> show;
 
-    delay(1);
-    iteration += 1;
+[[noreturn]] void ledShowTask(void *pvParameters) {
+    while (true) {
+        Serial.println("show loop");
+        show->execute(*strip, iteration++);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+}
+
+TaskHandle_t Task1Handle = nullptr;
+
+
+void setup() {
+    // Serial.begin(115200);
+
+    // show.reset(new Show::Rainbow());
+    show.reset(new Show::ColorRun());
+
+    // Create Task1 on Core 0
+    xTaskCreatePinnedToCore(
+        ledShowTask, // Task Function
+        "LED show", // Task Name
+        10000, // Stack Size
+        nullptr, // Parameters
+        1, // Priority
+        &Task1Handle, // Task Handle
+        0 // Core Number (0)
+    );
+}
+
+void loop() {
+    Serial.println("main loop");
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
