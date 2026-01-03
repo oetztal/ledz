@@ -538,6 +538,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                         <strong>Flag Presets:</strong>
                         <button class="preset-button" onclick="loadUkraineFlag()">🇺🇦 Ukraine</button>
                         <button class="preset-button" onclick="loadItalianFlag()">🇮🇹 Italy</button>
+                        <button class="preset-button" onclick="loadFrenchFlag()">🇫🇷 France</button>
                     </div>
                     <div id="colorRangesColorInputs">
                         <div class="param-row">
@@ -902,6 +903,21 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             document.getElementById('colorRangesColor1').value = '#008c45'; // Green
             document.getElementById('colorRangesColor2').value = '#ffffff'; // White
             document.getElementById('colorRangesColor3').value = '#cd212a'; // Red
+            document.getElementById('colorRangesRanges').value = ''; // Equal distribution
+        }
+
+        // Load French flag preset
+        function loadFrenchFlag() {
+            // Ensure we have 3 colors
+            while (colorRangesColorCount < 3) {
+                addColorRangesColor();
+            }
+            while (colorRangesColorCount > 3) {
+                removeColorRangesColor();
+            }
+            document.getElementById('colorRangesColor1').value = '#0055a4'; // Blue
+            document.getElementById('colorRangesColor2').value = '#ffffff'; // White
+            document.getElementById('colorRangesColor3').value = '#ef4135'; // Red
             document.getElementById('colorRangesRanges').value = ''; // Equal distribution
         }
 
