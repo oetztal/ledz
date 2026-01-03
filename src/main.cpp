@@ -7,7 +7,9 @@
 #include "Network.h"
 #include "Status.h"
 #include "Timer.h"
-#include "../../../../.platformio/packages/toolchain-riscv32-esp@8.4.0+2021r2-patch5/riscv32-esp-elf/include/c++/8.4.0/codecvt"
+#ifdef ARDUINO
+#include <codecvt>
+#endif
 #include "show/Chaos.h"
 #include "show/ColorRun.h"
 #include "show/Jump.h"
@@ -20,13 +22,16 @@
 // How many internal neopixels do we have? some boards have more than one!
 #define NUMPIXELS        300
 
+#ifdef ARDUINO
 std::unique_ptr<Strip::Strip> base{new Strip::Base(MOSI, NUMPIXELS)};
 std::unique_ptr<Strip::Strip> layout{new Strip::Layout(*base)};
 bool reverse = false;
 
 
 std::unique_ptr<Show::Show> show;
+#endif
 
+#ifdef ARDUINO
 [[noreturn]] void ledShowTask(void *pvParameters) {
     unsigned int iteration = 0;
     unsigned long total_execution_time = 0;
@@ -49,11 +54,13 @@ std::unique_ptr<Show::Show> show;
         total_show_time += show_time;
         auto delay = 10 - std::min(10ul, timer.elapsed());
         if (timer.start_time - last_show_stats > 10000) {
+#ifdef ARDUINO
             Serial.printf(
                 "Durations: execution %lu ms (avg: %lu ms), show %lu ms (avg: %lu ms), avg. cycle %lu ms, delay %lu ms\n",
                 execution_time, total_execution_time / iteration,
                 show_time, total_show_time / iteration,
                 (timer.start_time - start_time) / iteration, delay);
+#endif
             last_show_stats = timer.start_time;
         }
         vTaskDelay(delay / portTICK_PERIOD_MS);
@@ -98,7 +105,9 @@ void setup() {
 unsigned int effect = 0;
 
 void loop() {
+#ifdef ARDUINO
     Serial.println("main loop");
+#endif
     vTaskDelay(60000 / portTICK_PERIOD_MS);
 
     switch (effect++ % 4) {
@@ -119,3 +128,4 @@ void loop() {
             break;
     }
 }
+#endif

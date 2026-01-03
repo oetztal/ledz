@@ -7,7 +7,9 @@
 #include <algorithm>
 #include <random>
 #include <sstream>
+#ifdef ARDUINO
 #include <USBCDC.h>
+#endif
 
 namespace Show {
     ColorRun::ColorRun() : randomPercent(0, 99), randomSpeed(20, 60) {

@@ -5,7 +5,9 @@
 #include "Jump.h"
 
 #include <cmath>
+#ifdef ARDUINO
 #include <USBCDC.h>
+#endif
 
 namespace Show {
     void Jump::execute(Strip::Strip &strip, Iteration iteration) {

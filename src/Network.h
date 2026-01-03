@@ -7,11 +7,11 @@
 
 #include "Network.h"
 
+#ifdef ARDUINO
 #include <WiFiUdp.h>
 #include <NTPClient.h>
-
 #include <Adafruit_NeoPixel.h>
-
+#endif
 
 #include "Status.h"
 #include "strip/Strip.h"
@@ -20,8 +20,10 @@ class Network {
     const char *ssid;
     const char *password;
 
+#ifdef ARDUINO
     WiFiUDP wifiUdp;
     NTPClient ntpClient;
+#endif
 
     Status::Status &status;
 

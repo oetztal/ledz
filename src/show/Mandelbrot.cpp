@@ -6,7 +6,9 @@
 
 #include "Mandelbrot.h"
 
+#ifdef ARDUINO
 #include <USBCDC.h>
+#endif
 
 #include "color.h"
 
@@ -24,7 +26,9 @@ namespace Show {
     void Mandelbrot::log_result(unsigned long long j, float cre) {
         std::stringstream ss;
         ss << j << "(" << cre << ") [" << c_im_min << ", " << c_im_max << "], " << max_iterations;
+#ifdef ARDUINO
         Serial.println(ss.str().c_str());
+#endif
     }
 
     void Mandelbrot::execute(Strip::Strip &strip, Iteration iteration) {

@@ -21,12 +21,16 @@ namespace Status {
     }
 
     void Status::connecting() {
+#ifdef ARDUINO
         Serial.println("Connecting...");
+#endif
         setPixelColor(0xff0000);
     }
 
     void Status::connected() {
+#ifdef ARDUINO
         Serial.println("Connected!");
+#endif
         setPixelColor(0xff);
     }
 

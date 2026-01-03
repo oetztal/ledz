@@ -7,7 +7,9 @@
 #include <cstdint>
 #include <memory>
 
+#ifdef ARDUINO
 #include "Adafruit_NeoPixel.h"
+#endif
 #include "Strip.h"
 
 namespace Strip {
@@ -27,7 +29,9 @@ namespace Strip {
         PixelIndex length() const override;
 
     private:
+#ifdef ARDUINO
         std::unique_ptr<Adafruit_NeoPixel> strip;
+#endif
     };
 }
 

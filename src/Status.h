@@ -4,7 +4,9 @@
 
 #ifndef UNTITLED_STATUS_H
 #define UNTITLED_STATUS_H
+#ifdef ARDUINO
 #include "Adafruit_NeoPixel.h"
+#endif
 #include "strip/Strip.h"
 
 namespace Status {
