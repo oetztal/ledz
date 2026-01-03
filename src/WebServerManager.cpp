@@ -320,6 +320,69 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             margin-top: 5px;
             font-style: italic;
         }
+        .params-section {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 15px;
+            display: none;
+        }
+        .params-section.visible {
+            display: block;
+        }
+        .param-row {
+            margin-bottom: 15px;
+        }
+        .param-row:last-child {
+            margin-bottom: 0;
+        }
+        .param-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+        }
+        input[type="color"] {
+            width: 100%;
+            height: 50px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            cursor: pointer;
+            padding: 5px;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .apply-button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+        .apply-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .apply-button:active {
+            transform: translateY(0);
+        }
         .about-link {
             display: block;
             text-align: center;
@@ -360,6 +423,43 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                     <option value="">Loading shows...</option>
                 </select>
                 <div class="show-description" id="showDescription"></div>
+
+                <!-- Parameter controls (shown based on selected show) -->
+                <div id="solidParams" class="params-section">
+                    <div class="param-row">
+                        <label class="param-label" for="solidColor">Color</label>
+                        <input type="color" id="solidColor" value="#ffffff">
+                    </div>
+                    <button class="apply-button" onclick="applySolidColor()">Apply Color</button>
+                </div>
+
+                <div id="mandelbrotParams" class="params-section">
+                    <div class="param-row">
+                        <label class="param-label" for="mandelbrotCre0">Cre0 (Real min)</label>
+                        <input type="number" id="mandelbrotCre0" step="0.01" value="-1.05">
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="mandelbrotCim0">Cim0 (Imaginary min)</label>
+                        <input type="number" id="mandelbrotCim0" step="0.01" value="-0.3616">
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="mandelbrotCim1">Cim1 (Imaginary max)</label>
+                        <input type="number" id="mandelbrotCim1" step="0.01" value="-0.3156">
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="mandelbrotScale">Scale</label>
+                        <input type="number" id="mandelbrotScale" min="1" max="20" value="5">
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="mandelbrotMaxIter">Max Iterations</label>
+                        <input type="number" id="mandelbrotMaxIter" min="10" max="200" value="50">
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="mandelbrotColorScale">Color Scale</label>
+                        <input type="number" id="mandelbrotColorScale" min="1" max="50" value="10">
+                    </div>
+                    <button class="apply-button" onclick="applyMandelbrotParams()">Apply Parameters</button>
+                </div>
             </div>
 
             <div class="control-group">
@@ -388,6 +488,62 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
         let shows = [];
         let currentStatus = {};
 
+        // Show/hide parameter sections based on selected show
+        function updateParameterVisibility(showName) {
+            document.getElementById('solidParams').classList.remove('visible');
+            document.getElementById('mandelbrotParams').classList.remove('visible');
+
+            if (showName === 'Solid') {
+                document.getElementById('solidParams').classList.add('visible');
+            } else if (showName === 'Mandelbrot') {
+                document.getElementById('mandelbrotParams').classList.add('visible');
+            }
+        }
+
+        // Apply Solid color parameters
+        async function applySolidColor() {
+            const hex = document.getElementById('solidColor').value;
+            const r = parseInt(hex.substr(1,2), 16);
+            const g = parseInt(hex.substr(3,2), 16);
+            const b = parseInt(hex.substr(5,2), 16);
+
+            try {
+                await fetch('/api/show', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: 'Solid',
+                        params: { r, g, b }
+                    })
+                });
+            } catch (error) {
+                console.error('Failed to apply color:', error);
+            }
+        }
+
+        // Apply Mandelbrot parameters
+        async function applyMandelbrotParams() {
+            const Cre0 = parseFloat(document.getElementById('mandelbrotCre0').value);
+            const Cim0 = parseFloat(document.getElementById('mandelbrotCim0').value);
+            const Cim1 = parseFloat(document.getElementById('mandelbrotCim1').value);
+            const scale = parseInt(document.getElementById('mandelbrotScale').value);
+            const max_iterations = parseInt(document.getElementById('mandelbrotMaxIter').value);
+            const color_scale = parseInt(document.getElementById('mandelbrotColorScale').value);
+
+            try {
+                await fetch('/api/show', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: 'Mandelbrot',
+                        params: { Cre0, Cim0, Cim1, scale, max_iterations, color_scale }
+                    })
+                });
+            } catch (error) {
+                console.error('Failed to apply Mandelbrot parameters:', error);
+            }
+        }
+
         // Fetch available shows
         async function loadShows() {
             try {
@@ -400,11 +556,12 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                     `<option value="${show.name}">${show.name}</option>`
                 ).join('');
 
-                // Update description on change
+                // Update description and show/hide parameters on change
                 select.addEventListener('change', () => {
                     const selectedShow = shows.find(s => s.name === select.value);
                     document.getElementById('showDescription').textContent =
                         selectedShow ? selectedShow.description : '';
+                    updateParameterVisibility(select.value);
                 });
             } catch (error) {
                 console.error('Failed to load shows:', error);
@@ -428,6 +585,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                     const selectedShow = shows.find(s => s.name === currentStatus.current_show);
                     document.getElementById('showDescription').textContent =
                         selectedShow ? selectedShow.description : '';
+                    updateParameterVisibility(currentStatus.current_show);
                 }
 
                 const brightnessSlider = document.getElementById('brightnessSlider');
@@ -602,7 +760,7 @@ void WebServerManager::setupAPIRoutes() {
         NULL,
         [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
             if (index == 0 && showController != nullptr) {
-                StaticJsonDocument<256> doc;
+                StaticJsonDocument<512> doc;
                 DeserializationError error = deserializeJson(doc, data, len);
 
                 if (error) {
@@ -616,7 +774,14 @@ void WebServerManager::setupAPIRoutes() {
                     return;
                 }
 
-                if (showController->queueShowChange(showName)) {
+                // Get parameters if provided
+                String paramsJson = "{}";
+                if (doc.containsKey("params")) {
+                    JsonObject params = doc["params"];
+                    serializeJson(params, paramsJson);
+                }
+
+                if (showController->queueShowChange(showName, paramsJson.c_str())) {
                     request->send(200, "application/json", "{\"success\":true}");
                 } else {
                     request->send(503, "application/json", "{\"success\":false,\"error\":\"Queue full\"}");

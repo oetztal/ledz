@@ -47,12 +47,16 @@ void ShowController::begin() {
     }
     currentShowName[sizeof(currentShowName) - 1] = '\0';
 
-    currentShow.reset(factory.createShow(currentShowName));
+    // Load parameters if available
+    const char* params = (strlen(showConfig.params_json) > 0) ? showConfig.params_json : "{}";
+    currentShow.reset(factory.createShow(currentShowName, params));
 
     if (currentShow) {
 #ifdef ARDUINO
         Serial.print("ShowController: Initial show loaded: ");
-        Serial.println(currentShowName);
+        Serial.print(currentShowName);
+        Serial.print(" with params: ");
+        Serial.println(params);
 #endif
     } else {
 #ifdef ARDUINO
@@ -61,7 +65,7 @@ void ShowController::begin() {
     }
 }
 
-bool ShowController::queueShowChange(const char* showName) {
+bool ShowController::queueShowChange(const char* showName, const char* paramsJson) {
 #ifdef ARDUINO
     if (commandQueue == nullptr) {
         return false;
@@ -71,6 +75,9 @@ bool ShowController::queueShowChange(const char* showName) {
     cmd.type = ShowCommandType::SET_SHOW;
     strncpy(cmd.show_name, showName, sizeof(cmd.show_name) - 1);
     cmd.show_name[sizeof(cmd.show_name) - 1] = '\0';
+
+    strncpy(cmd.params_json, paramsJson, sizeof(cmd.params_json) - 1);
+    cmd.params_json[sizeof(cmd.params_json) - 1] = '\0';
 
     // Try to send with no wait (non-blocking)
     if (xQueueSend(commandQueue, &cmd, 0) == pdTRUE) {
@@ -129,8 +136,8 @@ bool ShowController::queueAutoCycleToggle(bool enabled) {
 void ShowController::applyCommand(const ShowCommand& cmd) {
     switch (cmd.type) {
         case ShowCommandType::SET_SHOW: {
-            // Create new show
-            Show::Show* newShow = factory.createShow(cmd.show_name);
+            // Create new show with parameters
+            Show::Show* newShow = factory.createShow(cmd.show_name, cmd.params_json);
             if (newShow != nullptr) {
                 currentShow.reset(newShow);
                 strncpy(currentShowName, cmd.show_name, sizeof(currentShowName) - 1);
@@ -138,12 +145,15 @@ void ShowController::applyCommand(const ShowCommand& cmd) {
 
 #ifdef ARDUINO
                 Serial.print("ShowController: Switched to show: ");
-                Serial.println(currentShowName);
+                Serial.print(currentShowName);
+                Serial.print(" with params: ");
+                Serial.println(cmd.params_json);
 #endif
 
                 // Save to configuration
                 Config::ShowConfig showConfig = config.loadShowConfig();
                 strncpy(showConfig.current_show, currentShowName, sizeof(showConfig.current_show) - 1);
+                strncpy(showConfig.params_json, cmd.params_json, sizeof(showConfig.params_json) - 1);
                 config.saveShowConfig(showConfig);
             } else {
 #ifdef ARDUINO

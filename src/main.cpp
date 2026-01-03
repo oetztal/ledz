@@ -18,6 +18,7 @@
 #include "show/ColorRun.h"
 #include "show/Jump.h"
 #include "show/Mandelbrot.h"
+#include "show/Solid.h"
 #include "strip/Base.h"
 #include "show/Rainbow.h"
 #include "strip/Layout.h"

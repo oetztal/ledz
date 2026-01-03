@@ -33,6 +33,7 @@ enum class ShowCommandType {
 struct ShowCommand {
     ShowCommandType type;
     char show_name[32];
+    char params_json[256];  // JSON parameters for show
     uint8_t brightness_value;
     bool auto_cycle_enabled;
 };
@@ -78,9 +79,10 @@ public:
     /**
      * Queue a show change command (called from Core 1 - webserver)
      * @param showName Name of show to switch to
+     * @param paramsJson JSON parameters (optional, defaults to "{}")
      * @return true if queued successfully
      */
-    bool queueShowChange(const char* showName);
+    bool queueShowChange(const char* showName, const char* paramsJson = "{}");
 
     /**
      * Queue a brightness change command (called from Core 1 - webserver)
