@@ -10,6 +10,7 @@
 #include "../../../../.platformio/packages/toolchain-riscv32-esp@8.4.0+2021r2-patch5/riscv32-esp-elf/include/c++/8.4.0/codecvt"
 #include "show/Chaos.h"
 #include "show/ColorRun.h"
+#include "show/Jump.h"
 #include "show/Mandelbrot.h"
 #include "strip/Base.h"
 #include "show/Rainbow.h"
@@ -108,10 +109,13 @@ void loop() {
             show.reset(new Show::Chaos());
             break;
         case 2:
-            show.reset(new Show::Rainbow());
+            show.reset(new Show::ColorRun());
             break;
         case 3:
-            show.reset(new Show::ColorRun());
+            show.reset(new Show::Jump());
+            break;
+        case 4:
+            show.reset(new Show::Rainbow());
             break;
     }
 }

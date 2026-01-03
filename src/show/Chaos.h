@@ -14,7 +14,7 @@ namespace Show {
         const float x_initial = 0.5;
         const float r_start = 2.95;
         const float r_max = 4.0;
-        const float r_incr = 0.0001;
+        const float r_incr = 0.0002;
         float r = r_start;
 
         float func(float x) const;
