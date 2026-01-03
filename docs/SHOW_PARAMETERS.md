@@ -63,6 +63,13 @@ curl -X POST http://192.168.1.100/api/show \
   -d '{"name":"Mandelbrot","params":{"Cre0":-0.5,"Cim0":0,"Cim1":-0.5,"scale":5,"max_iterations":50,"color_scale":10}}'
 ```
 
+**Example: Set Chaos Parameters**
+```bash
+curl -X POST http://192.168.1.100/api/show \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Chaos","params":{"Rmin":3.5,"Rmax":4.0,"Rdelta":0.001}}'
+```
+
 ## Supported Shows & Parameters
 
 ### Solid
@@ -94,8 +101,21 @@ curl -X POST http://192.168.1.100/api/show \
 {"Cre0": -0.8, "Cim0": -0.2, "Cim1": 0.2, "scale": 10, "max_iterations": 100, "color_scale": 5}  // High detail view
 ```
 
+### Chaos
+**Parameters**:
+- `Rmin` (float): Starting R value for logistic map (default: 2.95)
+- `Rmax` (float): Maximum R value (default: 4.0)
+- `Rdelta` (float): R increment per iteration (default: 0.0002)
+
+**Example JSON**:
+```json
+{"Rmin": 2.95, "Rmax": 4.0, "Rdelta": 0.0002}  // Default - slow evolution
+{"Rmin": 3.5, "Rmax": 4.0, "Rdelta": 0.001}    // Faster evolution, starting in chaotic region
+{"Rmin": 2.8, "Rmax": 3.6, "Rdelta": 0.0001}   // Slower, exploring period-doubling
+```
+
 ### Other Shows
-Rainbow, ColorRun, Chaos, Jump currently don't support parameters and will use their default behavior.
+Rainbow, ColorRun, Jump currently don't support parameters and will use their default behavior.
 
 ## Adding Parameter Support to New Shows
 
