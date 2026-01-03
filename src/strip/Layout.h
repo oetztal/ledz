@@ -37,6 +37,8 @@ namespace Strip {
         PixelIndex length() const override;
 
         void show() override;
+
+        void setBrightness(uint8_t brightness) override;
     };
 }
 

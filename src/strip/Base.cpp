@@ -18,7 +18,7 @@ namespace Strip {
 #endif
         strip = std::unique_ptr<Adafruit_NeoPixel>(new Adafruit_NeoPixel(length, pin, NEO_GRB + NEO_KHZ800));
         strip->begin();
-        strip->setBrightness(20);
+        // Brightness will be set by ShowController
 #endif
     }
 
@@ -53,6 +53,12 @@ namespace Strip {
         return strip->numPixels();
 #else
         return 0;
+#endif
+    }
+
+    void Base::setBrightness(uint8_t brightness) {
+#ifdef ARDUINO
+        strip->setBrightness(brightness);
 #endif
     }
 }

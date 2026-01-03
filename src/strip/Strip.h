@@ -26,6 +26,8 @@ namespace Strip {
         virtual PixelIndex length() const = 0;
 
         virtual void show() = 0;
+
+        virtual void setBrightness(uint8_t brightness) = 0;
     };
 }
 

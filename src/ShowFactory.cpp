@@ -22,10 +22,6 @@
 
 ShowFactory::ShowFactory() : showConstructors(strLess) {
     // Register all available shows (in display order)
-    registerShow("Rainbow", "Rainbow color cycle", []() {
-        return new Show::Rainbow();
-    });
-
     registerShow("Solid", "Solid color (default: white)", []() {
         return new Show::Solid(255, 255, 255); // Default to white
     });
@@ -53,6 +49,10 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
 
     registerShow("Jump", "Jumping lights", []() {
         return new Show::Jump();
+    });
+
+    registerShow("Rainbow", "Rainbow color cycle", []() {
+        return new Show::Rainbow();
     });
 
     registerShow("Wave", "Propagating wave with rainbow colors", []() {

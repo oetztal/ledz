@@ -94,6 +94,8 @@ const char CONFIG_HTML[] PROGMEM = R"rawliteral(
         <h1>ledz LED controller</h1>
         <h2 style="text-align: center; color: #666; font-size: 18px;">WiFi Configuration</h2>
 
+        <div id="status" class="status"></div>
+
         <form id="wifiForm">
             <div class="form-group">
                 <label for="ssid">WiFi Network Name (SSID):</label>
@@ -107,8 +109,6 @@ const char CONFIG_HTML[] PROGMEM = R"rawliteral(
 
             <button type="submit">Connect to WiFi</button>
         </form>
-
-        <div id="status" class="status"></div>
     </div>
 
     <script>

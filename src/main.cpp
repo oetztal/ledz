@@ -59,6 +59,9 @@ std::unique_ptr<Strip::Strip> layout;  // Will be initialized in setup() with co
         // Execute show
         auto timer = Support::Timer();
 
+        // Apply brightness setting
+        layout->setBrightness(controller->getBrightness());
+
         show->execute(*layout, iteration++);
         auto execution_time = timer.lap();
 

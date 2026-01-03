@@ -28,6 +28,8 @@ namespace Strip {
 
         PixelIndex length() const override;
 
+        void setBrightness(uint8_t brightness) override;
+
     private:
 #ifdef ARDUINO
         std::unique_ptr<Adafruit_NeoPixel> strip;
