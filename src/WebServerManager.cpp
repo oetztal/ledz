@@ -2237,6 +2237,16 @@ void WebServerManager::begin() {
     setupConfigRoutes();
     setupAPIRoutes();
 
+    // Captive portal: redirect all unknown requests to root
+    // This makes the captive portal work on phones/tablets
+    server.onNotFound([](AsyncWebServerRequest *request) {
+        // Check if this is a captive portal detection request
+        String host = request->host();
+
+        // Redirect to the root page
+        request->redirect("/");
+    });
+
     // Start server
     server.begin();
 

@@ -28,9 +28,8 @@ Network::Network(Config::ConfigManager &config, Status::Status &status)
 String Network::generateHostname() {
 #ifdef ARDUINO
     String deviceId = DeviceId::getDeviceId();
-    String hostname = deviceId;
+    String hostname = "ledz" + deviceId;
     hostname.toLowerCase();
-    hostname.replace("ledz-", "ledz");  // Remove dash for hostname
     return hostname;
 #else
     return "ledz";
@@ -46,7 +45,7 @@ void Network::startAP() {
     mode = NetworkMode::AP;
 
     // Get device ID for AP SSID
-    String deviceId = DeviceId::getDeviceId();
+    String deviceId = "ledz " + DeviceId::getDeviceId();
 
     Serial.print("Starting Access Point: ");
     Serial.println(deviceId.c_str());
