@@ -151,11 +151,11 @@ namespace Config {
         memcpy(mac_bytes, &mac, 6);
 
         char id[16];
-        snprintf(id, sizeof(id), "LEDCtrl-%02X%02X%02X",
+        snprintf(id, sizeof(id), "ledz-%02X%02X%02X",
                  mac_bytes[3], mac_bytes[4], mac_bytes[5]);
         return String(id);
 #else
-        return String("LEDCtrl-000000");
+        return String("ledz-000000");
 #endif
     }
 

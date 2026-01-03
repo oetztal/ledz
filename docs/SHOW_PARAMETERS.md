@@ -2,7 +2,7 @@
 
 ## Overview
 
-The LED Controller now supports configurable parameters for shows. Parameters are passed as JSON objects and automatically parsed by the ShowFactory.
+ledz now supports configurable parameters for shows. Parameters are passed as JSON objects and automatically parsed by the ShowFactory.
 
 **✅ Web UI Implemented**: The control interface now includes parameter controls that automatically appear based on the selected show:
 - **Solid Show**: Color picker for RGB selection

@@ -442,7 +442,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
 <body>
     <div class="container">
         <div class="header">
-            <h1>LED Controller</h1>
+            <h1>ledz</h1>
             <div class="device-id" id="deviceId">Loading...</div>
         </div>
 
@@ -820,6 +820,20 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             }
         }
 
+        // Update device info display
+        function updateDeviceInfo() {
+            const deviceIdElement = document.getElementById('deviceId');
+            if (currentStatus.device_id) {
+                const hostname = currentStatus.device_id.toLowerCase().replace('ledz-', 'ledz');
+                deviceIdElement.innerHTML = `
+                    ${currentStatus.device_id}<br>
+                    <small style="font-size: 11px; font-weight: normal;">
+                        Access at: <a href="http://${hostname}.local/" style="color: inherit; text-decoration: underline;">${hostname}.local</a>
+                    </small>
+                `;
+            }
+        }
+
         // Fetch available shows
         async function loadShows() {
             try {
@@ -850,7 +864,8 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 const response = await fetch('/api/status');
                 currentStatus = await response.json();
 
-                document.getElementById('deviceId').textContent = currentStatus.device_id;
+                // Update device info with mDNS hostname
+                updateDeviceInfo();
                 document.getElementById('currentShow').textContent = currentStatus.current_show;
                 document.getElementById('currentBrightness').textContent = currentStatus.brightness;
 

@@ -46,6 +46,22 @@ void Network::startAP() {
     Serial.print("AP IP address: ");
     Serial.println(IP);
 
+    // Start mDNS responder
+    String hostname = deviceId;
+    hostname.toLowerCase();
+    hostname.replace("ledz-", "ledz");  // Remove dash for hostname
+
+    if (MDNS.begin(hostname.c_str())) {
+        Serial.print("mDNS responder started: ");
+        Serial.print(hostname);
+        Serial.println(".local");
+
+        // Advertise HTTP service
+        MDNS.addService("http", "tcp", 80);
+    } else {
+        Serial.println("Error starting mDNS responder!");
+    }
+
     // Start captive portal (redirects all DNS to this device)
     captivePortal.begin();
 
@@ -79,6 +95,30 @@ void Network::startSTA(const char* ssid, const char* password) {
 
         Serial.print("IP address: ");
         Serial.println(WiFi.localIP());
+
+        // Start mDNS responder
+        String deviceId = DeviceId::getDeviceId();
+        String hostname = deviceId;
+        hostname.toLowerCase();
+        hostname.replace("ledz-", "ledz");  // Remove dash for hostname
+
+        if (MDNS.begin(hostname.c_str())) {
+            Serial.print("mDNS responder started: ");
+            Serial.print(hostname);
+            Serial.println(".local");
+
+            // Advertise HTTP service
+            MDNS.addService("http", "tcp", 80);
+
+            Serial.println("You can now access the LED controller at:");
+            Serial.print("  http://");
+            Serial.print(hostname);
+            Serial.println(".local/");
+            Serial.print("  or http://");
+            Serial.println(WiFi.localIP());
+        } else {
+            Serial.println("Error starting mDNS responder!");
+        }
 
         // Start NTP client
         ntpClient.begin();

@@ -16,7 +16,7 @@ namespace DeviceId {
 
     /**
      * Get unique device ID based on MAC address
-     * Format: "LEDCtrl-AABBCC" where AABBCC are the last 3 bytes of MAC
+     * Format: "ledz-AABBCC" where AABBCC are the last 3 bytes of MAC
      * @return Device ID string
      */
     inline String getDeviceId() {
@@ -25,7 +25,7 @@ namespace DeviceId {
         memcpy(mac_bytes, &mac, 6);
 
         char id[16];
-        snprintf(id, sizeof(id), "LEDCtrl-%02X%02X%02X",
+        snprintf(id, sizeof(id), "ledz-%02X%02X%02X",
                  mac_bytes[3], mac_bytes[4], mac_bytes[5]);
         return String(id);
     }
