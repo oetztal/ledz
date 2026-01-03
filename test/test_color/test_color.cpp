@@ -1,0 +1,56 @@
+#include "unity.h"
+#include "color.h"
+
+void setUp() {
+}
+
+void tearDown() {
+}
+
+void test_color_extraction() {
+    Strip::Color test_color = 0x123456;
+
+    TEST_ASSERT_EQUAL_UINT8(0x12, red(test_color));
+    TEST_ASSERT_EQUAL_UINT8(0x34, green(test_color));
+    TEST_ASSERT_EQUAL_UINT8(0x56, blue(test_color));
+}
+
+void test_color_construction() {
+    Strip::Color result = color(0x12, 0x34, 0x56);
+    TEST_ASSERT_EQUAL_UINT32(0x123456, result);
+}
+
+void test_color_red_component() {
+    Strip::Color pure_red = 0xFF0000;
+    TEST_ASSERT_EQUAL_UINT8(0xFF, red(pure_red));
+    TEST_ASSERT_EQUAL_UINT8(0x00, green(pure_red));
+    TEST_ASSERT_EQUAL_UINT8(0x00, blue(pure_red));
+}
+
+void test_color_green_component() {
+    Strip::Color pure_green = 0x00FF00;
+    TEST_ASSERT_EQUAL_UINT8(0x00, red(pure_green));
+    TEST_ASSERT_EQUAL_UINT8(0xFF, green(pure_green));
+    TEST_ASSERT_EQUAL_UINT8(0x00, blue(pure_green));
+}
+
+void test_color_blue_component() {
+    Strip::Color pure_blue = 0x0000FF;
+    TEST_ASSERT_EQUAL_UINT8(0x00, red(pure_blue));
+    TEST_ASSERT_EQUAL_UINT8(0x00, green(pure_blue));
+    TEST_ASSERT_EQUAL_UINT8(0xFF, blue(pure_blue));
+}
+
+int runUnityTests() {
+    UNITY_BEGIN();
+    RUN_TEST(test_color_extraction);
+    RUN_TEST(test_color_construction);
+    RUN_TEST(test_color_red_component);
+    RUN_TEST(test_color_green_component);
+    RUN_TEST(test_color_blue_component);
+    return UNITY_END();
+}
+
+int main() {
+    return runUnityTests();
+}
