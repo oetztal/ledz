@@ -97,6 +97,9 @@ void setup() {
     // Initialize show controller
     showController.begin();
 
+    // Set show controller on webserver (must be done before webserver starts)
+    webServer.setShowController(&showController, &showFactory);
+
     // Set webserver on network (must be done before network task starts)
     network.setWebServer(&webServer);
 

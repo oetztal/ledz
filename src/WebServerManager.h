@@ -18,6 +18,8 @@ namespace Config {
 }
 
 class Network;
+class ShowController;
+class ShowFactory;
 
 /**
  * WebServer Manager
@@ -32,6 +34,8 @@ private:
 
     Config::ConfigManager &config;
     Network &network;
+    ShowController *showController;
+    ShowFactory *showFactory;
 
     /**
      * Setup WiFi configuration routes
@@ -39,7 +43,7 @@ private:
     void setupConfigRoutes();
 
     /**
-     * Setup API routes (for future show control)
+     * Setup API routes for show control
      */
     void setupAPIRoutes();
 
@@ -57,6 +61,13 @@ public:
      * @param network Network manager reference
      */
     WebServerManager(Config::ConfigManager &config, Network &network);
+
+    /**
+     * Set show controller (must be called before begin)
+     * @param controller ShowController pointer
+     * @param factory ShowFactory pointer
+     */
+    void setShowController(ShowController *controller, ShowFactory *factory);
 
     /**
      * Start the webserver
