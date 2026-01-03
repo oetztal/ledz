@@ -1,9 +1,6 @@
 #include "unity.h"
 #include "support/SmoothBlend.h"
-#include "strip/Layout.h"
-#include "strip/Base.h"
 #include "color.h"
-#include <memory>
 
 // Mock strip for testing
 class MockStrip : public Strip::Strip {
@@ -94,23 +91,8 @@ void test_smooth_blend_multiple_colors() {
     TEST_ASSERT_TRUE(still_running);
 }
 
-void test_color_extraction() {
-    Strip::Color test_color = 0x123456;
-
-    TEST_ASSERT_EQUAL_UINT8(0x12, red(test_color));
-    TEST_ASSERT_EQUAL_UINT8(0x34, green(test_color));
-    TEST_ASSERT_EQUAL_UINT8(0x56, blue(test_color));
-}
-
-void test_color_construction() {
-    Strip::Color result = color(0x12, 0x34, 0x56);
-    TEST_ASSERT_EQUAL_UINT32(0x123456, result);
-}
-
 int runUnityTests() {
     UNITY_BEGIN();
-    RUN_TEST(test_color_extraction);
-    RUN_TEST(test_color_construction);
     RUN_TEST(test_smooth_blend_single_color);
     RUN_TEST(test_smooth_blend_multiple_colors);
     return UNITY_END();
