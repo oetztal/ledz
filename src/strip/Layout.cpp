@@ -44,7 +44,7 @@ namespace Strip {
     }
 
     PixelIndex Layout::length() const {
-        return int((strip.length() - abs(dead_leds)) / (mirror ? 2 : 1));
+        return int((strip.length() - std::abs(dead_leds)) / (mirror ? 2 : 1));
     }
 
     void Layout::show() {
