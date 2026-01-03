@@ -9,76 +9,164 @@
 #endif
 
 #include "Network.h"
+#include "Config.h"
+#include "DeviceId.h"
+#include "WebServerManager.h"
 
 #ifdef ARDUINO
 #include <set>
 #endif
 
-
-
-Network::Network(const char *ssid, const char *password, Status::Status &status) : status(status)
+Network::Network(Config::ConfigManager &config, Status::Status &status)
+    : config(config), status(status), mode(NetworkMode::NONE), webServer(nullptr)
 #ifdef ARDUINO
     , ntpClient(wifiUdp)
 #endif
 {
-    this->ssid = ssid;
-    this->password = password;
 }
 
+void Network::setWebServer(WebServerManager *server) {
+    this->webServer = server;
+}
 
-[[noreturn]] void Network::task(void *pvParameters) {
+void Network::startAP() {
 #ifdef ARDUINO
+    mode = NetworkMode::AP;
+
+    // Get device ID for AP SSID
+    String deviceId = DeviceId::getDeviceId();
+
+    Serial.print("Starting Access Point: ");
+    Serial.println(deviceId.c_str());
+
+    // Start open AP (no password)
+    WiFi.softAP(deviceId.c_str());
+
+    IPAddress IP = WiFi.softAPIP();
+    Serial.print("AP IP address: ");
+    Serial.println(IP);
+
+    status.connecting(); // Use connecting status for AP mode
+#endif
+}
+
+void Network::startSTA(const char* ssid, const char* password) {
+#ifdef ARDUINO
+    mode = NetworkMode::STA;
     status.connecting();
 
     WiFi.begin(ssid, password);
 
-    {
-        std::stringstream ss;
-        ss << "Connecting to WiFi: " << this->ssid;
-#ifdef ARDUINO
-        Serial.println(ss.str().c_str());
-#endif
-    }
+    Serial.print("Connecting to WiFi: ");
+    Serial.println(ssid);
 
-    while (WiFi.status() != WL_CONNECTED) {
+    // Wait for connection with timeout
+    int attempts = 0;
+    const int maxAttempts = 30; // 15 seconds
+
+    while (WiFi.status() != WL_CONNECTED && attempts < maxAttempts) {
         vTaskDelay(500 / portTICK_PERIOD_MS);
-#ifdef ARDUINO
         Serial.print(".");
-#endif
-    }
-    status.connected();
-
-
-    ntpClient.begin();
-
-    ntpClient.update();
-
-#ifdef ARDUINO
-    Serial.println("connected");
-#endif
-
-    {
-        std::stringstream ss;
-        ss << "ip " << WiFi.localIP().toString().c_str() << " " << " " << ntpClient.getEpochTime() << " " << ntpClient.getFormattedTime().c_str();
-#ifdef ARDUINO
-        Serial.println(ss.str().c_str());
-#endif
+        attempts++;
     }
 
+    if (WiFi.status() == WL_CONNECTED) {
+        status.connected();
+        Serial.println("\nConnected!");
+
+        Serial.print("IP address: ");
+        Serial.println(WiFi.localIP());
+
+        // Start NTP client
+        ntpClient.begin();
+        ntpClient.update();
+
+        Serial.print("NTP time: ");
+        Serial.println(ntpClient.getFormattedTime());
+    } else {
+        Serial.println("\nConnection failed!");
+        status.connecting(); // Keep in connecting state
+    }
+#endif
+}
+
+[[noreturn]] void Network::task(void *pvParameters) {
+#ifdef ARDUINO
+    // Check if WiFi is configured
+    if (!config.isConfigured()) {
+        Serial.println("No WiFi configuration found - starting AP mode");
+
+        // Start Access Point mode
+        startAP();
+
+        // Start webserver (if available)
+        if (webServer != nullptr) {
+            webServer->begin();
+        }
+
+        // Wait for configuration
+        while (!config.isConfigured()) {
+            vTaskDelay(100 / portTICK_PERIOD_MS);
+        }
+
+        Serial.println("Configuration received - restarting...");
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        ESP.restart();
+    }
+
+    // Load WiFi configuration
+    Config::WiFiConfig wifiConfig = config.loadWiFiConfig();
+
+    Serial.println("WiFi configured - starting STA mode");
+
+    // Start Station mode
+    startSTA(wifiConfig.ssid, wifiConfig.password);
+
+    // If connection failed, restart to AP mode
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("Failed to connect - restarting to AP mode...");
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        ESP.restart();
+    }
+
+    // Start webserver (if available)
+    if (webServer != nullptr) {
+        webServer->begin();
+    }
+
+    // Main loop - NTP updates
     auto lastNtpUpdate = ntpClient.getEpochTime();
 
     while (true) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        if (ntpClient.getEpochTime() - lastNtpUpdate > 60) {
-            auto result = ntpClient.update();
-            std::stringstream ss;
-            ss << "NTP update " << ntpClient.getFormattedTime().c_str() << " " << result;
-#ifdef ARDUINO
-            Serial.println(ss.str().c_str());
-#endif
-            lastNtpUpdate = ntpClient.getEpochTime();
+
+        // Check WiFi connection
+        if (WiFi.status() != WL_CONNECTED) {
+            Serial.println("WiFi disconnected - reconnecting...");
+            status.connecting();
+            WiFi.reconnect();
+
+            int attempts = 0;
+            while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+                vTaskDelay(500 / portTICK_PERIOD_MS);
+                attempts++;
+            }
+
+            if (WiFi.status() == WL_CONNECTED) {
+                status.connected();
+                Serial.println("Reconnected!");
+            }
         }
 
+        // Update NTP every 60 seconds
+        if (ntpClient.getEpochTime() - lastNtpUpdate > 60) {
+            bool result = ntpClient.update();
+            Serial.print("NTP update: ");
+            Serial.print(ntpClient.getFormattedTime());
+            Serial.print(" - ");
+            Serial.println(result ? "success" : "failed");
+            lastNtpUpdate = ntpClient.getEpochTime();
+        }
     }
 #endif
 }
