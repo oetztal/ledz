@@ -43,10 +43,10 @@ namespace Show {
          * @param letter_space Space between letters (default: 3)
          * @param word_space Space between words (default: 5)
          */
-        MorseCode(const std::string& message = "HELLO",
-                  float speed = 0.5f,
-                  unsigned int dot_length = 2,
-                  unsigned int dash_length = 4,
+        MorseCode(const std::string& message = "HELLO WORLD!",
+                  float speed = 0.2f,
+                  unsigned int dot_length = 1,
+                  unsigned int dash_length = 3,
                   unsigned int symbol_space = 2,
                   unsigned int letter_space = 3,
                   unsigned int word_space = 5);

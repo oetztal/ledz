@@ -25,6 +25,7 @@
 #include "show/Wave.h"
 #include "show/MorseCode.h"
 #include "show/TheaterChase.h"
+#include "show/Stroboscope.h"
 #include "strip/Base.h"
 #include "show/Rainbow.h"
 #include "strip/Layout.h"

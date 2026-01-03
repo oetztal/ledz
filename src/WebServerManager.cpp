@@ -661,6 +661,25 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                     </div>
                     <button class="apply-button" onclick="applyTheaterChaseParams()">Apply Parameters</button>
                 </div>
+
+                <div id="stroboscopeParams" class="params-section">
+                    <div class="param-row">
+                        <label class="param-label" for="stroboscopeColor">Flash Color</label>
+                        <input type="color" id="stroboscopeColor" value="#ffffff">
+                        <small style="display:block; margin-top:4px; color:#666;">Color to flash (default: white)</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="stroboscopeOnCycles">On Cycles</label>
+                        <input type="number" id="stroboscopeOnCycles" step="1" min="1" max="20" value="1">
+                        <small style="display:block; margin-top:4px; color:#666;">Number of frames to flash the color</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="stroboscopeOffCycles">Off Cycles</label>
+                        <input type="number" id="stroboscopeOffCycles" step="1" min="1" max="100" value="10">
+                        <small style="display:block; margin-top:4px; color:#666;">Number of frames to stay black</small>
+                    </div>
+                    <button class="apply-button" onclick="applyStroboscopeParams()">Apply Parameters</button>
+                </div>
             </div>
 
             <div class="control-group">
@@ -717,6 +736,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             document.getElementById('waveParams').classList.remove('visible');
             document.getElementById('morseCodeParams').classList.remove('visible');
             document.getElementById('theaterChaseParams').classList.remove('visible');
+            document.getElementById('stroboscopeParams').classList.remove('visible');
 
             if (showName === 'Solid') {
                 document.getElementById('solidParams').classList.add('visible');
@@ -736,6 +756,8 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 document.getElementById('morseCodeParams').classList.add('visible');
             } else if (showName === 'TheaterChase') {
                 document.getElementById('theaterChaseParams').classList.add('visible');
+            } else if (showName === 'Stroboscope') {
+                document.getElementById('stroboscopeParams').classList.add('visible');
             }
         }
 
@@ -1028,6 +1050,31 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             }
         }
 
+        // Apply Stroboscope parameters
+        async function applyStroboscopeParams() {
+            const hex = document.getElementById('stroboscopeColor').value;
+            const r = parseInt(hex.substring(1, 3), 16);
+            const g = parseInt(hex.substring(3, 5), 16);
+            const b = parseInt(hex.substring(5, 7), 16);
+            const on_cycles = parseInt(document.getElementById('stroboscopeOnCycles').value);
+            const off_cycles = parseInt(document.getElementById('stroboscopeOffCycles').value);
+
+            try {
+                pendingParameterConfig = true;
+                await fetch('/api/show', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: 'Stroboscope',
+                        params: { r, g, b, on_cycles, off_cycles }
+                    })
+                });
+                pendingParameterConfig = false;  // Applied successfully
+            } catch (error) {
+                console.error('Failed to apply Stroboscope parameters:', error);
+            }
+        }
+
         // Update device info display
         function updateDeviceInfo() {
             const pageTitleElement = document.getElementById('pageTitle');
@@ -1126,12 +1173,15 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             const showName = e.target.value;
 
             // Don't auto-apply for shows with parameters - wait for user to click Apply button
-            if (showName === 'Solid' || showName === 'Mandelbrot' || showName === 'Chaos') {
+            const showsWithParams = ['Solid', 'Mandelbrot', 'Chaos', 'TwoColorBlend', 'ColorRanges',
+                                     'Starlight', 'Wave', 'MorseCode', 'TheaterChase', 'Stroboscope'];
+
+            if (showsWithParams.includes(showName)) {
                 pendingParameterConfig = true;  // User is now configuring parameters
                 return;
             }
 
-            // User selected a show without parameters
+            // User selected a show without parameters (Rainbow, ColorRun, Jump)
             pendingParameterConfig = false;
 
             try {

@@ -15,6 +15,7 @@
 #include "show/Wave.h"
 #include "show/MorseCode.h"
 #include "show/TheaterChase.h"
+#include "show/Stroboscope.h"
 #include "color.h"
 
 #ifdef ARDUINO
@@ -42,6 +43,10 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
 
     registerShow("Starlight", "Twinkling stars effect", []() {
         return new Show::Starlight(); // Default: 0.1 probability, 5s length, 1s fade, warm white
+    });
+
+    registerShow("Stroboscope", "Flashing strobe effect", []() {
+        return new Show::Stroboscope(); // Default: white, 1 on, 10 off
     });
 
     registerShow("ColorRun", "Running colors", []() {
@@ -252,6 +257,18 @@ Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
         Serial.printf("ShowFactory: Creating TheaterChase num_steps_per_cycle=%u\n",
                      num_steps_per_cycle);
         return new Show::TheaterChase(num_steps_per_cycle);
+    }
+    else if (strcmp(name, "Stroboscope") == 0) {
+        // Parse Stroboscope parameters: {"r":255, "g":255, "b":255, "on_cycles":1, "off_cycles":10}
+        uint8_t r = doc["r"] | 255;
+        uint8_t g = doc["g"] | 255;
+        uint8_t b = doc["b"] | 255;
+        unsigned int on_cycles = doc["on_cycles"] | 1;
+        unsigned int off_cycles = doc["off_cycles"] | 10;
+
+        Serial.printf("ShowFactory: Creating Stroboscope RGB(%d,%d,%d), on=%u, off=%u\n",
+                     r, g, b, on_cycles, off_cycles);
+        return new Show::Stroboscope(r, g, b, on_cycles, off_cycles);
     }
     // Other shows don't support parameters yet, use default constructor
     else {
