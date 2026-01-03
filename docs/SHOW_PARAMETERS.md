@@ -9,6 +9,7 @@ The LED Controller now supports configurable parameters for shows. Parameters ar
 - **Mandelbrot Show**: Input fields for Cre0, Cim0, Cim1 (complex plane coordinates), scale, max_iterations, and color_scale
 - **Chaos Show**: Input fields for Rmin, Rmax, and Rdelta (logistic map parameters)
 - **TwoColorBlend Show**: Two color pickers for start and end gradient colors
+- **ColorRanges Show**: Dynamic color inputs with flag presets (Ukraine 🇺🇦, Italy 🇮🇹), optional custom ranges
 
 ## Architecture
 
@@ -78,6 +79,27 @@ curl -X POST http://192.168.1.100/api/show \
   -d '{"name":"TwoColorBlend","params":{"r1":255,"g1":0,"b1":0,"r2":0,"g2":0,"b2":255}}'
 ```
 
+**Example: Set ColorRanges Parameters (Ukraine Flag)**
+```bash
+curl -X POST http://192.168.1.100/api/show \
+  -H "Content-Type: application/json" \
+  -d '{"name":"ColorRanges","params":{"colors":[[0,87,183],[255,215,0]]}}'
+```
+
+**Example: Set ColorRanges Parameters (Italian Flag)**
+```bash
+curl -X POST http://192.168.1.100/api/show \
+  -H "Content-Type: application/json" \
+  -d '{"name":"ColorRanges","params":{"colors":[[0,140,69],[255,255,255],[205,33,42]]}}'
+```
+
+**Example: Set ColorRanges with Custom Ranges**
+```bash
+curl -X POST http://192.168.1.100/api/show \
+  -H "Content-Type: application/json" \
+  -d '{"name":"ColorRanges","params":{"colors":[[255,0,0],[255,255,255],[0,0,255]],"ranges":[25,75]}}'
+```
+
 ## Supported Shows & Parameters
 
 ### Solid
@@ -139,6 +161,71 @@ curl -X POST http://192.168.1.100/api/show \
 {"r1": 255, "g1": 255, "b1": 0, "r2": 128, "g2": 0, "b2": 128}  // Yellow to Purple gradient
 {"r1": 0, "g1": 255, "b1": 0, "r2": 255, "g2": 255, "b2": 0}    // Green to Yellow gradient
 ```
+
+### ColorRanges
+**Parameters**:
+- `colors` (array of RGB arrays, required): List of colors as `[r, g, b]` arrays. Minimum 2 colors.
+- `ranges` (array of floats, optional): Boundary percentages (0-100) where colors transition. **Must have exactly N-1 values for N colors.** If omitted, colors distribute equally.
+
+**Description**: Displays solid color sections with sharp transitions across the LED strip. Perfect for flags, banners, or multi-color patterns. Colors are smoothly blended from the current state using SmoothBlend.
+
+**Range Calculation**:
+- **Equal Distribution** (default): If `ranges` is omitted, colors are distributed equally across the strip
+  - 2 colors: 50% each (no ranges needed)
+  - 3 colors: 33.3% each (no ranges needed)
+  - 4 colors: 25% each (no ranges needed)
+- **Custom Distribution**: Provide boundary percentages. **For N colors, you need N-1 boundary values.**
+  - 2 colors: 1 boundary (e.g., `[60]` = 60% color1, 40% color2)
+  - 3 colors: 2 boundaries (e.g., `[25, 75]` = 25% color1, 50% color2, 25% color3)
+  - 4 colors: 3 boundaries (e.g., `[20, 50, 80]` = 20% color1, 30% color2, 30% color3, 20% color4)
+
+**Example JSON**:
+```json
+// Ukraine Flag (default) - Blue and Yellow, equal distribution (50% each)
+{
+  "colors": [[0, 87, 183], [255, 215, 0]]
+}
+
+// Italian Flag - Green, White, Red, equal distribution (33.3% each)
+{
+  "colors": [[0, 140, 69], [255, 255, 255], [205, 33, 42]]
+}
+
+// 2 colors with custom split: 60% red, 40% blue
+{
+  "colors": [[255, 0, 0], [0, 0, 255]],
+  "ranges": [60]  // 1 boundary for 2 colors
+}
+
+// 3 colors with custom ranges: 25% red, 50% white, 25% blue
+{
+  "colors": [[255, 0, 0], [255, 255, 255], [0, 0, 255]],
+  "ranges": [25, 75]  // 2 boundaries for 3 colors: Red (0-25%), White (25-75%), Blue (75-100%)
+}
+
+// 4 colors with custom ranges: unequal sections
+{
+  "colors": [[255, 0, 0], [255, 255, 0], [0, 255, 0], [0, 0, 255]],
+  "ranges": [20, 50, 80]  // 3 boundaries for 4 colors: 20%, 30%, 30%, 20%
+}
+
+// Rainbow sections (equal distribution)
+{
+  "colors": [
+    [255, 0, 0],     // Red
+    [255, 127, 0],   // Orange
+    [255, 255, 0],   // Yellow
+    [0, 255, 0],     // Green
+    [0, 0, 255],     // Blue
+    [75, 0, 130]     // Indigo
+  ]
+  // No ranges = equal distribution (16.6% each)
+}
+```
+
+**Flag Presets**:
+- **🇺🇦 Ukraine**: Blue (#0057B7) and Yellow (#FFD700)
+- **🇮🇹 Italy**: Green (#008C45), White (#FFFFFF), Red (#CD212A)
 
 ### Other Shows
 Rainbow, ColorRun, Jump currently don't support parameters and will use their default behavior.

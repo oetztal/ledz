@@ -396,6 +396,47 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
         .about-link:hover {
             background-color: #f8f9fa;
         }
+
+        .preset-button {
+            padding: 8px 12px;
+            margin: 4px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f5f5f5;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .preset-button:hover {
+            background: #e0e0e0;
+        }
+
+        .small-button {
+            padding: 6px 10px;
+            margin: 4px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .small-button:hover {
+            background: #f0f0f0;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
     </style>
 </head>
 <body>
@@ -488,6 +529,40 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                     </div>
                     <button class="apply-button" onclick="applyTwoColorBlendParams()">Apply Colors</button>
                 </div>
+
+                <div id="colorRangesParams" class="params-section">
+                    <div style="margin-bottom: 12px;">
+                        <strong>Flag Presets:</strong>
+                        <button class="preset-button" onclick="loadUkraineFlag()">🇺🇦 Ukraine</button>
+                        <button class="preset-button" onclick="loadItalianFlag()">🇮🇹 Italy</button>
+                    </div>
+                    <div id="colorRangesColorInputs">
+                        <div class="param-row">
+                            <label class="param-label" for="colorRangesColor1">Color 1</label>
+                            <input type="color" id="colorRangesColor1" value="#0057b7">
+                        </div>
+                        <div class="param-row">
+                            <label class="param-label" for="colorRangesColor2">Color 2</label>
+                            <input type="color" id="colorRangesColor2" value="#ffd700">
+                        </div>
+                    </div>
+                    <div class="param-row">
+                        <button class="small-button" onclick="addColorRangesColor()">+ Add Color</button>
+                        <button class="small-button" onclick="removeColorRangesColor()">- Remove Color</button>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="colorRangesRanges">Ranges (%) [optional]</label>
+                        <input type="text" id="colorRangesRanges" placeholder="e.g., 33.3, 66.6" value="">
+                        <small style="display:block; margin-top:4px; color:#666;">
+                            Leave empty for equal distribution.<br>
+                            For N colors, enter N-1 boundary percentages:<br>
+                            • 2 colors = 1 value (e.g., "50" or "60")<br>
+                            • 3 colors = 2 values (e.g., "33.3, 66.6" or "25, 75")<br>
+                            • 4 colors = 3 values (e.g., "25, 50, 75")
+                        </small>
+                    </div>
+                    <button class="apply-button" onclick="applyColorRangesParams()">Apply Pattern</button>
+                </div>
             </div>
 
             <div class="control-group">
@@ -536,6 +611,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             document.getElementById('mandelbrotParams').classList.remove('visible');
             document.getElementById('chaosParams').classList.remove('visible');
             document.getElementById('twoColorBlendParams').classList.remove('visible');
+            document.getElementById('colorRangesParams').classList.remove('visible');
 
             if (showName === 'Solid') {
                 document.getElementById('solidParams').classList.add('visible');
@@ -545,6 +621,8 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 document.getElementById('chaosParams').classList.add('visible');
             } else if (showName === 'TwoColorBlend') {
                 document.getElementById('twoColorBlendParams').classList.add('visible');
+            } else if (showName === 'ColorRanges') {
+                document.getElementById('colorRangesParams').classList.add('visible');
             }
         }
 
@@ -639,6 +717,106 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 pendingParameterConfig = false;  // Applied successfully
             } catch (error) {
                 console.error('Failed to apply TwoColorBlend parameters:', error);
+            }
+        }
+
+        // ColorRanges color management
+        let colorRangesColorCount = 2;
+
+        function addColorRangesColor() {
+            colorRangesColorCount++;
+            const container = document.getElementById('colorRangesColorInputs');
+            const newColorDiv = document.createElement('div');
+            newColorDiv.className = 'param-row';
+            newColorDiv.innerHTML = `
+                <label class="param-label" for="colorRangesColor${colorRangesColorCount}">Color ${colorRangesColorCount}</label>
+                <input type="color" id="colorRangesColor${colorRangesColorCount}" value="#ffffff">
+            `;
+            container.appendChild(newColorDiv);
+        }
+
+        function removeColorRangesColor() {
+            if (colorRangesColorCount > 2) {
+                const container = document.getElementById('colorRangesColorInputs');
+                container.removeChild(container.lastChild);
+                colorRangesColorCount--;
+            }
+        }
+
+        // Load Ukraine flag preset
+        function loadUkraineFlag() {
+            // Reset to 2 colors
+            while (colorRangesColorCount > 2) {
+                removeColorRangesColor();
+            }
+            document.getElementById('colorRangesColor1').value = '#0057b7'; // Blue
+            document.getElementById('colorRangesColor2').value = '#ffd700'; // Yellow
+            document.getElementById('colorRangesRanges').value = ''; // Equal distribution
+        }
+
+        // Load Italian flag preset
+        function loadItalianFlag() {
+            // Ensure we have 3 colors
+            while (colorRangesColorCount < 3) {
+                addColorRangesColor();
+            }
+            while (colorRangesColorCount > 3) {
+                removeColorRangesColor();
+            }
+            document.getElementById('colorRangesColor1').value = '#008c45'; // Green
+            document.getElementById('colorRangesColor2').value = '#ffffff'; // White
+            document.getElementById('colorRangesColor3').value = '#cd212a'; // Red
+            document.getElementById('colorRangesRanges').value = ''; // Equal distribution
+        }
+
+        // Apply ColorRanges parameters
+        async function applyColorRangesParams() {
+            const colors = [];
+
+            // Collect all color values
+            for (let i = 1; i <= colorRangesColorCount; i++) {
+                const colorInput = document.getElementById(`colorRangesColor${i}`);
+                if (colorInput) {
+                    const hex = colorInput.value;
+                    const r = parseInt(hex.substr(1,2), 16);
+                    const g = parseInt(hex.substr(3,2), 16);
+                    const b = parseInt(hex.substr(5,2), 16);
+                    colors.push([r, g, b]);
+                }
+            }
+
+            // Parse ranges (optional)
+            const rangesText = document.getElementById('colorRangesRanges').value.trim();
+            let ranges = [];
+            if (rangesText) {
+                ranges = rangesText.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+
+                // Validate: should have colors.length - 1 ranges
+                if (ranges.length > 0 && ranges.length !== colors.length - 1) {
+                    alert(`Warning: For ${colors.length} colors, you need ${colors.length - 1} range value(s).\nYou provided ${ranges.length}. Using equal distribution instead.`);
+                    ranges = []; // Clear invalid ranges
+                }
+            }
+
+            const params = { colors };
+            if (ranges.length > 0) {
+                params.ranges = ranges;
+            }
+
+            console.log('ColorRanges params:', JSON.stringify(params));
+
+            try {
+                await fetch('/api/show', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: 'ColorRanges',
+                        params: params
+                    })
+                });
+                pendingParameterConfig = false;  // Applied successfully
+            } catch (error) {
+                console.error('Failed to apply ColorRanges parameters:', error);
             }
         }
 

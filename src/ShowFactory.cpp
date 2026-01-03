@@ -4,12 +4,14 @@
 
 #include "ShowFactory.h"
 #include "show/Rainbow.h"
+#include "show/ColorRanges.h"
 #include "show/ColorRun.h"
 #include "show/Mandelbrot.h"
 #include "show/Chaos.h"
 #include "show/Jump.h"
 #include "show/Solid.h"
 #include "show/TwoColorBlend.h"
+#include "color.h"
 
 #ifdef ARDUINO
 #include <ArduinoJson.h>
@@ -44,6 +46,15 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
     registerShow("TwoColorBlend", "Gradient between two colors", []() {
         return new Show::TwoColorBlend(255, 0, 0, 0, 0, 255); // Default: red to blue
     });
+
+    registerShow("ColorRanges", "Solid color sections (flags, patterns)", []() {
+        // Default: Ukraine flag (blue and yellow)
+        std::vector<Strip::Color> colors = {
+            color(0, 87, 183),    // Blue
+            color(255, 215, 0)    // Yellow
+        };
+        return new Show::ColorRanges(colors);
+    });
 }
 
 void ShowFactory::registerShow(const char* name, const char* description, ShowConstructor constructor) {
@@ -63,8 +74,8 @@ Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
     }
 
 #ifdef ARDUINO
-    // Parse JSON parameters
-    StaticJsonDocument<256> doc;
+    // Parse JSON parameters (increased size for ColorRanges with many colors)
+    StaticJsonDocument<512> doc;
     DeserializationError error = deserializeJson(doc, paramsJson);
 
     // If JSON parsing fails, use defaults
@@ -117,6 +128,63 @@ Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
         Serial.printf("ShowFactory: Creating TwoColorBlend color1 RGB(%d,%d,%d) to color2 RGB(%d,%d,%d)\n",
                      r1, g1, b1, r2, g2, b2);
         return new Show::TwoColorBlend(r1, g1, b1, r2, g2, b2);
+    }
+    else if (strcmp(name, "ColorRanges") == 0) {
+        // Parse ColorRanges parameters: {"colors":[[r1,g1,b1],[r2,g2,b2],...], "ranges":[33.3, 66.6]}
+        std::vector<Strip::Color> colors;
+        std::vector<float> ranges;
+
+        Serial.println("ShowFactory: Parsing ColorRanges parameters");
+        Serial.print("JSON: ");
+        serializeJson(doc, Serial);
+        Serial.println();
+
+        // Parse colors array
+        if (doc.containsKey("colors") && doc["colors"].is<JsonArray>()) {
+            JsonArray colorsArray = doc["colors"];
+            Serial.printf("Found %d colors in array\n", colorsArray.size());
+            for (JsonVariant colorVariant : colorsArray) {
+                if (colorVariant.is<JsonArray>()) {
+                    JsonArray colorArray = colorVariant;
+                    if (colorArray.size() >= 3) {
+                        uint8_t r = colorArray[0] | 0;
+                        uint8_t g = colorArray[1] | 0;
+                        uint8_t b = colorArray[2] | 0;
+                        colors.push_back(color(r, g, b));
+                        Serial.printf("  Color: RGB(%d,%d,%d)\n", r, g, b);
+                    }
+                }
+            }
+        }
+
+        // Parse ranges array (optional)
+        if (doc.containsKey("ranges")) {
+            Serial.println("Found 'ranges' key in JSON");
+            if (doc["ranges"].is<JsonArray>()) {
+                JsonArray rangesArray = doc["ranges"];
+                Serial.printf("Ranges array size: %d\n", rangesArray.size());
+                for (JsonVariant rangeVariant : rangesArray) {
+                    float rangeValue = rangeVariant.as<float>();
+                    ranges.push_back(rangeValue);
+                    Serial.printf("  Range: %.2f\n", rangeValue);
+                }
+            } else {
+                Serial.println("WARNING: 'ranges' exists but is not an array!");
+            }
+        } else {
+            Serial.println("No 'ranges' key in JSON");
+        }
+
+        // If no colors parsed, use default Ukraine flag
+        if (colors.empty()) {
+            Serial.println("No colors parsed, using default Ukraine flag");
+            colors.push_back(color(0, 87, 183));   // Blue
+            colors.push_back(color(255, 215, 0));  // Yellow
+        }
+
+        Serial.printf("ShowFactory: Creating ColorRanges with %zu colors and %zu ranges\n",
+                     colors.size(), ranges.size());
+        return new Show::ColorRanges(colors, ranges);
     }
     // Other shows don't support parameters yet, use default constructor
     else {

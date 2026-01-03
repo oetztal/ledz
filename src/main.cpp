@@ -15,6 +15,7 @@
 #include <codecvt>
 #endif
 #include "show/Chaos.h"
+#include "show/ColorRanges.h"
 #include "show/ColorRun.h"
 #include "show/Jump.h"
 #include "show/Mandelbrot.h"
