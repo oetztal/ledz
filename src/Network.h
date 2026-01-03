@@ -16,6 +16,7 @@
 
 #include "Status.h"
 #include "strip/Strip.h"
+#include "CaptivePortal.h"
 
 // Forward declarations
 namespace Config {
@@ -45,6 +46,7 @@ private:
     Status::Status &status;
     Config::ConfigManager &config;
     WebServerManager *webServer;
+    CaptivePortal captivePortal;
 
     /**
      * Start Access Point mode for configuration

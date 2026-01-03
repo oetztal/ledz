@@ -320,6 +320,19 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             margin-top: 5px;
             font-style: italic;
         }
+        .about-link {
+            display: block;
+            text-align: center;
+            padding: 15px;
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            border-top: 1px solid #e9ecef;
+        }
+        .about-link:hover {
+            background-color: #f8f9fa;
+        }
     </style>
 </head>
 <body>
@@ -367,6 +380,8 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 </div>
             </div>
         </div>
+
+        <a href="/about" class="about-link">Device Information</a>
     </div>
 
     <script>
@@ -667,6 +682,231 @@ void WebServerManager::setupAPIRoutes() {
             }
         }
     );
+
+    // GET /api/about - Device information
+    server.on("/api/about", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        StaticJsonDocument<1024> doc;
+
+        // Device info
+        Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
+        doc["device_id"] = deviceConfig.device_id;
+
+        // Chip info
+        doc["chip_model"] = ESP.getChipModel();
+        doc["chip_revision"] = ESP.getChipRevision();
+        doc["chip_cores"] = ESP.getChipCores();
+        doc["cpu_freq_mhz"] = ESP.getCpuFreqMHz();
+
+        // Memory info
+        doc["free_heap"] = ESP.getFreeHeap();
+        doc["heap_size"] = ESP.getHeapSize();
+        doc["min_free_heap"] = ESP.getMinFreeHeap();
+        doc["psram_size"] = ESP.getPsramSize();
+
+        // Flash info
+        doc["flash_size"] = ESP.getFlashChipSize();
+        doc["flash_speed"] = ESP.getFlashChipSpeed();
+
+        // Runtime info
+        doc["uptime_ms"] = millis();
+
+        // Network info
+        if (WiFi.status() == WL_CONNECTED) {
+            doc["wifi_ssid"] = WiFi.SSID();
+            doc["wifi_rssi"] = WiFi.RSSI();
+            doc["ip_address"] = WiFi.localIP().toString();
+            doc["mac_address"] = WiFi.macAddress();
+        } else if (WiFi.getMode() == WIFI_AP) {
+            doc["ap_ssid"] = WiFi.softAPgetHostname();
+            doc["ap_ip"] = WiFi.softAPIP().toString();
+            doc["ap_clients"] = WiFi.softAPgetStationNum();
+        }
+
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+
+    // GET /about - About page
+    server.on("/about", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(200, "text/html", R"rawliteral(
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - LED Controller</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 28px; margin-bottom: 10px; }
+        .nav {
+            padding: 10px 20px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .nav a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .content { padding: 30px; }
+        .info-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .info-section:last-child { border-bottom: none; }
+        .info-section h2 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+        .info-label {
+            font-size: 14px;
+            color: #6c757d;
+        }
+        .info-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+        .refresh-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .refresh-btn:hover { background-color: #5568d3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Device Information</h1>
+        </div>
+        <div class="nav">
+            <a href="/">&larr; Back to Control</a>
+        </div>
+        <div class="content">
+            <div class="info-section">
+                <h2>Device</h2>
+                <div id="deviceInfo"></div>
+            </div>
+            <div class="info-section">
+                <h2>Hardware</h2>
+                <div id="hardwareInfo"></div>
+            </div>
+            <div class="info-section">
+                <h2>Memory</h2>
+                <div id="memoryInfo"></div>
+            </div>
+            <div class="info-section">
+                <h2>Network</h2>
+                <div id="networkInfo"></div>
+            </div>
+            <button class="refresh-btn" onclick="loadInfo()">Refresh</button>
+        </div>
+    </div>
+    <script>
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+        function formatUptime(ms) {
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+            if (days > 0) return days + 'd ' + (hours % 24) + 'h';
+            if (hours > 0) return hours + 'h ' + (minutes % 60) + 'm';
+            return minutes + 'm ' + (seconds % 60) + 's';
+        }
+        function createRow(label, value) {
+            return `<div class="info-row"><span class="info-label">${label}</span><span class="info-value">${value}</span></div>`;
+        }
+        async function loadInfo() {
+            try {
+                const response = await fetch('/api/about');
+                const data = await response.json();
+
+                document.getElementById('deviceInfo').innerHTML =
+                    createRow('Device ID', data.device_id) +
+                    createRow('Uptime', formatUptime(data.uptime_ms));
+
+                document.getElementById('hardwareInfo').innerHTML =
+                    createRow('Chip Model', data.chip_model) +
+                    createRow('Chip Revision', data.chip_revision) +
+                    createRow('CPU Cores', data.chip_cores) +
+                    createRow('CPU Frequency', data.cpu_freq_mhz + ' MHz');
+
+                const heapUsage = ((data.heap_size - data.free_heap) / data.heap_size * 100).toFixed(1);
+                document.getElementById('memoryInfo').innerHTML =
+                    createRow('Free Heap', formatBytes(data.free_heap)) +
+                    createRow('Total Heap', formatBytes(data.heap_size)) +
+                    createRow('Heap Usage', heapUsage + '%') +
+                    createRow('Min Free Heap', formatBytes(data.min_free_heap)) +
+                    createRow('Flash Size', formatBytes(data.flash_size));
+
+                let networkHTML = '';
+                if (data.wifi_ssid) {
+                    networkHTML =
+                        createRow('Status', 'Connected') +
+                        createRow('SSID', data.wifi_ssid) +
+                        createRow('Signal', data.wifi_rssi + ' dBm') +
+                        createRow('IP Address', data.ip_address) +
+                        createRow('MAC Address', data.mac_address);
+                } else if (data.ap_ssid) {
+                    networkHTML =
+                        createRow('Status', 'Access Point') +
+                        createRow('SSID', data.ap_ssid) +
+                        createRow('IP Address', data.ap_ip) +
+                        createRow('Clients', data.ap_clients);
+                } else {
+                    networkHTML = createRow('Status', 'Disconnected');
+                }
+                document.getElementById('networkInfo').innerHTML = networkHTML;
+            } catch (error) {
+                console.error('Failed to load device info:', error);
+            }
+        }
+        loadInfo();
+    </script>
+</body>
+</html>
+        )rawliteral");
+    });
 #endif
 }
 

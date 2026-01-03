@@ -37,6 +37,7 @@ namespace Config {
         prefs.begin(NAMESPACE, true); // Read-only mode
 
         config.configured = prefs.getBool("configured", false);
+        config.connection_failures = prefs.getUChar("wifi_failures", 0);
 
         if (config.configured) {
             prefs.getString("wifi_ssid", config.ssid, sizeof(config.ssid));
@@ -155,6 +156,38 @@ namespace Config {
         return String(id);
 #else
         return String("LEDCtrl-000000");
+#endif
+    }
+
+    uint8_t ConfigManager::incrementConnectionFailures() {
+#ifdef ARDUINO
+        prefs.begin(NAMESPACE, false); // Read-write mode
+        uint8_t failures = prefs.getUChar("wifi_failures", 0);
+        failures++;
+        prefs.putUChar("wifi_failures", failures);
+        prefs.end();
+        return failures;
+#else
+        return 0;
+#endif
+    }
+
+    void ConfigManager::resetConnectionFailures() {
+#ifdef ARDUINO
+        prefs.begin(NAMESPACE, false); // Read-write mode
+        prefs.putUChar("wifi_failures", 0);
+        prefs.end();
+#endif
+    }
+
+    uint8_t ConfigManager::getConnectionFailures() {
+#ifdef ARDUINO
+        prefs.begin(NAMESPACE, true); // Read-only mode
+        uint8_t failures = prefs.getUChar("wifi_failures", 0);
+        prefs.end();
+        return failures;
+#else
+        return 0;
 #endif
     }
 

@@ -19,8 +19,9 @@ namespace Config {
         char ssid[64];
         char password[64];
         bool configured;
+        uint8_t connection_failures;  // Track consecutive connection failures
 
-        WiFiConfig() : configured(false) {
+        WiFiConfig() : configured(false), connection_failures(0) {
             ssid[0] = '\0';
             password[0] = '\0';
         }
@@ -126,6 +127,23 @@ namespace Config {
          * @return Device ID string (e.g., "LEDCtrl-AABBCC")
          */
         String getDeviceId();
+
+        /**
+         * Increment WiFi connection failure counter
+         * @return New failure count
+         */
+        uint8_t incrementConnectionFailures();
+
+        /**
+         * Reset WiFi connection failure counter
+         */
+        void resetConnectionFailures();
+
+        /**
+         * Get WiFi connection failure count
+         * @return Number of consecutive failures
+         */
+        uint8_t getConnectionFailures();
     };
 
 } // namespace Config

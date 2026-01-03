@@ -1,0 +1,54 @@
+//
+// Created by Claude Code on 03.01.26.
+//
+// CaptivePortal - DNS server for captive portal functionality
+// Redirects all DNS queries to the device IP in AP mode
+//
+
+#ifndef UNTITLED_CAPTIVEPORTAL_H
+#define UNTITLED_CAPTIVEPORTAL_H
+
+#ifdef ARDUINO
+#include <DNSServer.h>
+#include <WiFi.h>
+#endif
+
+/**
+ * CaptivePortal
+ * Simple DNS server wrapper that redirects all queries to the AP IP
+ * This causes phones/tablets to automatically open the config page
+ */
+class CaptivePortal {
+private:
+#ifdef ARDUINO
+    DNSServer dnsServer;
+#endif
+    bool running;
+
+public:
+    CaptivePortal();
+
+    /**
+     * Start the captive portal
+     * Starts DNS server on port 53, redirecting all queries to AP IP
+     */
+    void begin();
+
+    /**
+     * Process DNS requests
+     * Must be called regularly from main loop or task
+     */
+    void handleClient();
+
+    /**
+     * Stop the captive portal
+     */
+    void end();
+
+    /**
+     * Check if captive portal is running
+     */
+    bool isRunning() const { return running; }
+};
+
+#endif //UNTITLED_CAPTIVEPORTAL_H

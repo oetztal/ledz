@@ -46,6 +46,9 @@ void Network::startAP() {
     Serial.print("AP IP address: ");
     Serial.println(IP);
 
+    // Start captive portal (redirects all DNS to this device)
+    captivePortal.begin();
+
     status.connecting(); // Use connecting status for AP mode
 #endif
 }
@@ -106,12 +109,39 @@ void Network::startSTA(const char* ssid, const char* password) {
 
         // Wait for configuration
         while (!config.isConfigured()) {
+            captivePortal.handleClient(); // Handle DNS requests
             vTaskDelay(100 / portTICK_PERIOD_MS);
         }
 
-        Serial.println("Configuration received - restarting...");
+        Serial.println("Configuration received - stopping captive portal...");
+        captivePortal.end();
+
+        Serial.println("Restarting...");
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         ESP.restart();
+    }
+
+    // Check connection failure count
+    uint8_t failures = config.getConnectionFailures();
+    Serial.print("Previous connection failures: ");
+    Serial.println(failures);
+
+    if (failures >= 3) {
+        Serial.println("Too many connection failures - starting AP mode for reconfiguration");
+
+        // Start Access Point mode for reconfiguration
+        startAP();
+
+        // Start webserver (if available)
+        if (webServer != nullptr) {
+            webServer->begin();
+        }
+
+        // Stay in AP mode until user reconfigures or manually restarts
+        while (true) {
+            captivePortal.handleClient(); // Handle DNS requests
+            vTaskDelay(100 / portTICK_PERIOD_MS);
+        }
     }
 
     // Load WiFi configuration
@@ -122,12 +152,21 @@ void Network::startSTA(const char* ssid, const char* password) {
     // Start Station mode
     startSTA(wifiConfig.ssid, wifiConfig.password);
 
-    // If connection failed, restart to AP mode
+    // Check if connection succeeded
     if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("Failed to connect - restarting to AP mode...");
+        Serial.println("Failed to connect - incrementing failure counter");
+        uint8_t newFailures = config.incrementConnectionFailures();
+        Serial.print("New failure count: ");
+        Serial.println(newFailures);
+
+        Serial.println("Restarting...");
         vTaskDelay(2000 / portTICK_PERIOD_MS);
         ESP.restart();
     }
+
+    // Connection successful - reset failure counter
+    Serial.println("Connected successfully - resetting failure counter");
+    config.resetConnectionFailures();
 
     // Start webserver (if available)
     if (webServer != nullptr) {
