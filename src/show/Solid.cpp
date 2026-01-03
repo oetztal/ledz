@@ -5,6 +5,10 @@
 #include "Solid.h"
 #include "../color.h"
 
+#ifdef ARDUINO
+#include <Arduino.h>
+#endif
+
 namespace Show {
 
     Solid::Solid() : Solid(255, 255, 255) {
@@ -12,11 +16,13 @@ namespace Show {
     }
 
     Solid::Solid(uint8_t red, uint8_t green, uint8_t blue)
-        : target_color(color(red, green, blue)), blend_complete(true) {
+        : target_color(color(red, green, blue)), blend_complete(false) {
+        // Start with blend_complete=false to trigger smooth transition
     }
 
     Solid::Solid(Strip::Color color)
-        : target_color(color), blend_complete(true) {
+        : target_color(color), blend_complete(false) {
+        // Start with blend_complete=false to trigger smooth transition
     }
 
     void Solid::setColor(uint8_t red, uint8_t green, uint8_t blue) {
@@ -32,6 +38,9 @@ namespace Show {
     void Solid::execute(Strip::Strip &strip, Iteration iteration) {
         // If we need to start a blend and don't have one yet
         if (!blend_complete && blend == nullptr) {
+#ifdef ARDUINO
+            Serial.println("Solid: Starting new blend");
+#endif
             blend.reset(new Support::SmoothBlend(strip, target_color));
         }
 
@@ -40,6 +49,9 @@ namespace Show {
             blend->step();
         } else if (blend != nullptr) {
             // Blend just completed
+#ifdef ARDUINO
+            Serial.println("Solid: Blend completed");
+#endif
             blend.reset();
             blend_complete = true;
         }

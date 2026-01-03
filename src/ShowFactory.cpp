@@ -29,7 +29,7 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
     });
 
     registerShow("Chaos", "Chaotic pattern", []() {
-        return new Show::Chaos();
+        return new Show::Chaos(2.95f, 4.0f, 0.0002f);
     });
 
     registerShow("Jump", "Jumping lights", []() {
@@ -91,6 +91,15 @@ Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
         Serial.printf("ShowFactory: Creating Mandelbrot Cre0=%.4f, Cim0=%.4f, Cim1=%.4f, scale=%u, max_iter=%u, color_scale=%u\n",
                      Cre0, Cim0, Cim1, scale, max_iterations, color_scale);
         return new Show::Mandelbrot(Cre0, Cim0, Cim1, scale, max_iterations, color_scale);
+    }
+    else if (strcmp(name, "Chaos") == 0) {
+        // Parse Chaos parameters: {"Rmin":2.95, "Rmax":4.0, "Rdelta":0.0002}
+        float Rmin = doc["Rmin"] | 2.95f;
+        float Rmax = doc["Rmax"] | 4.0f;
+        float Rdelta = doc["Rdelta"] | 0.0002f;
+        Serial.printf("ShowFactory: Creating Chaos Rmin=%.4f, Rmax=%.4f, Rdelta=%.6f\n",
+                     Rmin, Rmax, Rdelta);
+        return new Show::Chaos(Rmin, Rmax, Rdelta);
     }
     // Other shows don't support parameters yet, use default constructor
     else {

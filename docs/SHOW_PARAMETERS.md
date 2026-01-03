@@ -7,6 +7,7 @@ The LED Controller now supports configurable parameters for shows. Parameters ar
 **✅ Web UI Implemented**: The control interface now includes parameter controls that automatically appear based on the selected show:
 - **Solid Show**: Color picker for RGB selection
 - **Mandelbrot Show**: Input fields for Cre0, Cim0, Cim1 (complex plane coordinates), scale, max_iterations, and color_scale
+- **Chaos Show**: Input fields for Rmin, Rmax, and Rdelta (logistic map parameters)
 
 ## Architecture
 

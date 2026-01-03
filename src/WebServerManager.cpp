@@ -460,6 +460,22 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                     </div>
                     <button class="apply-button" onclick="applyMandelbrotParams()">Apply Parameters</button>
                 </div>
+
+                <div id="chaosParams" class="params-section">
+                    <div class="param-row">
+                        <label class="param-label" for="chaosRmin">Rmin (Start)</label>
+                        <input type="number" id="chaosRmin" step="0.01" value="2.95">
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="chaosRmax">Rmax (Maximum)</label>
+                        <input type="number" id="chaosRmax" step="0.01" value="4.0">
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="chaosRdelta">Rdelta (Increment)</label>
+                        <input type="number" id="chaosRdelta" step="0.0001" value="0.0002">
+                    </div>
+                    <button class="apply-button" onclick="applyChaosParams()">Apply Parameters</button>
+                </div>
             </div>
 
             <div class="control-group">
@@ -487,16 +503,20 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
     <script>
         let shows = [];
         let currentStatus = {};
+        let pendingParameterConfig = false;  // Track if user is configuring parameters
 
         // Show/hide parameter sections based on selected show
         function updateParameterVisibility(showName) {
             document.getElementById('solidParams').classList.remove('visible');
             document.getElementById('mandelbrotParams').classList.remove('visible');
+            document.getElementById('chaosParams').classList.remove('visible');
 
             if (showName === 'Solid') {
                 document.getElementById('solidParams').classList.add('visible');
             } else if (showName === 'Mandelbrot') {
                 document.getElementById('mandelbrotParams').classList.add('visible');
+            } else if (showName === 'Chaos') {
+                document.getElementById('chaosParams').classList.add('visible');
             }
         }
 
@@ -516,6 +536,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                         params: { r, g, b }
                     })
                 });
+                pendingParameterConfig = false;  // Applied successfully
             } catch (error) {
                 console.error('Failed to apply color:', error);
             }
@@ -539,8 +560,30 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                         params: { Cre0, Cim0, Cim1, scale, max_iterations, color_scale }
                     })
                 });
+                pendingParameterConfig = false;  // Applied successfully
             } catch (error) {
                 console.error('Failed to apply Mandelbrot parameters:', error);
+            }
+        }
+
+        // Apply Chaos parameters
+        async function applyChaosParams() {
+            const Rmin = parseFloat(document.getElementById('chaosRmin').value);
+            const Rmax = parseFloat(document.getElementById('chaosRmax').value);
+            const Rdelta = parseFloat(document.getElementById('chaosRdelta').value);
+
+            try {
+                await fetch('/api/show', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: 'Chaos',
+                        params: { Rmin, Rmax, Rdelta }
+                    })
+                });
+                pendingParameterConfig = false;  // Applied successfully
+            } catch (error) {
+                console.error('Failed to apply Chaos parameters:', error);
             }
         }
 
@@ -579,8 +622,9 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 document.getElementById('currentBrightness').textContent = currentStatus.brightness;
 
                 // Update UI controls without triggering change events
+                // Don't override dropdown if user is configuring parameters
                 const showSelect = document.getElementById('showSelect');
-                if (showSelect.value !== currentStatus.current_show) {
+                if (!pendingParameterConfig && showSelect.value !== currentStatus.current_show) {
                     showSelect.value = currentStatus.current_show;
                     const selectedShow = shows.find(s => s.name === currentStatus.current_show);
                     document.getElementById('showDescription').textContent =
@@ -604,6 +648,16 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
         // Show change handler
         document.getElementById('showSelect').addEventListener('change', async (e) => {
             const showName = e.target.value;
+
+            // Don't auto-apply for shows with parameters - wait for user to click Apply button
+            if (showName === 'Solid' || showName === 'Mandelbrot' || showName === 'Chaos') {
+                pendingParameterConfig = true;  // User is now configuring parameters
+                return;
+            }
+
+            // User selected a show without parameters
+            pendingParameterConfig = false;
+
             try {
                 await fetch('/api/show', {
                     method: 'POST',
@@ -775,10 +829,12 @@ void WebServerManager::setupAPIRoutes() {
                 }
 
                 // Get parameters if provided
-                String paramsJson = "{}";
+                String paramsJson;
                 if (doc.containsKey("params")) {
                     JsonObject params = doc["params"];
                     serializeJson(params, paramsJson);
+                } else {
+                    paramsJson = "{}";
                 }
 
                 if (showController->queueShowChange(showName, paramsJson.c_str())) {
