@@ -1,0 +1,83 @@
+//
+// Created by Claude Code on 03.01.26.
+//
+// WebServer Manager - handles HTTP server and API endpoints
+//
+
+#ifndef UNTITLED_WEBSERVERMANAGER_H
+#define UNTITLED_WEBSERVERMANAGER_H
+
+#ifdef ARDUINO
+#include <ESPAsyncWebServer.h>
+#include <Arduino.h>
+#endif
+
+// Forward declarations
+namespace Config {
+    class ConfigManager;
+}
+
+class Network;
+class ShowController;
+class ShowFactory;
+
+/**
+ * WebServer Manager
+ * Manages HTTP server and API endpoints for WiFi configuration
+ * and LED show control
+ */
+class WebServerManager {
+private:
+#ifdef ARDUINO
+    AsyncWebServer server;
+#endif
+
+    Config::ConfigManager &config;
+    Network &network;
+    ShowController *showController;
+    ShowFactory *showFactory;
+
+    /**
+     * Setup WiFi configuration routes
+     */
+    void setupConfigRoutes();
+
+    /**
+     * Setup API routes for show control
+     */
+    void setupAPIRoutes();
+
+    /**
+     * Handle WiFi configuration POST request
+     */
+#ifdef ARDUINO
+    void handleWiFiConfig(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total);
+#endif
+
+public:
+    /**
+     * WebServerManager constructor
+     * @param config Configuration manager reference
+     * @param network Network manager reference
+     */
+    WebServerManager(Config::ConfigManager &config, Network &network);
+
+    /**
+     * Set show controller (must be called before begin)
+     * @param controller ShowController pointer
+     * @param factory ShowFactory pointer
+     */
+    void setShowController(ShowController *controller, ShowFactory *factory);
+
+    /**
+     * Start the webserver
+     */
+    void begin();
+
+    /**
+     * Stop the webserver
+     */
+    void end();
+};
+
+#endif //UNTITLED_WEBSERVERMANAGER_H
