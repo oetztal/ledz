@@ -476,6 +476,18 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                     </div>
                     <button class="apply-button" onclick="applyChaosParams()">Apply Parameters</button>
                 </div>
+
+                <div id="twoColorBlendParams" class="params-section">
+                    <div class="param-row">
+                        <label class="param-label" for="twoColorBlendColor1">Start Color</label>
+                        <input type="color" id="twoColorBlendColor1" value="#ff0000">
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="twoColorBlendColor2">End Color</label>
+                        <input type="color" id="twoColorBlendColor2" value="#0000ff">
+                    </div>
+                    <button class="apply-button" onclick="applyTwoColorBlendParams()">Apply Colors</button>
+                </div>
             </div>
 
             <div class="control-group">
@@ -523,6 +535,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             document.getElementById('solidParams').classList.remove('visible');
             document.getElementById('mandelbrotParams').classList.remove('visible');
             document.getElementById('chaosParams').classList.remove('visible');
+            document.getElementById('twoColorBlendParams').classList.remove('visible');
 
             if (showName === 'Solid') {
                 document.getElementById('solidParams').classList.add('visible');
@@ -530,6 +543,8 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 document.getElementById('mandelbrotParams').classList.add('visible');
             } else if (showName === 'Chaos') {
                 document.getElementById('chaosParams').classList.add('visible');
+            } else if (showName === 'TwoColorBlend') {
+                document.getElementById('twoColorBlendParams').classList.add('visible');
             }
         }
 
@@ -597,6 +612,33 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 pendingParameterConfig = false;  // Applied successfully
             } catch (error) {
                 console.error('Failed to apply Chaos parameters:', error);
+            }
+        }
+
+        // Apply TwoColorBlend parameters
+        async function applyTwoColorBlendParams() {
+            const hex1 = document.getElementById('twoColorBlendColor1').value;
+            const r1 = parseInt(hex1.substr(1,2), 16);
+            const g1 = parseInt(hex1.substr(3,2), 16);
+            const b1 = parseInt(hex1.substr(5,2), 16);
+
+            const hex2 = document.getElementById('twoColorBlendColor2').value;
+            const r2 = parseInt(hex2.substr(1,2), 16);
+            const g2 = parseInt(hex2.substr(3,2), 16);
+            const b2 = parseInt(hex2.substr(5,2), 16);
+
+            try {
+                await fetch('/api/show', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: 'TwoColorBlend',
+                        params: { r1, g1, b1, r2, g2, b2 }
+                    })
+                });
+                pendingParameterConfig = false;  // Applied successfully
+            } catch (error) {
+                console.error('Failed to apply TwoColorBlend parameters:', error);
             }
         }
 

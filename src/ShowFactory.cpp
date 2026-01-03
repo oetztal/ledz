@@ -9,6 +9,7 @@
 #include "show/Chaos.h"
 #include "show/Jump.h"
 #include "show/Solid.h"
+#include "show/TwoColorBlend.h"
 
 #ifdef ARDUINO
 #include <ArduinoJson.h>
@@ -38,6 +39,10 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
 
     registerShow("Solid", "Solid color (default: white)", []() {
         return new Show::Solid(255, 255, 255); // Default to white
+    });
+
+    registerShow("TwoColorBlend", "Gradient between two colors", []() {
+        return new Show::TwoColorBlend(255, 0, 0, 0, 0, 255); // Default: red to blue
     });
 }
 
@@ -100,6 +105,18 @@ Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
         Serial.printf("ShowFactory: Creating Chaos Rmin=%.4f, Rmax=%.4f, Rdelta=%.6f\n",
                      Rmin, Rmax, Rdelta);
         return new Show::Chaos(Rmin, Rmax, Rdelta);
+    }
+    else if (strcmp(name, "TwoColorBlend") == 0) {
+        // Parse TwoColorBlend parameters: {"r1":255, "g1":0, "b1":0, "r2":0, "g2":0, "b2":255}
+        uint8_t r1 = doc["r1"] | 255;  // Default to red
+        uint8_t g1 = doc["g1"] | 0;
+        uint8_t b1 = doc["b1"] | 0;
+        uint8_t r2 = doc["r2"] | 0;    // Default to blue
+        uint8_t g2 = doc["g2"] | 0;
+        uint8_t b2 = doc["b2"] | 255;
+        Serial.printf("ShowFactory: Creating TwoColorBlend color1 RGB(%d,%d,%d) to color2 RGB(%d,%d,%d)\n",
+                     r1, g1, b1, r2, g2, b2);
+        return new Show::TwoColorBlend(r1, g1, b1, r2, g2, b2);
     }
     // Other shows don't support parameters yet, use default constructor
     else {

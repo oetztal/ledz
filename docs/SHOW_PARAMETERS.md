@@ -8,6 +8,7 @@ The LED Controller now supports configurable parameters for shows. Parameters ar
 - **Solid Show**: Color picker for RGB selection
 - **Mandelbrot Show**: Input fields for Cre0, Cim0, Cim1 (complex plane coordinates), scale, max_iterations, and color_scale
 - **Chaos Show**: Input fields for Rmin, Rmax, and Rdelta (logistic map parameters)
+- **TwoColorBlend Show**: Two color pickers for start and end gradient colors
 
 ## Architecture
 
@@ -70,6 +71,13 @@ curl -X POST http://192.168.1.100/api/show \
   -d '{"name":"Chaos","params":{"Rmin":3.5,"Rmax":4.0,"Rdelta":0.001}}'
 ```
 
+**Example: Set TwoColorBlend Parameters**
+```bash
+curl -X POST http://192.168.1.100/api/show \
+  -H "Content-Type: application/json" \
+  -d '{"name":"TwoColorBlend","params":{"r1":255,"g1":0,"b1":0,"r2":0,"g2":0,"b2":255}}'
+```
+
 ## Supported Shows & Parameters
 
 ### Solid
@@ -112,6 +120,24 @@ curl -X POST http://192.168.1.100/api/show \
 {"Rmin": 2.95, "Rmax": 4.0, "Rdelta": 0.0002}  // Default - slow evolution
 {"Rmin": 3.5, "Rmax": 4.0, "Rdelta": 0.001}    // Faster evolution, starting in chaotic region
 {"Rmin": 2.8, "Rmax": 3.6, "Rdelta": 0.0001}   // Slower, exploring period-doubling
+```
+
+### TwoColorBlend
+**Parameters**:
+- `r1` (uint8_t, 0-255): Red component of start color (default: 255)
+- `g1` (uint8_t, 0-255): Green component of start color (default: 0)
+- `b1` (uint8_t, 0-255): Blue component of start color (default: 0)
+- `r2` (uint8_t, 0-255): Red component of end color (default: 0)
+- `g2` (uint8_t, 0-255): Green component of end color (default: 0)
+- `b2` (uint8_t, 0-255): Blue component of end color (default: 255)
+
+**Description**: Creates a smooth linear gradient from color1 (start of strip) to color2 (end of strip) with automatic smooth blending via SmoothBlend.
+
+**Example JSON**:
+```json
+{"r1": 255, "g1": 0, "b1": 0, "r2": 0, "g2": 0, "b2": 255}    // Red to Blue gradient
+{"r1": 255, "g1": 255, "b1": 0, "r2": 128, "g2": 0, "b2": 128}  // Yellow to Purple gradient
+{"r1": 0, "g1": 255, "b1": 0, "r2": 255, "g2": 255, "b2": 0}    // Green to Yellow gradient
 ```
 
 ### Other Shows
