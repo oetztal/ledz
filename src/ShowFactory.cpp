@@ -14,6 +14,7 @@
 #include "show/TwoColorBlend.h"
 #include "show/Wave.h"
 #include "show/MorseCode.h"
+#include "show/TheaterChase.h"
 #include "color.h"
 
 #ifdef ARDUINO
@@ -57,6 +58,10 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
 
     registerShow("Wave", "Propagating wave with rainbow colors", []() {
         return new Show::Wave(); // Default: 1.0 speed, 2.0 decay, 0.1 freq, 6.0 wavelength
+    });
+
+    registerShow("TheaterChase", "Marquee-style chase with rainbow colors", []() {
+        return new Show::TheaterChase(); // Default: 21 steps per cycle
     });
 
     registerShow("MorseCode", "Scrolling Morse code text display", []() {
@@ -239,6 +244,14 @@ Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
                      message.c_str(), speed, dot_length, dash_length);
         return new Show::MorseCode(message.c_str(), speed, dot_length, dash_length,
                                    symbol_space, letter_space, word_space);
+    }
+    else if (strcmp(name, "TheaterChase") == 0) {
+        // Parse TheaterChase parameters: {"num_steps_per_cycle":21}
+        unsigned int num_steps_per_cycle = doc["num_steps_per_cycle"] | 21;
+
+        Serial.printf("ShowFactory: Creating TheaterChase num_steps_per_cycle=%u\n",
+                     num_steps_per_cycle);
+        return new Show::TheaterChase(num_steps_per_cycle);
     }
     // Other shows don't support parameters yet, use default constructor
     else {

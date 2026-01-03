@@ -569,7 +569,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 <div id="starlightParams" class="params-section">
                     <div class="param-row">
                         <label class="param-label" for="starlightProbability">Spawn Probability (0.0-1.0)</label>
-                        <input type="number" id="starlightProbability" step="0.01" min="0" max="1" value="0.1">
+                        <input type="number" id="starlightProbability" step="0.01" min="0" max="1" value="0.01">
                         <small style="display:block; margin-top:4px; color:#666;">Higher = more stars spawn per frame</small>
                     </div>
                     <div class="param-row">
@@ -617,22 +617,22 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 <div id="morseCodeParams" class="params-section">
                     <div class="param-row">
                         <label class="param-label" for="morseMessage">Message</label>
-                        <input type="text" id="morseMessage" value="HELLO" style="width:100%; padding:8px;">
+                        <input type="text" id="morseMessage" value="HELLO WORLD!" style="width:100%; padding:8px;">
                         <small style="display:block; margin-top:4px; color:#666;">Text to encode in Morse code (letters, numbers, basic punctuation)</small>
                     </div>
                     <div class="param-row">
                         <label class="param-label" for="morseSpeed">Scroll Speed</label>
-                        <input type="number" id="morseSpeed" step="0.1" min="0.1" max="5" value="0.5">
+                        <input type="number" id="morseSpeed" step="0.1" min="0.1" max="5" value="0.2">
                         <small style="display:block; margin-top:4px; color:#666;">Higher = faster scrolling (LEDs per frame)</small>
                     </div>
                     <div class="param-row">
                         <label class="param-label" for="morseDotLength">Dot Length</label>
-                        <input type="number" id="morseDotLength" step="1" min="1" max="10" value="2">
+                        <input type="number" id="morseDotLength" step="1" min="1" max="10" value="1">
                         <small style="display:block; margin-top:4px; color:#666;">Number of LEDs per dot</small>
                     </div>
                     <div class="param-row">
                         <label class="param-label" for="morseDashLength">Dash Length</label>
-                        <input type="number" id="morseDashLength" step="1" min="1" max="20" value="4">
+                        <input type="number" id="morseDashLength" step="1" min="1" max="20" value="3">
                         <small style="display:block; margin-top:4px; color:#666;">Number of LEDs per dash (typically 2-3x dot length)</small>
                     </div>
                     <div class="param-row">
@@ -651,6 +651,15 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                         <small style="display:block; margin-top:4px; color:#666;">Dark LEDs between words</small>
                     </div>
                     <button class="apply-button" onclick="applyMorseCodeParams()">Apply Parameters</button>
+                </div>
+
+                <div id="theaterChaseParams" class="params-section">
+                    <div class="param-row">
+                        <label class="param-label" for="theaterStepsPerCycle">Steps per Color Cycle</label>
+                        <input type="number" id="theaterStepsPerCycle" step="7" min="7" max="140" value="21">
+                        <small style="display:block; margin-top:4px; color:#666;">Number of steps for one complete rainbow cycle (multiple of 7 recommended)</small>
+                    </div>
+                    <button class="apply-button" onclick="applyTheaterChaseParams()">Apply Parameters</button>
                 </div>
             </div>
 
@@ -707,6 +716,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             document.getElementById('starlightParams').classList.remove('visible');
             document.getElementById('waveParams').classList.remove('visible');
             document.getElementById('morseCodeParams').classList.remove('visible');
+            document.getElementById('theaterChaseParams').classList.remove('visible');
 
             if (showName === 'Solid') {
                 document.getElementById('solidParams').classList.add('visible');
@@ -724,6 +734,8 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 document.getElementById('waveParams').classList.add('visible');
             } else if (showName === 'MorseCode') {
                 document.getElementById('morseCodeParams').classList.add('visible');
+            } else if (showName === 'TheaterChase') {
+                document.getElementById('theaterChaseParams').classList.add('visible');
             }
         }
 
@@ -993,6 +1005,26 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 pendingParameterConfig = false;  // Applied successfully
             } catch (error) {
                 console.error('Failed to apply MorseCode parameters:', error);
+            }
+        }
+
+        // Apply TheaterChase parameters
+        async function applyTheaterChaseParams() {
+            const num_steps_per_cycle = parseInt(document.getElementById('theaterStepsPerCycle').value);
+
+            try {
+                pendingParameterConfig = true;
+                await fetch('/api/show', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: 'TheaterChase',
+                        params: { num_steps_per_cycle }
+                    })
+                });
+                pendingParameterConfig = false;  // Applied successfully
+            } catch (error) {
+                console.error('Failed to apply TheaterChase parameters:', error);
             }
         }
 

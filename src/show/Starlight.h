@@ -49,7 +49,7 @@ namespace Show {
          * @param g Green component of star color (default: 180)
          * @param b Blue component of star color (default: 50)
          */
-        Starlight(float probability = 0.1f,
+        Starlight(float probability = 0.01f,
                   unsigned long length_ms = 5000,
                   unsigned long fade_ms = 1000,
                   uint8_t r = 255,
