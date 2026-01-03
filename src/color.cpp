@@ -26,3 +26,15 @@ Strip::Color wheel(unsigned char wheel_pos) {
 Strip::Color color(Strip::ColorComponent red, Strip::ColorComponent green, Strip::ColorComponent blue) {
     return (red << 16) + (green << 8) + blue;
 }
+
+Strip::ColorComponent red(Strip::Color color) {
+    return (color >> 16) & 0xFF;
+}
+
+Strip::ColorComponent green(Strip::Color color) {
+    return (color >> 8) & 0xFF;
+}
+
+Strip::ColorComponent blue(Strip::Color color) {
+    return color & 0xFF;
+}
