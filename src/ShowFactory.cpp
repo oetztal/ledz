@@ -13,6 +13,7 @@
 #include "show/Starlight.h"
 #include "show/TwoColorBlend.h"
 #include "show/Wave.h"
+#include "show/MorseCode.h"
 #include "color.h"
 
 #ifdef ARDUINO
@@ -64,6 +65,10 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
 
     registerShow("Wave", "Propagating wave with rainbow colors", []() {
         return new Show::Wave(); // Default: 1.0 speed, 2.0 decay, 0.1 freq, 6.0 wavelength
+    });
+
+    registerShow("MorseCode", "Scrolling Morse code text display", []() {
+        return new Show::MorseCode(); // Default: "HELLO", 0.5 speed
     });
 }
 
@@ -219,6 +224,21 @@ Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
         Serial.printf("ShowFactory: Creating Wave speed=%.2f, decay=%.2f, freq=%.2f, wavelength=%.2f\n",
                      wave_speed, decay_rate, brightness_frequency, wavelength);
         return new Show::Wave(wave_speed, decay_rate, brightness_frequency, wavelength);
+    }
+    else if (strcmp(name, "MorseCode") == 0) {
+        // Parse MorseCode parameters: {"message":"HELLO", "speed":0.5, "dot_length":2, "dash_length":4, "symbol_space":2, "letter_space":3, "word_space":5}
+        String message = doc["message"] | "HELLO";
+        float speed = doc["speed"] | 0.5f;
+        unsigned int dot_length = doc["dot_length"] | 2;
+        unsigned int dash_length = doc["dash_length"] | 4;
+        unsigned int symbol_space = doc["symbol_space"] | 2;
+        unsigned int letter_space = doc["letter_space"] | 3;
+        unsigned int word_space = doc["word_space"] | 5;
+
+        Serial.printf("ShowFactory: Creating MorseCode message=\"%s\", speed=%.2f, dot=%u, dash=%u\n",
+                     message.c_str(), speed, dot_length, dash_length);
+        return new Show::MorseCode(message.c_str(), speed, dot_length, dash_length,
+                                   symbol_space, letter_space, word_space);
     }
     // Other shows don't support parameters yet, use default constructor
     else {

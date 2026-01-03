@@ -612,6 +612,45 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                     </div>
                     <button class="apply-button" onclick="applyWaveParams()">Apply Parameters</button>
                 </div>
+
+                <div id="morseCodeParams" class="params-section">
+                    <div class="param-row">
+                        <label class="param-label" for="morseMessage">Message</label>
+                        <input type="text" id="morseMessage" value="HELLO" style="width:100%; padding:8px;">
+                        <small style="display:block; margin-top:4px; color:#666;">Text to encode in Morse code (letters, numbers, basic punctuation)</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="morseSpeed">Scroll Speed</label>
+                        <input type="number" id="morseSpeed" step="0.1" min="0.1" max="5" value="0.5">
+                        <small style="display:block; margin-top:4px; color:#666;">Higher = faster scrolling (LEDs per frame)</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="morseDotLength">Dot Length</label>
+                        <input type="number" id="morseDotLength" step="1" min="1" max="10" value="2">
+                        <small style="display:block; margin-top:4px; color:#666;">Number of LEDs per dot</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="morseDashLength">Dash Length</label>
+                        <input type="number" id="morseDashLength" step="1" min="1" max="20" value="4">
+                        <small style="display:block; margin-top:4px; color:#666;">Number of LEDs per dash (typically 2-3x dot length)</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="morseSymbolSpace">Symbol Space</label>
+                        <input type="number" id="morseSymbolSpace" step="1" min="1" max="10" value="2">
+                        <small style="display:block; margin-top:4px; color:#666;">Dark LEDs between dots/dashes within letters</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="morseLetterSpace">Letter Space</label>
+                        <input type="number" id="morseLetterSpace" step="1" min="1" max="10" value="3">
+                        <small style="display:block; margin-top:4px; color:#666;">Dark LEDs between letters</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="morseWordSpace">Word Space</label>
+                        <input type="number" id="morseWordSpace" step="1" min="1" max="20" value="5">
+                        <small style="display:block; margin-top:4px; color:#666;">Dark LEDs between words</small>
+                    </div>
+                    <button class="apply-button" onclick="applyMorseCodeParams()">Apply Parameters</button>
+                </div>
             </div>
 
             <div class="control-group">
@@ -666,6 +705,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             document.getElementById('colorRangesParams').classList.remove('visible');
             document.getElementById('starlightParams').classList.remove('visible');
             document.getElementById('waveParams').classList.remove('visible');
+            document.getElementById('morseCodeParams').classList.remove('visible');
 
             if (showName === 'Solid') {
                 document.getElementById('solidParams').classList.add('visible');
@@ -681,6 +721,8 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 document.getElementById('starlightParams').classList.add('visible');
             } else if (showName === 'Wave') {
                 document.getElementById('waveParams').classList.add('visible');
+            } else if (showName === 'MorseCode') {
+                document.getElementById('morseCodeParams').classList.add('visible');
             }
         }
 
@@ -924,6 +966,32 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 pendingParameterConfig = false;  // Applied successfully
             } catch (error) {
                 console.error('Failed to apply Wave parameters:', error);
+            }
+        }
+
+        // Apply MorseCode parameters
+        async function applyMorseCodeParams() {
+            const message = document.getElementById('morseMessage').value;
+            const speed = parseFloat(document.getElementById('morseSpeed').value);
+            const dot_length = parseInt(document.getElementById('morseDotLength').value);
+            const dash_length = parseInt(document.getElementById('morseDashLength').value);
+            const symbol_space = parseInt(document.getElementById('morseSymbolSpace').value);
+            const letter_space = parseInt(document.getElementById('morseLetterSpace').value);
+            const word_space = parseInt(document.getElementById('morseWordSpace').value);
+
+            try {
+                pendingParameterConfig = true;
+                await fetch('/api/show', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: 'MorseCode',
+                        params: { message, speed, dot_length, dash_length, symbol_space, letter_space, word_space }
+                    })
+                });
+                pendingParameterConfig = false;  // Applied successfully
+            } catch (error) {
+                console.error('Failed to apply MorseCode parameters:', error);
             }
         }
 
