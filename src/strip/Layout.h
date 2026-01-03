@@ -15,6 +15,16 @@ namespace Strip {
 
         PixelIndex real_index(PixelIndex index) const;
 
+        // Dead LED clearing methods
+        void turnOffDeadLeds();
+        void turnOffMirroredDeadLeds();
+        void turnOffPlainDeadLeds();
+        void turnOffMiddleLeds();
+        void turnOffEdgeLeds();
+        void turnOffBeginningLeds();
+        void turnOffEndLeds();
+        void setRangeToBlack(PixelIndex start, PixelIndex end);
+
     public:
         Layout(Strip &strip, bool reverse = false, bool mirror = false, PixelIndex dead_leds = 0);
 
