@@ -112,6 +112,7 @@ namespace Config {
 
         config.brightness = prefs.getUChar("brightness", 128);
         config.num_pixels = prefs.getUShort("num_pixels", 300);
+        prefs.getString("device_name", config.device_name, sizeof(config.device_name));
 
         prefs.end();
 
@@ -119,6 +120,12 @@ namespace Config {
         String deviceId = getDeviceId();
         strncpy(config.device_id, deviceId.c_str(), sizeof(config.device_id) - 1);
         config.device_id[sizeof(config.device_id) - 1] = '\0';
+
+        // If no custom name is set, use device ID as name
+        if (config.device_name[0] == '\0') {
+            strncpy(config.device_name, config.device_id, sizeof(config.device_name) - 1);
+            config.device_name[sizeof(config.device_name) - 1] = '\0';
+        }
 #endif
 
         return config;
@@ -130,6 +137,7 @@ namespace Config {
 
         prefs.putUChar("brightness", config.brightness);
         prefs.putUShort("num_pixels", config.num_pixels);
+        prefs.putString("device_name", config.device_name);
         // Note: device_id is derived from MAC, not stored
 
         prefs.end();

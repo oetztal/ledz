@@ -48,10 +48,12 @@ namespace Config {
     struct DeviceConfig {
         uint8_t brightness;         // 0-255
         uint16_t num_pixels;
-        char device_id[16];         // e.g., "LEDCtrl-AABBCC"
+        char device_id[16];         // e.g., "ledz-AABBCC"
+        char device_name[32];       // Custom device name
 
         DeviceConfig() : brightness(128), num_pixels(300) {
             device_id[0] = '\0';
+            device_name[0] = '\0';
         }
     };
 

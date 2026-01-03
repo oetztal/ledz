@@ -621,7 +621,10 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             </div>
         </div>
 
-        <a href="/about" class="about-link">Device Information</a>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <a href="/settings" class="about-link" style="flex: 1; text-align: center;">Settings</a>
+            <a href="/about" class="about-link" style="flex: 1; text-align: center;">Device Info</a>
+        </div>
     </div>
 
     <script>
@@ -878,12 +881,27 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             const deviceIdElement = document.getElementById('deviceId');
             if (currentStatus.device_id) {
                 const hostname = currentStatus.device_id.toLowerCase().replace('ledz-', 'ledz');
-                deviceIdElement.innerHTML = `
-                    ${currentStatus.device_id}<br>
-                    <small style="font-size: 11px; font-weight: normal;">
+                const displayName = currentStatus.device_name || currentStatus.device_id;
+                let infoHTML = `${displayName}`;
+
+                // Show device ID if custom name is set
+                if (currentStatus.device_name && currentStatus.device_name !== currentStatus.device_id) {
+                    infoHTML += `<br><small style="font-size: 11px; font-weight: normal; opacity: 0.8;">${currentStatus.device_id}</small>`;
+                }
+                infoHTML += `<br>`;
+
+                if (currentStatus.wifi_connected && currentStatus.wifi_ssid) {
+                    infoHTML += `<small style="font-size: 11px; font-weight: normal;">
+                        WiFi: ${currentStatus.wifi_ssid}<br>
                         Access at: <a href="http://${hostname}.local/" style="color: inherit; text-decoration: underline;">${hostname}.local</a>
-                    </small>
-                `;
+                    </small>`;
+                } else {
+                    infoHTML += `<small style="font-size: 11px; font-weight: normal;">
+                        Access at: <a href="http://${hostname}.local/" style="color: inherit; text-decoration: underline;">${hostname}.local</a>
+                    </small>`;
+                }
+
+                deviceIdElement.innerHTML = infoHTML;
             }
         }
 
@@ -1117,6 +1135,7 @@ void WebServerManager::setupAPIRoutes() {
         // Device info
         Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
         doc["device_id"] = deviceConfig.device_id;
+        doc["device_name"] = deviceConfig.device_name;
         doc["brightness"] = showController->getBrightness();
 
         // Show info
@@ -1127,6 +1146,7 @@ void WebServerManager::setupAPIRoutes() {
         doc["wifi_connected"] = (WiFi.status() == WL_CONNECTED);
         if (WiFi.status() == WL_CONNECTED) {
             doc["ip_address"] = WiFi.localIP().toString();
+            doc["wifi_ssid"] = WiFi.SSID();
         }
 
         String response;
@@ -1310,6 +1330,144 @@ void WebServerManager::setupAPIRoutes() {
         ESP.restart();
     });
 
+    // POST /api/settings/wifi - Update WiFi credentials
+    server.on("/api/settings/wifi", HTTP_POST,
+        [](AsyncWebServerRequest *request) {},
+        NULL,
+        [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+            if (index == 0) {
+                StaticJsonDocument<256> doc;
+                DeserializationError error = deserializeJson(doc, data, len);
+
+                if (error) {
+                    request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
+                    return;
+                }
+
+                const char* ssid = doc["ssid"];
+                const char* password = doc["password"];
+
+                if (ssid == nullptr || strlen(ssid) == 0) {
+                    request->send(400, "application/json", "{\"success\":false,\"error\":\"SSID required\"}");
+                    return;
+                }
+
+                // Create and save WiFi config
+                Config::WiFiConfig wifiConfig;
+                strncpy(wifiConfig.ssid, ssid, sizeof(wifiConfig.ssid) - 1);
+                wifiConfig.ssid[sizeof(wifiConfig.ssid) - 1] = '\0';
+
+                if (password != nullptr) {
+                    strncpy(wifiConfig.password, password, sizeof(wifiConfig.password) - 1);
+                    wifiConfig.password[sizeof(wifiConfig.password) - 1] = '\0';
+                } else {
+                    wifiConfig.password[0] = '\0';
+                }
+
+                wifiConfig.configured = true;
+                config.saveWiFiConfig(wifiConfig);
+
+                Serial.printf("WiFi credentials updated: SSID=%s\n", wifiConfig.ssid);
+
+                // Send success response and restart
+                request->send(200, "application/json", "{\"success\":true,\"message\":\"WiFi updated, restarting...\"}");
+                delay(1000); // Give time for response to send
+                ESP.restart();
+            }
+        }
+    );
+
+    // POST /api/settings/device-name - Update device name
+    server.on("/api/settings/device-name", HTTP_POST,
+        [](AsyncWebServerRequest *request) {},
+        NULL,
+        [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+            if (index == 0) {
+                StaticJsonDocument<256> doc;
+                DeserializationError error = deserializeJson(doc, data, len);
+
+                if (error) {
+                    request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
+                    return;
+                }
+
+                const char* name = doc["name"];
+
+                if (name == nullptr || strlen(name) == 0) {
+                    request->send(400, "application/json", "{\"success\":false,\"error\":\"Device name required\"}");
+                    return;
+                }
+
+                // Load current config, update name, and save
+                Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
+                strncpy(deviceConfig.device_name, name, sizeof(deviceConfig.device_name) - 1);
+                deviceConfig.device_name[sizeof(deviceConfig.device_name) - 1] = '\0';
+                config.saveDeviceConfig(deviceConfig);
+
+                Serial.printf("Device name updated: %s\n", deviceConfig.device_name);
+
+                // Send success response (no restart needed)
+                request->send(200, "application/json", "{\"success\":true}");
+            }
+        }
+    );
+
+    // POST /api/settings/num-pixels - Update number of pixels
+    server.on("/api/settings/num-pixels", HTTP_POST,
+        [](AsyncWebServerRequest *request) {},
+        NULL,
+        [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+            if (index == 0) {
+                StaticJsonDocument<256> doc;
+                DeserializationError error = deserializeJson(doc, data, len);
+
+                if (error) {
+                    request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
+                    return;
+                }
+
+                if (!doc.containsKey("num_pixels")) {
+                    request->send(400, "application/json", "{\"success\":false,\"error\":\"Number of pixels required\"}");
+                    return;
+                }
+
+                uint16_t num_pixels = doc["num_pixels"];
+
+                if (num_pixels < 1 || num_pixels > 1000) {
+                    request->send(400, "application/json", "{\"success\":false,\"error\":\"Number of pixels must be between 1 and 1000\"}");
+                    return;
+                }
+
+                // Load current config, update num_pixels, and save
+                Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
+                deviceConfig.num_pixels = num_pixels;
+                config.saveDeviceConfig(deviceConfig);
+
+                Serial.printf("Number of pixels updated: %u\n", deviceConfig.num_pixels);
+
+                // Send success response and restart
+                request->send(200, "application/json", "{\"success\":true,\"message\":\"Number of pixels updated, restarting...\"}");
+                delay(1000); // Give time for response to send
+                ESP.restart();
+            }
+        }
+    );
+
+    // POST /api/settings/factory-reset - Factory reset device
+    server.on("/api/settings/factory-reset", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        Serial.println("Factory reset requested");
+
+        // Clear all configuration
+        config.reset();
+
+        Serial.println("All settings cleared");
+
+        // Send success response and restart
+        request->send(200, "application/json", "{\"success\":true,\"message\":\"Factory reset complete, restarting...\"}");
+        delay(1000); // Give time for response to send
+        ESP.restart();
+    });
+
     // GET /api/about - Device information
     server.on("/api/about", HTTP_GET, [this](AsyncWebServerRequest *request) {
         StaticJsonDocument<1024> doc;
@@ -1317,6 +1475,7 @@ void WebServerManager::setupAPIRoutes() {
         // Device info
         Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
         doc["device_id"] = deviceConfig.device_id;
+        doc["num_pixels"] = deviceConfig.num_pixels;
 
         // Chip info
         doc["chip_model"] = ESP.getChipModel();
@@ -1529,6 +1688,370 @@ void WebServerManager::setupAPIRoutes() {
             }
         }
         loadInfo();
+    </script>
+</body>
+</html>
+        )rawliteral");
+    });
+
+    // GET /settings - Settings page
+    server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(200, "text/html", R"rawliteral(
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - ledz</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 28px; margin-bottom: 5px; }
+        .header p { font-size: 14px; opacity: 0.9; }
+        .nav {
+            padding: 10px 20px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .nav a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .content { padding: 30px; }
+        .settings-section {
+            margin-bottom: 30px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .settings-section:last-child { border-bottom: none; }
+        .settings-section h2 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .settings-section p {
+            font-size: 13px;
+            color: #6c757d;
+            margin-bottom: 15px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn-primary {
+            background-color: #667eea;
+            color: white;
+        }
+        .btn-primary:hover { background-color: #5568d3; }
+        .btn-danger {
+            background-color: #d9534f;
+            color: white;
+        }
+        .btn-danger:hover { background-color: #c9302c; }
+        .info-box {
+            background-color: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #6c757d;
+        }
+        .warning-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Settings</h1>
+            <p>Configure device settings</p>
+        </div>
+        <div class="nav">
+            <a href="/">← Back to Control Panel</a>
+        </div>
+        <div class="content">
+            <div class="settings-section">
+                <h2>Device Name</h2>
+                <p>Set a custom name for this device. This name is displayed in the control panel.</p>
+
+                <div class="form-group">
+                    <label for="deviceName">Device Name</label>
+                    <input type="text" id="deviceName" placeholder="Enter device name" maxlength="31">
+                </div>
+
+                <button class="btn btn-primary" onclick="updateDeviceName()">Update Name</button>
+
+                <div class="info-box">
+                    <strong>Current:</strong> <span id="currentDeviceName">Loading...</span>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h2>Hardware Configuration</h2>
+                <p>Configure LED strip hardware settings. The device will restart after saving.</p>
+
+                <div class="form-group">
+                    <label for="numPixels">Number of LEDs</label>
+                    <input type="number" id="numPixels" placeholder="Enter number of LEDs" min="1" max="1000">
+                </div>
+
+                <button class="btn btn-primary" onclick="updateNumPixels()">Update LED Count</button>
+
+                <div class="info-box">
+                    <strong>Current:</strong> <span id="currentNumPixels">Loading...</span> LEDs<br>
+                    <strong>Note:</strong> The device will restart after updating the LED count.
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h2>WiFi Configuration</h2>
+                <p>Update the WiFi network credentials. The device will restart after saving.</p>
+
+                <div class="form-group">
+                    <label for="wifiSSID">WiFi Network (SSID)</label>
+                    <input type="text" id="wifiSSID" placeholder="Enter WiFi network name">
+                </div>
+
+                <div class="form-group">
+                    <label for="wifiPassword">WiFi Password</label>
+                    <input type="password" id="wifiPassword" placeholder="Enter WiFi password">
+                </div>
+
+                <button class="btn btn-primary" onclick="updateWiFi()">Update WiFi</button>
+
+                <div class="info-box">
+                    <strong>Note:</strong> The device will restart after updating WiFi credentials. You will need to reconnect to the new network to access the device.
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h2>Factory Reset</h2>
+                <p>Erase all settings and return the device to factory defaults.</p>
+
+                <button class="btn btn-danger" onclick="factoryReset()">Factory Reset</button>
+
+                <div class="warning-box">
+                    <strong>⚠️ Warning:</strong> This will permanently erase all settings including:
+                    <ul style="margin-top: 8px; margin-left: 20px;">
+                        <li>WiFi configuration</li>
+                        <li>Show settings and parameters</li>
+                        <li>Strip layout configuration</li>
+                        <li>All other preferences</li>
+                    </ul>
+                    The device will restart in AP mode and require reconfiguration.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load current device name
+        async function loadDeviceName() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                document.getElementById('currentDeviceName').textContent = data.device_name || data.device_id;
+            } catch (error) {
+                console.error('Failed to load device name:', error);
+                document.getElementById('currentDeviceName').textContent = 'Error loading';
+            }
+        }
+
+        // Load current num_pixels from /api/about endpoint
+        async function loadNumPixels() {
+            try {
+                const response = await fetch('/api/about');
+                const data = await response.json();
+                const numPixels = data.num_pixels || 300;
+                document.getElementById('currentNumPixels').textContent = numPixels;
+            } catch (error) {
+                console.error('Failed to load num_pixels:', error);
+                document.getElementById('currentNumPixels').textContent = 'Error';
+            }
+        }
+
+        // Update device name
+        async function updateDeviceName() {
+            const name = document.getElementById('deviceName').value;
+
+            if (!name || name.trim() === '') {
+                alert('Please enter a device name');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/settings/device-name', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name.trim() })
+                });
+
+                if (response.ok) {
+                    alert('Device name updated successfully!');
+                    document.getElementById('deviceName').value = '';
+                    loadDeviceName(); // Reload current name
+                } else {
+                    const data = await response.json();
+                    alert('Failed to update device name: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Failed to update device name:', error);
+                alert('Error updating device name. Please try again.');
+            }
+        }
+
+        // Update number of pixels
+        async function updateNumPixels() {
+            const numPixels = parseInt(document.getElementById('numPixels').value);
+
+            if (isNaN(numPixels) || numPixels < 1 || numPixels > 1000) {
+                alert('Please enter a valid number of LEDs (1-1000)');
+                return;
+            }
+
+            if (!confirm(`Update LED count to ${numPixels} LEDs?\n\nDevice will restart to apply changes.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/settings/num-pixels', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ num_pixels: numPixels })
+                });
+
+                if (response.ok) {
+                    alert('LED count updated!\n\nDevice is restarting...\n\nPlease wait a moment and refresh the page.');
+                    document.getElementById('numPixels').value = '';
+                } else {
+                    const data = await response.json();
+                    alert('Failed to update LED count: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Failed to update num_pixels:', error);
+                alert('Error updating LED count. Please try again.');
+            }
+        }
+
+        // Update WiFi credentials
+        async function updateWiFi() {
+            const ssid = document.getElementById('wifiSSID').value;
+            const password = document.getElementById('wifiPassword').value;
+
+            if (!ssid || ssid.trim() === '') {
+                alert('Please enter a WiFi SSID');
+                return;
+            }
+
+            if (!confirm(`Update WiFi credentials to network "${ssid}"?\n\nDevice will restart and connect to the new network.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/settings/wifi', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ssid, password })
+                });
+
+                if (response.ok) {
+                    alert('WiFi updated successfully!\n\nDevice is restarting...\n\nPlease reconnect to the new WiFi network and access the device at its new IP address or hostname.');
+                    // Clear the form
+                    document.getElementById('wifiSSID').value = '';
+                    document.getElementById('wifiPassword').value = '';
+                } else {
+                    const data = await response.json();
+                    alert('Failed to update WiFi: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Failed to update WiFi:', error);
+                alert('Error updating WiFi credentials. Please try again.');
+            }
+        }
+
+        // Factory reset
+        async function factoryReset() {
+            if (!confirm('⚠️ Factory Reset Warning\n\nThis will erase ALL settings including:\n• WiFi configuration\n• Show settings\n• Layout configuration\n• All preferences\n\nThe device will restart in AP mode.\n\nAre you sure you want to continue?')) {
+                return;
+            }
+
+            if (!confirm('⚠️ Final Confirmation\n\nThis action CANNOT be undone!\n\nAre you absolutely sure you want to factory reset?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/settings/factory-reset', {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    alert('Factory reset complete!\n\nDevice is restarting in AP mode.\n\nConnect to the WiFi network "ledz-XXXXXX" to reconfigure the device.');
+                } else {
+                    alert('Failed to factory reset. Please try again.');
+                }
+            } catch (error) {
+                console.error('Failed to factory reset:', error);
+                alert('Error performing factory reset. Please try again.');
+            }
+        }
+
+        // Load device info on page load
+        loadDeviceName();
+        loadNumPixels();
     </script>
 </body>
 </html>

@@ -27,11 +27,8 @@
 #include "strip/Layout.h"
 
 
-// How many internal neopixels do we have? some boards have more than one!
-#define NUMPIXELS        300
-
 #ifdef ARDUINO
-std::unique_ptr<Strip::Strip> base{new Strip::Base(MOSI, NUMPIXELS)};
+std::unique_ptr<Strip::Strip> base;    // Will be initialized in setup() with config
 std::unique_ptr<Strip::Strip> layout;  // Will be initialized in setup() with config
 #endif
 
@@ -98,6 +95,14 @@ void setup() {
     config.begin();
 
 #ifdef ARDUINO
+    // Load device configuration for num_pixels
+    Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
+    uint16_t num_pixels = deviceConfig.num_pixels;
+    Serial.printf("Initializing LED strip with %u pixels\n", num_pixels);
+
+    // Initialize base strip with configured number of pixels
+    base.reset(new Strip::Base(MOSI, num_pixels));
+
     // Load and apply layout configuration
     Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
     layout.reset(new Strip::Layout(*base, layoutConfig.reverse, layoutConfig.mirror, layoutConfig.dead_leds));
