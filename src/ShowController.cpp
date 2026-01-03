@@ -3,6 +3,7 @@
 //
 
 #include "ShowController.h"
+#include "color.h"
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -264,6 +265,25 @@ bool ShowController::queueLayoutChange(bool reverse, bool mirror, uint16_t dead_
 void ShowController::setLayoutPointers(std::unique_ptr<Strip::Strip>* layout, Strip::Strip* base) {
     layoutPtr = layout;
     baseStrip = base;
+}
+
+void ShowController::clearStrip() {
+#ifdef ARDUINO
+    if (layoutPtr != nullptr && *layoutPtr != nullptr) {
+        uint16_t num_leds = (*layoutPtr)->length();
+        Strip::Color black = color(0, 0, 0);
+
+        // Turn all LEDs off
+        for (uint16_t i = 0; i < num_leds; i++) {
+            (*layoutPtr)->setPixelColor(i, black);
+        }
+
+        // Show the cleared strip
+        (*layoutPtr)->show();
+
+        Serial.println("ShowController: Strip cleared");
+    }
+#endif
 }
 
 ShowController::~ShowController() {

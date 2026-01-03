@@ -155,6 +155,12 @@ public:
     bool isAutoCycleEnabled() const { return autoCycle; }
 
     /**
+     * Clear the LED strip (turn all LEDs off)
+     * Used before factory reset or shutdown
+     */
+    void clearStrip();
+
+    /**
      * Destructor
      */
     ~ShowController();

@@ -73,6 +73,7 @@ const char CONFIG_HTML[] PROGMEM = R"rawliteral(
         }
         .status {
             margin-top: 20px;
+            margin-bottom: 30px;
             padding: 10px;
             border-radius: 5px;
             display: none;
@@ -1660,14 +1661,33 @@ void WebServerManager::setupAPIRoutes() {
     server.on("/api/settings/factory-reset", HTTP_POST, [this](AsyncWebServerRequest *request) {
         Serial.println("Factory reset requested");
 
+        // Send success response first
+        request->send(200, "application/json", "{\"success\":true,\"message\":\"Factory reset complete, restarting...\"}");
+
+        // Give time for response to send
+        delay(500);
+
+        // Suspend LED task to stop it from updating the strip
+        extern TaskHandle_t showTaskHandle;
+        if (showTaskHandle != nullptr) {
+            vTaskSuspend(showTaskHandle);
+            Serial.println("LED task suspended");
+        }
+
+        // Clear the LED strip
+        if (showController) {
+            showController->clearStrip();
+        }
+
+        // Give time for the clear to be visible
+        delay(500);
+
         // Clear all configuration
         config.reset();
 
         Serial.println("All settings cleared");
 
-        // Send success response and restart
-        request->send(200, "application/json", "{\"success\":true,\"message\":\"Factory reset complete, restarting...\"}");
-        delay(1000); // Give time for response to send
+        // Restart
         ESP.restart();
     });
 
@@ -2307,7 +2327,7 @@ void WebServerManager::handleWiFiConfig(AsyncWebServerRequest *request, uint8_t 
 
         // Generate mDNS hostname for response
         String deviceId = DeviceId::getDeviceId();
-        String hostname = "ledz" + deviceId;
+        String hostname = "ledz-" + deviceId;
         hostname.toLowerCase();
 
         // Send success response with hostname
