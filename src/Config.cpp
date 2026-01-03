@@ -191,4 +191,34 @@ namespace Config {
 #endif
     }
 
+    LayoutConfig ConfigManager::loadLayoutConfig() {
+        LayoutConfig config;
+
+#ifdef ARDUINO
+        prefs.begin(NAMESPACE, true); // Read-only mode
+        config.reverse = prefs.getBool("layout_reverse", false);
+        config.mirror = prefs.getBool("layout_mirror", false);
+        config.dead_leds = prefs.getUShort("layout_dead", 0);
+        prefs.end();
+
+        Serial.printf("Config: Loaded layout - reverse=%d, mirror=%d, dead_leds=%u\n",
+                     config.reverse, config.mirror, config.dead_leds);
+#endif
+
+        return config;
+    }
+
+    void ConfigManager::saveLayoutConfig(const LayoutConfig& config) {
+#ifdef ARDUINO
+        prefs.begin(NAMESPACE, false); // Read-write mode
+        prefs.putBool("layout_reverse", config.reverse);
+        prefs.putBool("layout_mirror", config.mirror);
+        prefs.putUShort("layout_dead", config.dead_leds);
+        prefs.end();
+
+        Serial.printf("Config: Saved layout - reverse=%d, mirror=%d, dead_leds=%u\n",
+                     config.reverse, config.mirror, config.dead_leds);
+#endif
+    }
+
 } // namespace Config

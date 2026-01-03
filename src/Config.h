@@ -56,6 +56,18 @@ namespace Config {
     };
 
     /**
+     * LED strip layout configuration structure
+     */
+    struct LayoutConfig {
+        bool reverse;               // Reverse LED order
+        bool mirror;                // Mirror LED pattern
+        uint16_t dead_leds;         // Number of dead LEDs at the end
+
+        LayoutConfig() : reverse(false), mirror(false), dead_leds(0) {
+        }
+    };
+
+    /**
      * Configuration Manager
      * Handles persistent storage using ESP32 Preferences (NVS)
      */
@@ -144,6 +156,18 @@ namespace Config {
          * @return Number of consecutive failures
          */
         uint8_t getConnectionFailures();
+
+        /**
+         * Load layout configuration from NVS
+         * @return LayoutConfig structure with defaults if not found
+         */
+        LayoutConfig loadLayoutConfig();
+
+        /**
+         * Save layout configuration to NVS
+         * @param config Layout configuration to save
+         */
+        void saveLayoutConfig(const LayoutConfig& config);
     };
 
 } // namespace Config

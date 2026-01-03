@@ -29,8 +29,7 @@
 
 #ifdef ARDUINO
 std::unique_ptr<Strip::Strip> base{new Strip::Base(MOSI, NUMPIXELS)};
-std::unique_ptr<Strip::Strip> layout{new Strip::Layout(*base)};
-bool reverse = false;
+std::unique_ptr<Strip::Strip> layout;  // Will be initialized in setup() with config
 #endif
 
 #ifdef ARDUINO
@@ -95,8 +94,21 @@ void setup() {
     // Initialize configuration manager
     config.begin();
 
+#ifdef ARDUINO
+    // Load and apply layout configuration
+    Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
+    layout.reset(new Strip::Layout(*base, layoutConfig.reverse, layoutConfig.mirror, layoutConfig.dead_leds));
+    Serial.printf("Layout initialized: reverse=%d, mirror=%d, dead_leds=%u\n",
+                 layoutConfig.reverse, layoutConfig.mirror, layoutConfig.dead_leds);
+#endif
+
     // Initialize show controller
     showController.begin();
+
+#ifdef ARDUINO
+    // Set layout pointers for runtime reconfiguration
+    showController.setLayoutPointers(&layout, base.get());
+#endif
 
     // Set show controller on webserver (must be done before webserver starts)
     webServer.setShowController(&showController, &showFactory);
@@ -110,9 +122,9 @@ void setup() {
         "LED show", // Task Name
         10000, // Stack Size
         &showController, // Parameters (pass controller)
-        1, // Priority
+        2, // Priority
         &showTaskHandle, // Task Handle
-        0 // Core Number (0)
+        1 // Core Number (0)
     );
 
     // Create Network task on Core 1
@@ -121,9 +133,9 @@ void setup() {
         "Network", // Task Name
         10000, // Stack Size
         &network, // Parameters
-        2, // Priority
+        1, // Priority
         &networkTaskHandle, // Task Handle
-        1 // Core Number (1)
+        0 // Core Number (1)
     );
 }
 

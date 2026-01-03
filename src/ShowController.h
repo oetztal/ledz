@@ -17,6 +17,8 @@
 #include "show/Show.h"
 #include "ShowFactory.h"
 #include "Config.h"
+#include "strip/Strip.h"
+#include "strip/Layout.h"
 
 /**
  * Show command types for queue communication
@@ -24,7 +26,8 @@
 enum class ShowCommandType {
     SET_SHOW,           // Change current show
     SET_BRIGHTNESS,     // Change brightness
-    TOGGLE_AUTO_CYCLE   // Enable/disable auto-cycling
+    TOGGLE_AUTO_CYCLE,  // Enable/disable auto-cycling
+    SET_LAYOUT          // Change strip layout
 };
 
 /**
@@ -36,6 +39,9 @@ struct ShowCommand {
     char params_json[256];  // JSON parameters for show
     uint8_t brightness_value;
     bool auto_cycle_enabled;
+    bool layout_reverse;
+    bool layout_mirror;
+    uint16_t layout_dead_leds;
 };
 
 /**
@@ -57,6 +63,10 @@ private:
     char currentShowName[32];
     uint8_t brightness;
     bool autoCycle;
+
+    // Pointer to layout for runtime reconfiguration
+    std::unique_ptr<Strip::Strip>* layoutPtr;
+    Strip::Strip* baseStrip;
 
     /**
      * Apply a command (called from LED task)
@@ -97,6 +107,22 @@ public:
      * @return true if queued successfully
      */
     bool queueAutoCycleToggle(bool enabled);
+
+    /**
+     * Queue layout change command (called from Core 1 - webserver)
+     * @param reverse Reverse LED order
+     * @param mirror Mirror LED pattern
+     * @param dead_leds Number of dead LEDs at the end
+     * @return true if queued successfully
+     */
+    bool queueLayoutChange(bool reverse, bool mirror, uint16_t dead_leds);
+
+    /**
+     * Set layout and base strip pointers for runtime reconfiguration
+     * @param layout Pointer to the layout unique_ptr
+     * @param base Pointer to the base strip
+     */
+    void setLayoutPointers(std::unique_ptr<Strip::Strip>* layout, Strip::Strip* base);
 
     /**
      * Process pending commands from queue (called from Core 0 - LED task)

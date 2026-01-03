@@ -9,7 +9,8 @@
 #endif
 
 ShowController::ShowController(ShowFactory &factory, Config::ConfigManager &config)
-    : factory(factory), config(config), brightness(128), autoCycle(true)
+    : factory(factory), config(config), brightness(128), autoCycle(true),
+      layoutPtr(nullptr), baseStrip(nullptr)
 #ifdef ARDUINO
     , commandQueue(nullptr)
 #endif
@@ -193,6 +194,29 @@ void ShowController::applyCommand(const ShowCommand& cmd) {
             config.saveShowConfig(showConfig);
             break;
         }
+
+        case ShowCommandType::SET_LAYOUT: {
+#ifdef ARDUINO
+            if (layoutPtr != nullptr && baseStrip != nullptr) {
+                // Recreate layout with new parameters
+                layoutPtr->reset(new Strip::Layout(*baseStrip, cmd.layout_reverse,
+                                                   cmd.layout_mirror, cmd.layout_dead_leds));
+
+                Serial.printf("ShowController: Layout updated - reverse=%d, mirror=%d, dead_leds=%u\n",
+                             cmd.layout_reverse, cmd.layout_mirror, cmd.layout_dead_leds);
+
+                // Save to configuration
+                Config::LayoutConfig layoutConfig;
+                layoutConfig.reverse = cmd.layout_reverse;
+                layoutConfig.mirror = cmd.layout_mirror;
+                layoutConfig.dead_leds = cmd.layout_dead_leds;
+                config.saveLayoutConfig(layoutConfig);
+            } else {
+                Serial.println("ERROR: Layout pointers not set!");
+            }
+#endif
+            break;
+        }
     }
 }
 
@@ -212,6 +236,34 @@ void ShowController::processCommands() {
 
 Show::Show* ShowController::getCurrentShow() {
     return currentShow.get();
+}
+
+bool ShowController::queueLayoutChange(bool reverse, bool mirror, uint16_t dead_leds) {
+#ifdef ARDUINO
+    if (commandQueue == nullptr) {
+        return false;
+    }
+
+    ShowCommand cmd;
+    cmd.type = ShowCommandType::SET_LAYOUT;
+    cmd.layout_reverse = reverse;
+    cmd.layout_mirror = mirror;
+    cmd.layout_dead_leds = dead_leds;
+
+    if (xQueueSend(commandQueue, &cmd, 0) == pdTRUE) {
+        return true;
+    }
+
+    Serial.println("WARNING: Layout command queue full!");
+    return false;
+#else
+    return false;
+#endif
+}
+
+void ShowController::setLayoutPointers(std::unique_ptr<Strip::Strip>* layout, Strip::Strip* base) {
+    layoutPtr = layout;
+    baseStrip = base;
 }
 
 ShowController::~ShowController() {

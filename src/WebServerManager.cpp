@@ -495,6 +495,19 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                     </label>
                 </div>
             </div>
+
+            <div class="control-group">
+                <label class="control-label">Strip Layout</label>
+                <select id="layoutMode" style="margin-bottom: 10px;">
+                    <option value="normal">Normal</option>
+                    <option value="reverse">Reversed</option>
+                    <option value="mirror">Mirrored</option>
+                    <option value="reverse_mirror">Reversed + Mirrored</option>
+                </select>
+                <label class="control-label" for="deadLeds" style="margin-top: 15px;">Dead LEDs</label>
+                <input type="number" id="deadLeds" min="0" max="100" value="0" style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 16px;">
+                <button class="apply-button" onclick="applyLayout()" style="margin-top: 15px;">Apply Layout</button>
+            </div>
         </div>
 
         <a href="/about" class="about-link">Device Information</a>
@@ -702,9 +715,56 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             }
         });
 
+        // Load layout configuration
+        async function loadLayout() {
+            try {
+                const response = await fetch('/api/layout');
+                const layout = await response.json();
+
+                // Set layout mode dropdown
+                let mode = 'normal';
+                if (layout.reverse && layout.mirror) mode = 'reverse_mirror';
+                else if (layout.reverse) mode = 'reverse';
+                else if (layout.mirror) mode = 'mirror';
+                document.getElementById('layoutMode').value = mode;
+
+                // Set dead LEDs
+                document.getElementById('deadLeds').value = layout.dead_leds;
+            } catch (error) {
+                console.error('Failed to load layout:', error);
+            }
+        }
+
+        // Apply layout configuration
+        async function applyLayout() {
+            const mode = document.getElementById('layoutMode').value;
+            const dead_leds = parseInt(document.getElementById('deadLeds').value);
+
+            let reverse = false;
+            let mirror = false;
+            if (mode === 'reverse') reverse = true;
+            else if (mode === 'mirror') mirror = true;
+            else if (mode === 'reverse_mirror') {
+                reverse = true;
+                mirror = true;
+            }
+
+            try {
+                await fetch('/api/layout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reverse, mirror, dead_leds })
+                });
+                // Layout is applied immediately, no restart needed
+            } catch (error) {
+                console.error('Failed to apply layout:', error);
+            }
+        }
+
         // Initialize
         loadShows();
         updateStatus();
+        loadLayout();
 
         // Update status every 2 seconds
         setInterval(updateStatus, 2000);
@@ -903,6 +963,64 @@ void WebServerManager::setupAPIRoutes() {
             }
         }
     );
+
+    // POST /api/layout - Change strip layout configuration
+    server.on("/api/layout", HTTP_POST,
+        [](AsyncWebServerRequest *request) {},
+        NULL,
+        [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+            if (index == 0 && showController != nullptr) {
+                StaticJsonDocument<256> doc;
+                DeserializationError error = deserializeJson(doc, data, len);
+
+                if (error) {
+                    request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
+                    return;
+                }
+
+                Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
+
+                // Update fields if provided
+                if (doc.containsKey("reverse")) {
+                    layoutConfig.reverse = doc["reverse"];
+                }
+                if (doc.containsKey("mirror")) {
+                    layoutConfig.mirror = doc["mirror"];
+                }
+                if (doc.containsKey("dead_leds")) {
+                    layoutConfig.dead_leds = doc["dead_leds"];
+                }
+
+                // Queue the layout change for thread-safe execution
+                if (showController->queueLayoutChange(layoutConfig.reverse, layoutConfig.mirror, layoutConfig.dead_leds)) {
+                    request->send(200, "application/json", "{\"success\":true}");
+                } else {
+                    request->send(503, "application/json", "{\"success\":false,\"error\":\"Queue full\"}");
+                }
+            }
+        }
+    );
+
+    // GET /api/layout - Get current layout configuration
+    server.on("/api/layout", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
+
+        StaticJsonDocument<256> doc;
+        doc["reverse"] = layoutConfig.reverse;
+        doc["mirror"] = layoutConfig.mirror;
+        doc["dead_leds"] = layoutConfig.dead_leds;
+
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+
+    // POST /api/restart - Restart the device
+    server.on("/api/restart", HTTP_POST, [](AsyncWebServerRequest *request) {
+        request->send(200, "application/json", "{\"success\":true,\"message\":\"Restarting...\"}");
+        delay(500); // Give time for response to send
+        ESP.restart();
+    });
 
     // GET /api/about - Device information
     server.on("/api/about", HTTP_GET, [this](AsyncWebServerRequest *request) {
