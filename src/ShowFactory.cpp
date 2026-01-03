@@ -12,6 +12,7 @@
 #include "show/Solid.h"
 #include "show/Starlight.h"
 #include "show/TwoColorBlend.h"
+#include "show/Wave.h"
 #include "color.h"
 
 #ifdef ARDUINO
@@ -59,6 +60,10 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
 
     registerShow("Starlight", "Twinkling stars effect", []() {
         return new Show::Starlight(); // Default: 0.1 probability, 5s length, 1s fade, warm white
+    });
+
+    registerShow("Wave", "Propagating wave with rainbow colors", []() {
+        return new Show::Wave(); // Default: 1.0 speed, 2.0 decay, 0.1 freq, 6.0 wavelength
     });
 }
 
@@ -203,6 +208,17 @@ Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
         Serial.printf("ShowFactory: Creating Starlight probability=%.2f, length=%lums, fade=%lums, RGB(%d,%d,%d)\n",
                      probability, length_ms, fade_ms, r, g, b);
         return new Show::Starlight(probability, length_ms, fade_ms, r, g, b);
+    }
+    else if (strcmp(name, "Wave") == 0) {
+        // Parse Wave parameters: {"wave_speed":1.0, "decay_rate":2.0, "brightness_frequency":0.1, "wavelength":6.0}
+        float wave_speed = doc["wave_speed"] | 1.0f;
+        float decay_rate = doc["decay_rate"] | 2.0f;
+        float brightness_frequency = doc["brightness_frequency"] | 0.1f;
+        float wavelength = doc["wavelength"] | 6.0f;
+
+        Serial.printf("ShowFactory: Creating Wave speed=%.2f, decay=%.2f, freq=%.2f, wavelength=%.2f\n",
+                     wave_speed, decay_rate, brightness_frequency, wavelength);
+        return new Show::Wave(wave_speed, decay_rate, brightness_frequency, wavelength);
     }
     // Other shows don't support parameters yet, use default constructor
     else {

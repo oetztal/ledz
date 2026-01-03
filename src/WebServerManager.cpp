@@ -443,6 +443,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
     <div class="container">
         <div class="header">
             <h1>ledz</h1>
+            <div class="device-name" id="deviceName" style="font-size: 18px; margin-top: 5px; margin-bottom: 10px; opacity: 0.95;"></div>
             <div class="device-id" id="deviceId">Loading...</div>
         </div>
 
@@ -587,6 +588,30 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                     </div>
                     <button class="apply-button" onclick="applyStarlightParams()">Apply Parameters</button>
                 </div>
+
+                <div id="waveParams" class="params-section">
+                    <div class="param-row">
+                        <label class="param-label" for="waveSpeed">Wave Speed</label>
+                        <input type="number" id="waveSpeed" step="0.1" min="0.1" max="10" value="1.0">
+                        <small style="display:block; margin-top:4px; color:#666;">Higher = faster wave propagation</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="waveDecay">Decay Rate</label>
+                        <input type="number" id="waveDecay" step="0.1" min="0" max="10" value="2.0">
+                        <small style="display:block; margin-top:4px; color:#666;">Higher = faster brightness fade towards ends</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="waveBrightnessFreq">Brightness Frequency</label>
+                        <input type="number" id="waveBrightnessFreq" step="0.01" min="0.01" max="1" value="0.1">
+                        <small style="display:block; margin-top:4px; color:#666;">Frequency of source brightness pulsation</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="waveWavelength">Wavelength</label>
+                        <input type="number" id="waveWavelength" step="0.5" min="1" max="20" value="6.0">
+                        <small style="display:block; margin-top:4px; color:#666;">Higher = longer, more spread out waves</small>
+                    </div>
+                    <button class="apply-button" onclick="applyWaveParams()">Apply Parameters</button>
+                </div>
             </div>
 
             <div class="control-group">
@@ -640,6 +665,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             document.getElementById('twoColorBlendParams').classList.remove('visible');
             document.getElementById('colorRangesParams').classList.remove('visible');
             document.getElementById('starlightParams').classList.remove('visible');
+            document.getElementById('waveParams').classList.remove('visible');
 
             if (showName === 'Solid') {
                 document.getElementById('solidParams').classList.add('visible');
@@ -653,6 +679,8 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 document.getElementById('colorRangesParams').classList.add('visible');
             } else if (showName === 'Starlight') {
                 document.getElementById('starlightParams').classList.add('visible');
+            } else if (showName === 'Wave') {
+                document.getElementById('waveParams').classList.add('visible');
             }
         }
 
@@ -876,27 +904,56 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             }
         }
 
+        // Apply Wave parameters
+        async function applyWaveParams() {
+            const wave_speed = parseFloat(document.getElementById('waveSpeed').value);
+            const decay_rate = parseFloat(document.getElementById('waveDecay').value);
+            const brightness_frequency = parseFloat(document.getElementById('waveBrightnessFreq').value);
+            const wavelength = parseFloat(document.getElementById('waveWavelength').value);
+
+            try {
+                pendingParameterConfig = true;
+                await fetch('/api/show', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: 'Wave',
+                        params: { wave_speed, decay_rate, brightness_frequency, wavelength }
+                    })
+                });
+                pendingParameterConfig = false;  // Applied successfully
+            } catch (error) {
+                console.error('Failed to apply Wave parameters:', error);
+            }
+        }
+
         // Update device info display
         function updateDeviceInfo() {
+            const deviceNameElement = document.getElementById('deviceName');
             const deviceIdElement = document.getElementById('deviceId');
+
             if (currentStatus.device_id) {
                 const hostname = currentStatus.device_id.toLowerCase().replace('ledz-', 'ledz');
-                const displayName = currentStatus.device_name || currentStatus.device_id;
-                let infoHTML = `${displayName}`;
+                const hasCustomName = currentStatus.device_name && currentStatus.device_name !== currentStatus.device_id;
 
-                // Show device ID if custom name is set
-                if (currentStatus.device_name && currentStatus.device_name !== currentStatus.device_id) {
-                    infoHTML += `<br><small style="font-size: 11px; font-weight: normal; opacity: 0.8;">${currentStatus.device_id}</small>`;
+                // Show custom device name in the subtitle (if configured)
+                if (hasCustomName) {
+                    deviceNameElement.textContent = currentStatus.device_name;
+                    deviceNameElement.style.display = 'block';
+                } else {
+                    deviceNameElement.style.display = 'none';
                 }
-                infoHTML += `<br>`;
+
+                // Device ID and technical details
+                let infoHTML = currentStatus.device_id;
 
                 if (currentStatus.wifi_connected && currentStatus.wifi_ssid) {
-                    infoHTML += `<small style="font-size: 11px; font-weight: normal;">
+                    infoHTML += `<br><small style="font-size: 11px; font-weight: normal;">
                         WiFi: ${currentStatus.wifi_ssid}<br>
                         Access at: <a href="http://${hostname}.local/" style="color: inherit; text-decoration: underline;">${hostname}.local</a>
                     </small>`;
                 } else {
-                    infoHTML += `<small style="font-size: 11px; font-weight: normal;">
+                    infoHTML += `<br><small style="font-size: 11px; font-weight: normal;">
                         Access at: <a href="http://${hostname}.local/" style="color: inherit; text-decoration: underline;">${hostname}.local</a>
                     </small>`;
                 }

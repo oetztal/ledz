@@ -22,6 +22,7 @@
 #include "show/Solid.h"
 #include "show/Starlight.h"
 #include "show/TwoColorBlend.h"
+#include "show/Wave.h"
 #include "strip/Base.h"
 #include "show/Rainbow.h"
 #include "strip/Layout.h"
