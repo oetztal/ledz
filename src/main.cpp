@@ -20,6 +20,7 @@
 #include "show/Jump.h"
 #include "show/Mandelbrot.h"
 #include "show/Solid.h"
+#include "show/Starlight.h"
 #include "show/TwoColorBlend.h"
 #include "strip/Base.h"
 #include "show/Rainbow.h"

@@ -563,6 +563,30 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                     </div>
                     <button class="apply-button" onclick="applyColorRangesParams()">Apply Pattern</button>
                 </div>
+
+                <div id="starlightParams" class="params-section">
+                    <div class="param-row">
+                        <label class="param-label" for="starlightProbability">Spawn Probability (0.0-1.0)</label>
+                        <input type="number" id="starlightProbability" step="0.01" min="0" max="1" value="0.1">
+                        <small style="display:block; margin-top:4px; color:#666;">Higher = more stars spawn per frame</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="starlightLength">Hold Time (ms)</label>
+                        <input type="number" id="starlightLength" step="100" min="100" max="30000" value="5000">
+                        <small style="display:block; margin-top:4px; color:#666;">Duration at full brightness</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="starlightFade">Fade Time (ms)</label>
+                        <input type="number" id="starlightFade" step="100" min="100" max="10000" value="1000">
+                        <small style="display:block; margin-top:4px; color:#666;">Fade-in and fade-out duration</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="starlightColor">Star Color</label>
+                        <input type="color" id="starlightColor" value="#ffb432">
+                        <small style="display:block; margin-top:4px; color:#666;">Default: warm white (255, 180, 50)</small>
+                    </div>
+                    <button class="apply-button" onclick="applyStarlightParams()">Apply Parameters</button>
+                </div>
             </div>
 
             <div class="control-group">
@@ -612,6 +636,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             document.getElementById('chaosParams').classList.remove('visible');
             document.getElementById('twoColorBlendParams').classList.remove('visible');
             document.getElementById('colorRangesParams').classList.remove('visible');
+            document.getElementById('starlightParams').classList.remove('visible');
 
             if (showName === 'Solid') {
                 document.getElementById('solidParams').classList.add('visible');
@@ -623,6 +648,8 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 document.getElementById('twoColorBlendParams').classList.add('visible');
             } else if (showName === 'ColorRanges') {
                 document.getElementById('colorRangesParams').classList.add('visible');
+            } else if (showName === 'Starlight') {
+                document.getElementById('starlightParams').classList.add('visible');
             }
         }
 
@@ -817,6 +844,32 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 pendingParameterConfig = false;  // Applied successfully
             } catch (error) {
                 console.error('Failed to apply ColorRanges parameters:', error);
+            }
+        }
+
+        // Apply Starlight parameters
+        async function applyStarlightParams() {
+            const probability = parseFloat(document.getElementById('starlightProbability').value);
+            const length = parseInt(document.getElementById('starlightLength').value);
+            const fade = parseInt(document.getElementById('starlightFade').value);
+
+            const hex = document.getElementById('starlightColor').value;
+            const r = parseInt(hex.substr(1,2), 16);
+            const g = parseInt(hex.substr(3,2), 16);
+            const b = parseInt(hex.substr(5,2), 16);
+
+            try {
+                await fetch('/api/show', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: 'Starlight',
+                        params: { probability, length, fade, r, g, b }
+                    })
+                });
+                pendingParameterConfig = false;  // Applied successfully
+            } catch (error) {
+                console.error('Failed to apply Starlight parameters:', error);
             }
         }
 

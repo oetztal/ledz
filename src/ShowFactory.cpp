@@ -10,6 +10,7 @@
 #include "show/Chaos.h"
 #include "show/Jump.h"
 #include "show/Solid.h"
+#include "show/Starlight.h"
 #include "show/TwoColorBlend.h"
 #include "color.h"
 
@@ -54,6 +55,10 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
             color(255, 215, 0)    // Yellow
         };
         return new Show::ColorRanges(colors);
+    });
+
+    registerShow("Starlight", "Twinkling stars effect", []() {
+        return new Show::Starlight(); // Default: 0.1 probability, 5s length, 1s fade, warm white
     });
 }
 
@@ -185,6 +190,19 @@ Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
         Serial.printf("ShowFactory: Creating ColorRanges with %zu colors and %zu ranges\n",
                      colors.size(), ranges.size());
         return new Show::ColorRanges(colors, ranges);
+    }
+    else if (strcmp(name, "Starlight") == 0) {
+        // Parse Starlight parameters: {"probability":0.1, "length":5000, "fade":1000, "r":255, "g":180, "b":50}
+        float probability = doc["probability"] | 0.1f;
+        unsigned long length_ms = doc["length"] | 5000;
+        unsigned long fade_ms = doc["fade"] | 1000;
+        uint8_t r = doc["r"] | 255;
+        uint8_t g = doc["g"] | 180;
+        uint8_t b = doc["b"] | 50;
+
+        Serial.printf("ShowFactory: Creating Starlight probability=%.2f, length=%lums, fade=%lums, RGB(%d,%d,%d)\n",
+                     probability, length_ms, fade_ms, r, g, b);
+        return new Show::Starlight(probability, length_ms, fade_ms, r, g, b);
     }
     // Other shows don't support parameters yet, use default constructor
     else {
