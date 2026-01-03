@@ -19,7 +19,7 @@ const char CONFIG_HTML[] PROGMEM = R"rawliteral(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LED Controller - WiFi Setup</title>
+    <title>ledz - WiFi Setup</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -90,7 +90,7 @@ const char CONFIG_HTML[] PROGMEM = R"rawliteral(
 </head>
 <body>
     <div class="container">
-        <h1>LED Controller</h1>
+        <h1>ledz LED controller</h1>
         <h2 style="text-align: center; color: #666; font-size: 18px;">WiFi Configuration</h2>
 
         <form id="wifiForm">
@@ -156,7 +156,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LED Controller</title>
+    <title>ledz LED controller</title>
     <style>
         * {
             box-sizing: border-box;
@@ -1521,7 +1521,7 @@ void WebServerManager::setupAPIRoutes() {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About - LED Controller</title>
+    <title>About - ledz</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {

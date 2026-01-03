@@ -110,7 +110,7 @@ void Network::startSTA(const char* ssid, const char* password) {
             // Advertise HTTP service
             MDNS.addService("http", "tcp", 80);
 
-            Serial.println("You can now access the LED controller at:");
+            Serial.println("You can now access ledz at:");
             Serial.print("  http://");
             Serial.print(hostname);
             Serial.println(".local/");

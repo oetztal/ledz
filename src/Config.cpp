@@ -111,7 +111,7 @@ namespace Config {
         prefs.begin(NAMESPACE, true); // Read-only mode
 
         config.brightness = prefs.getUChar("brightness", 128);
-        config.num_pixels = prefs.getUShort("num_pixels", 300);
+        config.num_pixels = prefs.getUShort("num_pixels", 1);
         prefs.getString("device_name", config.device_name, sizeof(config.device_name));
 
         prefs.end();
