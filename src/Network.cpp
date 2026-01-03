@@ -28,7 +28,7 @@ Network::Network(Config::ConfigManager &config, Status::Status &status)
 String Network::generateHostname() {
 #ifdef ARDUINO
     String deviceId = DeviceId::getDeviceId();
-    String hostname = "ledz" + deviceId;
+    String hostname = "ledz-" + deviceId;
     hostname.toLowerCase();
     return hostname;
 #else
@@ -45,17 +45,17 @@ void Network::startAP() {
     mode = NetworkMode::AP;
 
     // Get device ID for AP SSID
-    String deviceId = "ledz " + DeviceId::getDeviceId();
+    String ap_ssid = "ledz " + DeviceId::getDeviceId();
 
     Serial.print("Starting Access Point: ");
-    Serial.println(deviceId.c_str());
+    Serial.println(ap_ssid.c_str());
 
     // Start open AP (no password)
-    WiFi.softAP(deviceId.c_str());
+    WiFi.softAP(ap_ssid.c_str());
 
-    IPAddress IP = WiFi.softAPIP();
+    IPAddress ip_address = WiFi.softAPIP();
     Serial.print("AP IP address: ");
-    Serial.println(IP);
+    Serial.println(ip_address);
 
     // Start mDNS responder
     String hostname = generateHostname();
@@ -101,7 +101,7 @@ void Network::startSTA(const char* ssid, const char* password) {
 
     WiFi.begin(ssid, password);
 
-    Serial.print("Connecting to WiFi: ");
+    Serial.print("Connecting to WiFi ...");
     Serial.println(ssid);
 
     // Wait for connection with timeout
@@ -110,13 +110,12 @@ void Network::startSTA(const char* ssid, const char* password) {
 
     while (WiFi.status() != WL_CONNECTED && attempts < maxAttempts) {
         vTaskDelay(500 / portTICK_PERIOD_MS);
-        Serial.print(".");
         attempts++;
     }
 
     if (WiFi.status() == WL_CONNECTED) {
         status.connected();
-        Serial.println("\nConnected!");
+        Serial.println("WiFi connected");
 
         Serial.print("IP address: ");
         Serial.println(WiFi.localIP());
@@ -165,7 +164,7 @@ void Network::startSTA(const char* ssid, const char* password) {
         Serial.print("NTP time: ");
         Serial.println(ntpClient.getFormattedTime());
     } else {
-        Serial.println("\nConnection failed!");
+        Serial.println("\nConnection failed");
         status.connecting(); // Keep in connecting state
     }
 #endif
@@ -190,11 +189,14 @@ void Network::startSTA(const char* ssid, const char* password) {
             captivePortal.handleClient(); // Handle DNS requests
             vTaskDelay(100 / portTICK_PERIOD_MS);
         }
+        Serial.println("Configuration received");
 
-        Serial.println("Configuration received - stopping captive portal...");
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        Serial.println("Stopping captive portal");
         captivePortal.end();
 
-        Serial.println("Restarting...");
+        Serial.println("Restarting");
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         ESP.restart();
     }
@@ -259,7 +261,7 @@ void Network::startSTA(const char* ssid, const char* password) {
 
         // Check WiFi connection
         if (WiFi.status() != WL_CONNECTED) {
-            Serial.println("WiFi disconnected - reconnecting...");
+            Serial.println("WiFi disconnected - reconnecting ...");
             status.connecting();
             WiFi.reconnect();
 
@@ -271,12 +273,12 @@ void Network::startSTA(const char* ssid, const char* password) {
 
             if (WiFi.status() == WL_CONNECTED) {
                 status.connected();
-                Serial.println("Reconnected!");
+                Serial.println("WiFi reconnected");
             }
         }
 
-        // Update NTP every 60 seconds
-        if (ntpClient.getEpochTime() - lastNtpUpdate > 60) {
+        // Update NTP every 300 seconds
+        if (ntpClient.getEpochTime() - lastNtpUpdate > 300) {
             bool result = ntpClient.update();
             Serial.print("NTP update: ");
             Serial.print(ntpClient.getFormattedTime());

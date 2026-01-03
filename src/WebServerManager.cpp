@@ -7,6 +7,7 @@
 #include "Network.h"
 #include "ShowController.h"
 #include "ShowFactory.h"
+#include "DeviceId.h"
 
 #ifdef ARDUINO
 #include <ArduinoJson.h>
@@ -131,7 +132,8 @@ const char CONFIG_HTML[] PROGMEM = R"rawliteral(
 
                 if (result.success) {
                     statusDiv.className = 'status success';
-                    statusDiv.textContent = 'WiFi configured successfully! Device will restart and connect to your network.';
+                    const hostname = result.hostname || 'the device';
+                    statusDiv.innerHTML = `WiFi configured successfully!<br><br>The device will restart and connect to your network.<br><br>After restart, access it at: <strong><a href="http://${hostname}/" target="_blank">http://${hostname}/</a></strong>`;
                     statusDiv.style.display = 'block';
                 } else {
                     statusDiv.className = 'status error';
@@ -1000,7 +1002,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             const deviceIdElement = document.getElementById('deviceId');
 
             if (currentStatus.device_id) {
-                const hostname = currentStatus.device_id.toLowerCase().replace('ledz-', 'ledz');
+                const hostname = "ledz-" + currentStatus.device_id.toLowerCase();
                 const hasCustomName = currentStatus.device_name && currentStatus.device_name !== currentStatus.device_id;
 
                 // Update page title with custom name if set
@@ -2221,8 +2223,19 @@ void WebServerManager::handleWiFiConfig(AsyncWebServerRequest *request, uint8_t 
         Serial.print("WiFi configured: SSID=");
         Serial.println(wifiConfig.ssid);
 
-        // Send success response
-        request->send(200, "application/json", "{\"success\":true}");
+        // Generate mDNS hostname for response
+        String deviceId = DeviceId::getDeviceId();
+        String hostname = "ledz" + deviceId;
+        hostname.toLowerCase();
+
+        // Send success response with hostname
+        StaticJsonDocument<128> responseDoc;
+        responseDoc["success"] = true;
+        responseDoc["hostname"] = hostname + ".local";
+
+        String response;
+        serializeJson(responseDoc, response);
+        request->send(200, "application/json", response);
 
         // Note: The Network task will detect config.isConfigured() and restart the device
     }

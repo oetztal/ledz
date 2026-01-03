@@ -21,33 +21,13 @@
 #endif
 
 ShowFactory::ShowFactory() : showConstructors(strLess) {
-    // Register all available shows
+    // Register all available shows (in display order)
     registerShow("Rainbow", "Rainbow color cycle", []() {
         return new Show::Rainbow();
     });
 
-    registerShow("ColorRun", "Running colors", []() {
-        return new Show::ColorRun();
-    });
-
-    registerShow("Mandelbrot", "Mandelbrot fractal zoom", []() {
-        return new Show::Mandelbrot(-1.05, -0.3616, -0.3156, 5, 50, 10);
-    });
-
-    registerShow("Chaos", "Chaotic pattern", []() {
-        return new Show::Chaos(2.95f, 4.0f, 0.0002f);
-    });
-
-    registerShow("Jump", "Jumping lights", []() {
-        return new Show::Jump();
-    });
-
     registerShow("Solid", "Solid color (default: white)", []() {
         return new Show::Solid(255, 255, 255); // Default to white
-    });
-
-    registerShow("TwoColorBlend", "Gradient between two colors", []() {
-        return new Show::TwoColorBlend(255, 0, 0, 0, 0, 255); // Default: red to blue
     });
 
     registerShow("ColorRanges", "Solid color sections (flags, patterns)", []() {
@@ -59,8 +39,20 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
         return new Show::ColorRanges(colors);
     });
 
+    registerShow("TwoColorBlend", "Gradient between two colors", []() {
+        return new Show::TwoColorBlend(255, 0, 0, 0, 0, 255); // Default: red to blue
+    });
+
     registerShow("Starlight", "Twinkling stars effect", []() {
         return new Show::Starlight(); // Default: 0.1 probability, 5s length, 1s fade, warm white
+    });
+
+    registerShow("ColorRun", "Running colors", []() {
+        return new Show::ColorRun();
+    });
+
+    registerShow("Jump", "Jumping lights", []() {
+        return new Show::Jump();
     });
 
     registerShow("Wave", "Propagating wave with rainbow colors", []() {
@@ -69,6 +61,14 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
 
     registerShow("MorseCode", "Scrolling Morse code text display", []() {
         return new Show::MorseCode(); // Default: "HELLO", 0.5 speed
+    });
+
+    registerShow("Chaos", "Chaotic pattern", []() {
+        return new Show::Chaos(2.95f, 4.0f, 0.0002f);
+    });
+
+    registerShow("Mandelbrot", "Mandelbrot fractal zoom", []() {
+        return new Show::Mandelbrot(-1.05, -0.3616, -0.3156, 5, 50, 10);
     });
 }
 

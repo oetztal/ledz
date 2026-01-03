@@ -48,7 +48,7 @@ namespace Config {
     struct DeviceConfig {
         uint8_t brightness;         // 0-255
         uint16_t num_pixels;
-        char device_id[16];         // e.g., "ledz-AABBCC"
+        char device_id[16];         // e.g., "AABBCC"
         char device_name[32];       // Custom device name
 
         DeviceConfig() : brightness(128), num_pixels(300) {
@@ -138,7 +138,7 @@ namespace Config {
 
         /**
          * Get unique device ID based on MAC address
-         * @return Device ID string (e.g., "ledz-AABBCC")
+         * @return Device ID string (e.g., "AABBCC")
          */
         String getDeviceId();
 

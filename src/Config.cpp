@@ -159,7 +159,7 @@ namespace Config {
         memcpy(mac_bytes, &mac, 6);
 
         char id[16];
-        snprintf(id, sizeof(id), "ledz-%02X%02X%02X",
+        snprintf(id, sizeof(id), "%02X%02X%02X",
                  mac_bytes[3], mac_bytes[4], mac_bytes[5]);
         return String(id);
 #else
