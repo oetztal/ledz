@@ -442,8 +442,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
 <body>
     <div class="container">
         <div class="header">
-            <h1>ledz</h1>
-            <div class="device-name" id="deviceName" style="font-size: 18px; margin-top: 5px; margin-bottom: 10px; opacity: 0.95;"></div>
+            <h1 id="pageTitle">ledz</h1>
             <div class="device-id" id="deviceId">Loading...</div>
         </div>
 
@@ -997,19 +996,18 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
 
         // Update device info display
         function updateDeviceInfo() {
-            const deviceNameElement = document.getElementById('deviceName');
+            const pageTitleElement = document.getElementById('pageTitle');
             const deviceIdElement = document.getElementById('deviceId');
 
             if (currentStatus.device_id) {
                 const hostname = currentStatus.device_id.toLowerCase().replace('ledz-', 'ledz');
                 const hasCustomName = currentStatus.device_name && currentStatus.device_name !== currentStatus.device_id;
 
-                // Show custom device name in the subtitle (if configured)
+                // Update page title with custom name if set
                 if (hasCustomName) {
-                    deviceNameElement.textContent = currentStatus.device_name;
-                    deviceNameElement.style.display = 'block';
+                    pageTitleElement.textContent = 'ledz ' + currentStatus.device_name;
                 } else {
-                    deviceNameElement.style.display = 'none';
+                    pageTitleElement.textContent = 'ledz';
                 }
 
                 // Device ID and technical details
@@ -1113,24 +1111,20 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             }
         });
 
-        // Brightness change handler (with debouncing)
-        let brightnessTimeout;
-        document.getElementById('brightnessSlider').addEventListener('input', (e) => {
+        // Brightness change handler (instantaneous updates)
+        document.getElementById('brightnessSlider').addEventListener('input', async (e) => {
             const value = e.target.value;
             document.getElementById('brightnessValue').textContent = value;
 
-            clearTimeout(brightnessTimeout);
-            brightnessTimeout = setTimeout(async () => {
-                try {
-                    await fetch('/api/brightness', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ value: parseInt(value) })
-                    });
-                } catch (error) {
-                    console.error('Failed to change brightness:', error);
-                }
-            }, 300);
+            try {
+                await fetch('/api/brightness', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ value: parseInt(value) })
+                });
+            } catch (error) {
+                console.error('Failed to change brightness:', error);
+            }
         });
 
         // Auto-cycle toggle handler

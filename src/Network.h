@@ -50,6 +50,12 @@ private:
     CaptivePortal captivePortal;
 
     /**
+     * Generate mDNS hostname from device ID
+     * Creates hostname like "ledzaabbcc" from device ID (removes dash)
+     */
+    String generateHostname();
+
+    /**
      * Start Access Point mode for configuration
      */
     void startAP();

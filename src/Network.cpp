@@ -25,6 +25,18 @@ Network::Network(Config::ConfigManager &config, Status::Status &status)
 {
 }
 
+String Network::generateHostname() {
+#ifdef ARDUINO
+    String deviceId = DeviceId::getDeviceId();
+    String hostname = deviceId;
+    hostname.toLowerCase();
+    hostname.replace("ledz-", "ledz");  // Remove dash for hostname
+    return hostname;
+#else
+    return "ledz";
+#endif
+}
+
 void Network::setWebServer(WebServerManager *server) {
     this->webServer = server;
 }
@@ -47,14 +59,28 @@ void Network::startAP() {
     Serial.println(IP);
 
     // Start mDNS responder
-    String hostname = deviceId;
-    hostname.toLowerCase();
-    hostname.replace("ledz-", "ledz");  // Remove dash for hostname
+    String hostname = generateHostname();
 
     if (MDNS.begin(hostname.c_str())) {
         Serial.print("mDNS responder started: ");
         Serial.print(hostname);
         Serial.println(".local");
+
+        // Load device config for custom name
+        Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
+        bool hasCustomName = (deviceConfig.device_name[0] != '\0' &&
+                              strcmp(deviceConfig.device_name, deviceConfig.device_id) != 0);
+
+        // Set instance name with custom device name or device ID
+        String instanceName;
+        if (hasCustomName) {
+            instanceName = "ledz " + String(deviceConfig.device_name);
+        } else {
+            instanceName = "ledz " + String(deviceConfig.device_id);
+        }
+        MDNS.setInstanceName(instanceName.c_str());
+        Serial.print("mDNS instance name: ");
+        Serial.println(instanceName);
 
         // Advertise HTTP service
         MDNS.addService("http", "tcp", 80);
@@ -97,15 +123,28 @@ void Network::startSTA(const char* ssid, const char* password) {
         Serial.println(WiFi.localIP());
 
         // Start mDNS responder
-        String deviceId = DeviceId::getDeviceId();
-        String hostname = deviceId;
-        hostname.toLowerCase();
-        hostname.replace("ledz-", "ledz");  // Remove dash for hostname
+        String hostname = generateHostname();
 
         if (MDNS.begin(hostname.c_str())) {
             Serial.print("mDNS responder started: ");
             Serial.print(hostname);
             Serial.println(".local");
+
+            // Load device config for custom name
+            Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
+            bool hasCustomName = (deviceConfig.device_name[0] != '\0' &&
+                                  strcmp(deviceConfig.device_name, deviceConfig.device_id) != 0);
+
+            // Set instance name with custom device name or device ID
+            String instanceName;
+            if (hasCustomName) {
+                instanceName = "ledz " + String(deviceConfig.device_name);
+            } else {
+                instanceName = "ledz " + String(deviceConfig.device_id);
+            }
+            MDNS.setInstanceName(instanceName.c_str());
+            Serial.print("mDNS instance name: ");
+            Serial.println(instanceName);
 
             // Advertise HTTP service
             MDNS.addService("http", "tcp", 80);

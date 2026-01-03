@@ -183,7 +183,7 @@ If you want to change the hostname format, modify `src/Network.cpp`:
 // Current implementation
 String hostname = deviceId;
 hostname.toLowerCase();
-hostname.replace("ledctrl-", "ledctrl");
+hostname.replace("ledz-", "ledz");
 
 // Custom implementation (example)
 hostname = "myled";  // All devices would be "myled.local"

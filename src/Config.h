@@ -78,7 +78,7 @@ namespace Config {
 #ifdef ARDUINO
         Preferences prefs;
 #endif
-        static constexpr const char* NAMESPACE = "ledctrl";
+        static constexpr const char* NAMESPACE = "ledz";
 
     public:
         ConfigManager();
@@ -138,7 +138,7 @@ namespace Config {
 
         /**
          * Get unique device ID based on MAC address
-         * @return Device ID string (e.g., "LEDCtrl-AABBCC")
+         * @return Device ID string (e.g., "ledz-AABBCC")
          */
         String getDeviceId();
 
