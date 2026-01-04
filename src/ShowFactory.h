@@ -28,7 +28,7 @@ public:
     /**
      * Show constructor function type
      */
-    using ShowConstructor = std::function<Show::Show*()>;
+    using ShowConstructor = std::function<std::unique_ptr<Show::Show>&&()>;
 
     /**
      * Show metadata for listing available shows
@@ -62,7 +62,7 @@ public:
      * @param name Show name
      * @return Show instance (caller owns pointer) or nullptr if not found
      */
-    Show::Show* createShow(const char* name);
+    std::unique_ptr<Show::Show> &&createShow(const char *name);
 
     /**
      * Create a show by name with JSON parameters
@@ -70,7 +70,7 @@ public:
      * @param paramsJson JSON string with parameters (e.g., {"r":255,"g":0,"b":0})
      * @return Show instance (caller owns pointer) or nullptr if not found
      */
-    Show::Show* createShow(const char* name, const char* paramsJson);
+    std::unique_ptr<Show::Show> &&createShow(const char *name, const char *paramsJson);
 
     /**
      * Get list of all registered shows

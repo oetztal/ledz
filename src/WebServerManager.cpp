@@ -1299,17 +1299,12 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
 </html>
 )rawliteral";
 
-WebServerManager::WebServerManager(Config::ConfigManager &config, Network &network)
-    : config(config), network(network), showController(nullptr), showFactory(nullptr)
+WebServerManager::WebServerManager(Config::ConfigManager &config, Network &network, ShowController &show_controller)
+    : config(config), network(network), showController(show_controller)
 #ifdef ARDUINO
-    , server(80)
+      , server(80)
 #endif
 {
-}
-
-void WebServerManager::setShowController(ShowController *controller, ShowFactory *factory) {
-    this->showController = controller;
-    this->showFactory = factory;
 }
 
 void WebServerManager::setupConfigRoutes() {
@@ -1330,13 +1325,13 @@ void WebServerManager::setupConfigRoutes() {
 
     // Handle WiFi configuration POST
     server.on("/api/wifi", HTTP_POST,
-        [](AsyncWebServerRequest *request) {
-            // This callback is called after body processing
-        },
-        NULL,
-        [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-            this->handleWiFiConfig(request, data, len, index, total);
-        }
+              [](AsyncWebServerRequest *request) {
+                  // This callback is called after body processing
+              },
+              NULL,
+              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+                  this->handleWiFiConfig(request, data, len, index, total);
+              }
     );
 #endif
 }
@@ -1345,22 +1340,17 @@ void WebServerManager::setupAPIRoutes() {
 #ifdef ARDUINO
     // GET /api/status - Get device status
     server.on("/api/status", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        if (showController == nullptr) {
-            request->send(500, "application/json", "{\"error\":\"Controller not initialized\"}");
-            return;
-        }
-
         StaticJsonDocument<512> doc;
 
         // Device info
         Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
         doc["device_id"] = deviceConfig.device_id;
         doc["device_name"] = deviceConfig.device_name;
-        doc["brightness"] = showController->getBrightness();
+        doc["brightness"] = showController.getBrightness();
 
         // Show info
-        doc["current_show"] = showController->getCurrentShowName();
-        doc["auto_cycle"] = showController->isAutoCycleEnabled();
+        doc["current_show"] = showController.getCurrentShowName();
+        doc["auto_cycle"] = showController.isAutoCycleEnabled();
 
         // Network info
         doc["wifi_connected"] = (WiFi.status() == WL_CONNECTED);
@@ -1376,16 +1366,11 @@ void WebServerManager::setupAPIRoutes() {
 
     // GET /api/shows - List available shows
     server.on("/api/shows", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        if (showFactory == nullptr) {
-            request->send(500, "application/json", "{\"error\":\"Factory not initialized\"}");
-            return;
-        }
-
         StaticJsonDocument<1024> doc;
         JsonArray shows = doc.createNestedArray("shows");
 
-        const std::vector<ShowFactory::ShowInfo>& showList = showFactory->listShows();
-        for (const auto& showInfo : showList) {
+        const std::vector<ShowFactory::ShowInfo> &showList = showController.listShows();
+        for (const auto &showInfo: showList) {
             JsonObject show = shows.createNestedObject();
             show["name"] = showInfo.name;
             show["description"] = showInfo.description;
@@ -1398,135 +1383,143 @@ void WebServerManager::setupAPIRoutes() {
 
     // POST /api/show - Change current show
     server.on("/api/show", HTTP_POST,
-        [](AsyncWebServerRequest *request) {},
-        NULL,
-        [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-            if (index == 0 && showController != nullptr) {
-                StaticJsonDocument<512> doc;
-                DeserializationError error = deserializeJson(doc, data, len);
+              [](AsyncWebServerRequest *request) {
+              },
+              NULL,
+              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+                  if (index == 0) {
+                      StaticJsonDocument<512> doc;
+                      DeserializationError error = deserializeJson(doc, data, len);
 
-                if (error) {
-                    request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
-                    return;
-                }
+                      if (error) {
+                          request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
+                          return;
+                      }
 
-                const char* showName = doc["name"];
-                if (showName == nullptr) {
-                    request->send(400, "application/json", "{\"success\":false,\"error\":\"Show name required\"}");
-                    return;
-                }
+                      const char *showName = doc["name"];
+                      if (showName == nullptr) {
+                          request->send(400, "application/json",
+                                        "{\"success\":false,\"error\":\"Show name required\"}");
+                          return;
+                      }
 
-                // Get parameters if provided
-                String paramsJson;
-                if (doc.containsKey("params")) {
-                    JsonObject params = doc["params"];
-                    serializeJson(params, paramsJson);
-                } else {
-                    paramsJson = "{}";
-                }
+                      // Get parameters if provided
+                      String paramsJson;
+                      if (doc.containsKey("params")) {
+                          JsonObject params = doc["params"];
+                          serializeJson(params, paramsJson);
+                      } else {
+                          paramsJson = "{}";
+                      }
 
-                if (showController->queueShowChange(showName, paramsJson.c_str())) {
-                    request->send(200, "application/json", "{\"success\":true}");
-                } else {
-                    request->send(503, "application/json", "{\"success\":false,\"error\":\"Queue full\"}");
-                }
-            }
-        }
+                      if (showController.queueShowChange(showName, paramsJson.c_str())) {
+                          request->send(200, "application/json", "{\"success\":true}");
+                      } else {
+                          request->send(503, "application/json", "{\"success\":false,\"error\":\"Queue full\"}");
+                      }
+                  }
+              }
     );
 
     // POST /api/brightness - Change brightness
     server.on("/api/brightness", HTTP_POST,
-        [](AsyncWebServerRequest *request) {},
-        NULL,
-        [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-            if (index == 0 && showController != nullptr) {
-                StaticJsonDocument<256> doc;
-                DeserializationError error = deserializeJson(doc, data, len);
+              [](AsyncWebServerRequest *request) {
+              },
+              NULL,
+              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+                  if (index == 0) {
+                      StaticJsonDocument<256> doc;
+                      DeserializationError error = deserializeJson(doc, data, len);
 
-                if (error) {
-                    request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
-                    return;
-                }
+                      if (error) {
+                          request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
+                          return;
+                      }
 
-                if (!doc.containsKey("value")) {
-                    request->send(400, "application/json", "{\"success\":false,\"error\":\"Brightness value required\"}");
-                    return;
-                }
+                      if (!doc.containsKey("value")) {
+                          request->send(400, "application/json",
+                                        "{\"success\":false,\"error\":\"Brightness value required\"}");
+                          return;
+                      }
 
-                uint8_t brightness = doc["value"];
-                if (showController->queueBrightnessChange(brightness)) {
-                    request->send(200, "application/json", "{\"success\":true}");
-                } else {
-                    request->send(503, "application/json", "{\"success\":false,\"error\":\"Queue full\"}");
-                }
-            }
-        }
+                      uint8_t brightness = doc["value"];
+                      if (showController.queueBrightnessChange(brightness)) {
+                          request->send(200, "application/json", "{\"success\":true}");
+                      } else {
+                          request->send(503, "application/json", "{\"success\":false,\"error\":\"Queue full\"}");
+                      }
+                  }
+              }
     );
 
     // POST /api/auto-cycle - Toggle auto-cycle
     server.on("/api/auto-cycle", HTTP_POST,
-        [](AsyncWebServerRequest *request) {},
-        NULL,
-        [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-            if (index == 0 && showController != nullptr) {
-                StaticJsonDocument<256> doc;
-                DeserializationError error = deserializeJson(doc, data, len);
+              [](AsyncWebServerRequest *request) {
+              },
+              NULL,
+              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+                  if (index == 0) {
+                      StaticJsonDocument<256> doc;
+                      DeserializationError error = deserializeJson(doc, data, len);
 
-                if (error) {
-                    request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
-                    return;
-                }
+                      if (error) {
+                          request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
+                          return;
+                      }
 
-                if (!doc.containsKey("enabled")) {
-                    request->send(400, "application/json", "{\"success\":false,\"error\":\"Enabled field required\"}");
-                    return;
-                }
+                      if (!doc.containsKey("enabled")) {
+                          request->send(400, "application/json",
+                                        "{\"success\":false,\"error\":\"Enabled field required\"}");
+                          return;
+                      }
 
-                bool enabled = doc["enabled"];
-                if (showController->queueAutoCycleToggle(enabled)) {
-                    request->send(200, "application/json", "{\"success\":true}");
-                } else {
-                    request->send(503, "application/json", "{\"success\":false,\"error\":\"Queue full\"}");
-                }
-            }
-        }
+                      bool enabled = doc["enabled"];
+                      if (showController.queueAutoCycleToggle(enabled)) {
+                          request->send(200, "application/json", "{\"success\":true}");
+                      } else {
+                          request->send(503, "application/json", "{\"success\":false,\"error\":\"Queue full\"}");
+                      }
+                  }
+              }
     );
 
     // POST /api/layout - Change strip layout configuration
     server.on("/api/layout", HTTP_POST,
-        [](AsyncWebServerRequest *request) {},
-        NULL,
-        [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-            if (index == 0 && showController != nullptr) {
-                StaticJsonDocument<256> doc;
-                DeserializationError error = deserializeJson(doc, data, len);
+              [](AsyncWebServerRequest *request) {
+              },
+              NULL,
+              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+                  if (index == 0) {
+                      StaticJsonDocument<256> doc;
+                      DeserializationError error = deserializeJson(doc, data, len);
 
-                if (error) {
-                    request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
-                    return;
-                }
+                      if (error) {
+                          request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
+                          return;
+                      }
 
-                Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
+                      Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
 
-                // Update fields if provided
-                if (doc.containsKey("reverse")) {
-                    layoutConfig.reverse = doc["reverse"];
-                }
-                if (doc.containsKey("mirror")) {
-                    layoutConfig.mirror = doc["mirror"];
-                }
-                if (doc.containsKey("dead_leds")) {
-                    layoutConfig.dead_leds = doc["dead_leds"];
-                }
+                      // Update fields if provided
+                      if (doc.containsKey("reverse")) {
+                          layoutConfig.reverse = doc["reverse"];
+                      }
+                      if (doc.containsKey("mirror")) {
+                          layoutConfig.mirror = doc["mirror"];
+                      }
+                      if (doc.containsKey("dead_leds")) {
+                          layoutConfig.dead_leds = doc["dead_leds"];
+                      }
 
-                // Queue the layout change for thread-safe execution
-                if (showController->queueLayoutChange(layoutConfig.reverse, layoutConfig.mirror, layoutConfig.dead_leds)) {
-                    request->send(200, "application/json", "{\"success\":true}");
-                } else {
-                    request->send(503, "application/json", "{\"success\":false,\"error\":\"Queue full\"}");
-                }
-            }
-        }
+                      // Queue the layout change for thread-safe execution
+                      if (showController.queueLayoutChange(layoutConfig.reverse, layoutConfig.mirror,
+                                                           layoutConfig.dead_leds)) {
+                          request->send(200, "application/json", "{\"success\":true}");
+                      } else {
+                          request->send(503, "application/json", "{\"success\":false,\"error\":\"Queue full\"}");
+                      }
+                  }
+              }
     );
 
     // GET /api/layout - Get current layout configuration
@@ -1552,125 +1545,133 @@ void WebServerManager::setupAPIRoutes() {
 
     // POST /api/settings/wifi - Update WiFi credentials
     server.on("/api/settings/wifi", HTTP_POST,
-        [](AsyncWebServerRequest *request) {},
-        NULL,
-        [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-            if (index == 0) {
-                StaticJsonDocument<256> doc;
-                DeserializationError error = deserializeJson(doc, data, len);
+              [](AsyncWebServerRequest *request) {
+              },
+              NULL,
+              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+                  if (index == 0) {
+                      StaticJsonDocument<256> doc;
+                      DeserializationError error = deserializeJson(doc, data, len);
 
-                if (error) {
-                    request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
-                    return;
-                }
+                      if (error) {
+                          request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
+                          return;
+                      }
 
-                const char* ssid = doc["ssid"];
-                const char* password = doc["password"];
+                      const char *ssid = doc["ssid"];
+                      const char *password = doc["password"];
 
-                if (ssid == nullptr || strlen(ssid) == 0) {
-                    request->send(400, "application/json", "{\"success\":false,\"error\":\"SSID required\"}");
-                    return;
-                }
+                      if (ssid == nullptr || strlen(ssid) == 0) {
+                          request->send(400, "application/json", "{\"success\":false,\"error\":\"SSID required\"}");
+                          return;
+                      }
 
-                // Create and save WiFi config
-                Config::WiFiConfig wifiConfig;
-                strncpy(wifiConfig.ssid, ssid, sizeof(wifiConfig.ssid) - 1);
-                wifiConfig.ssid[sizeof(wifiConfig.ssid) - 1] = '\0';
+                      // Create and save WiFi config
+                      Config::WiFiConfig wifiConfig;
+                      strncpy(wifiConfig.ssid, ssid, sizeof(wifiConfig.ssid) - 1);
+                      wifiConfig.ssid[sizeof(wifiConfig.ssid) - 1] = '\0';
 
-                if (password != nullptr) {
-                    strncpy(wifiConfig.password, password, sizeof(wifiConfig.password) - 1);
-                    wifiConfig.password[sizeof(wifiConfig.password) - 1] = '\0';
-                } else {
-                    wifiConfig.password[0] = '\0';
-                }
+                      if (password != nullptr) {
+                          strncpy(wifiConfig.password, password, sizeof(wifiConfig.password) - 1);
+                          wifiConfig.password[sizeof(wifiConfig.password) - 1] = '\0';
+                      } else {
+                          wifiConfig.password[0] = '\0';
+                      }
 
-                wifiConfig.configured = true;
-                config.saveWiFiConfig(wifiConfig);
+                      wifiConfig.configured = true;
+                      config.saveWiFiConfig(wifiConfig);
 
-                Serial.printf("WiFi credentials updated: SSID=%s\n", wifiConfig.ssid);
+                      Serial.printf("WiFi credentials updated: SSID=%s\n", wifiConfig.ssid);
 
-                // Send success response and restart
-                request->send(200, "application/json", "{\"success\":true,\"message\":\"WiFi updated, restarting...\"}");
-                delay(1000); // Give time for response to send
-                ESP.restart();
-            }
-        }
+                      // Send success response and restart
+                      request->send(200, "application/json",
+                                    "{\"success\":true,\"message\":\"WiFi updated, restarting...\"}");
+                      delay(1000); // Give time for response to send
+                      ESP.restart();
+                  }
+              }
     );
 
     // POST /api/settings/device-name - Update device name
     server.on("/api/settings/device-name", HTTP_POST,
-        [](AsyncWebServerRequest *request) {},
-        NULL,
-        [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-            if (index == 0) {
-                StaticJsonDocument<256> doc;
-                DeserializationError error = deserializeJson(doc, data, len);
+              [](AsyncWebServerRequest *request) {
+              },
+              NULL,
+              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+                  if (index == 0) {
+                      StaticJsonDocument<256> doc;
+                      DeserializationError error = deserializeJson(doc, data, len);
 
-                if (error) {
-                    request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
-                    return;
-                }
+                      if (error) {
+                          request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
+                          return;
+                      }
 
-                const char* name = doc["name"];
+                      const char *name = doc["name"];
 
-                if (name == nullptr || strlen(name) == 0) {
-                    request->send(400, "application/json", "{\"success\":false,\"error\":\"Device name required\"}");
-                    return;
-                }
+                      if (name == nullptr || strlen(name) == 0) {
+                          request->send(400, "application/json",
+                                        "{\"success\":false,\"error\":\"Device name required\"}");
+                          return;
+                      }
 
-                // Load current config, update name, and save
-                Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
-                strncpy(deviceConfig.device_name, name, sizeof(deviceConfig.device_name) - 1);
-                deviceConfig.device_name[sizeof(deviceConfig.device_name) - 1] = '\0';
-                config.saveDeviceConfig(deviceConfig);
+                      // Load current config, update name, and save
+                      Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
+                      strncpy(deviceConfig.device_name, name, sizeof(deviceConfig.device_name) - 1);
+                      deviceConfig.device_name[sizeof(deviceConfig.device_name) - 1] = '\0';
+                      config.saveDeviceConfig(deviceConfig);
 
-                Serial.printf("Device name updated: %s\n", deviceConfig.device_name);
+                      Serial.printf("Device name updated: %s\n", deviceConfig.device_name);
 
-                // Send success response (no restart needed)
-                request->send(200, "application/json", "{\"success\":true}");
-            }
-        }
+                      // Send success response (no restart needed)
+                      request->send(200, "application/json", "{\"success\":true}");
+                  }
+              }
     );
 
     // POST /api/settings/num-pixels - Update number of pixels
     server.on("/api/settings/num-pixels", HTTP_POST,
-        [](AsyncWebServerRequest *request) {},
-        NULL,
-        [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-            if (index == 0) {
-                StaticJsonDocument<256> doc;
-                DeserializationError error = deserializeJson(doc, data, len);
+              [](AsyncWebServerRequest *request) {
+              },
+              NULL,
+              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+                  if (index == 0) {
+                      StaticJsonDocument<256> doc;
+                      DeserializationError error = deserializeJson(doc, data, len);
 
-                if (error) {
-                    request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
-                    return;
-                }
+                      if (error) {
+                          request->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
+                          return;
+                      }
 
-                if (!doc.containsKey("num_pixels")) {
-                    request->send(400, "application/json", "{\"success\":false,\"error\":\"Number of pixels required\"}");
-                    return;
-                }
+                      if (!doc.containsKey("num_pixels")) {
+                          request->send(400, "application/json",
+                                        "{\"success\":false,\"error\":\"Number of pixels required\"}");
+                          return;
+                      }
 
-                uint16_t num_pixels = doc["num_pixels"];
+                      uint16_t num_pixels = doc["num_pixels"];
 
-                if (num_pixels < 1 || num_pixels > 1000) {
-                    request->send(400, "application/json", "{\"success\":false,\"error\":\"Number of pixels must be between 1 and 1000\"}");
-                    return;
-                }
+                      if (num_pixels < 1 || num_pixels > 1000) {
+                          request->send(400, "application/json",
+                                        "{\"success\":false,\"error\":\"Number of pixels must be between 1 and 1000\"}");
+                          return;
+                      }
 
-                // Load current config, update num_pixels, and save
-                Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
-                deviceConfig.num_pixels = num_pixels;
-                config.saveDeviceConfig(deviceConfig);
+                      // Load current config, update num_pixels, and save
+                      Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
+                      deviceConfig.num_pixels = num_pixels;
+                      config.saveDeviceConfig(deviceConfig);
 
-                Serial.printf("Number of pixels updated: %u\n", deviceConfig.num_pixels);
+                      Serial.printf("Number of pixels updated: %u\n", deviceConfig.num_pixels);
 
-                // Send success response and restart
-                request->send(200, "application/json", "{\"success\":true,\"message\":\"Number of pixels updated, restarting...\"}");
-                delay(1000); // Give time for response to send
-                ESP.restart();
-            }
-        }
+                      // Send success response and restart
+                      request->send(200, "application/json",
+                                    "{\"success\":true,\"message\":\"Number of pixels updated, restarting...\"}");
+                      delay(1000); // Give time for response to send
+                      ESP.restart();
+                  }
+              }
     );
 
     // POST /api/settings/factory-reset - Factory reset device
@@ -1678,7 +1679,8 @@ void WebServerManager::setupAPIRoutes() {
         Serial.println("Factory reset requested");
 
         // Send success response first
-        request->send(200, "application/json", "{\"success\":true,\"message\":\"Factory reset complete, restarting...\"}");
+        request->send(200, "application/json",
+                      "{\"success\":true,\"message\":\"Factory reset complete, restarting...\"}");
 
         // Give time for response to send
         delay(500);
@@ -1691,9 +1693,7 @@ void WebServerManager::setupAPIRoutes() {
         }
 
         // Clear the LED strip
-        if (showController) {
-            showController->clearStrip();
-        }
+        showController.clearStrip();
 
         // Give time for the clear to be visible
         delay(500);
@@ -2300,7 +2300,8 @@ void WebServerManager::setupAPIRoutes() {
 }
 
 #ifdef ARDUINO
-void WebServerManager::handleWiFiConfig(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+void WebServerManager::handleWiFiConfig(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
+                                        size_t total) {
     // Only process the first chunk (index == 0)
     if (index == 0) {
         // Parse JSON body
@@ -2313,8 +2314,8 @@ void WebServerManager::handleWiFiConfig(AsyncWebServerRequest *request, uint8_t 
         }
 
         // Extract SSID and password
-        const char* ssid = doc["ssid"];
-        const char* password = doc["password"];
+        const char *ssid = doc["ssid"];
+        const char *password = doc["password"];
 
         if (ssid == nullptr || strlen(ssid) == 0) {
             request->send(400, "application/json", "{\"success\":false,\"error\":\"SSID required\"}");

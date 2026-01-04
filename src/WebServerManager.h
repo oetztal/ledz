@@ -34,8 +34,7 @@ private:
 
     Config::ConfigManager &config;
     Network &network;
-    ShowController *showController;
-    ShowFactory *showFactory;
+    ShowController &showController;
 
     /**
      * Setup WiFi configuration routes
@@ -59,15 +58,9 @@ public:
      * WebServerManager constructor
      * @param config Configuration manager reference
      * @param network Network manager reference
+     * @param showController ShowController reference
      */
-    WebServerManager(Config::ConfigManager &config, Network &network);
-
-    /**
-     * Set show controller (must be called before begin)
-     * @param controller ShowController pointer
-     * @param factory ShowFactory pointer
-     */
-    void setShowController(ShowController *controller, ShowFactory *factory);
+    WebServerManager(Config::ConfigManager &config, Network &network, ShowController &showController);
 
     /**
      * Start the webserver

@@ -46,12 +46,12 @@ private:
 
     Status::Status &status;
     Config::ConfigManager &config;
-    WebServerManager *webServer;
+    std::unique_ptr<WebServerManager> webServer;
     CaptivePortal captivePortal;
 
     /**
      * Generate mDNS hostname from device ID
-     * Creates hostname like "ledzaabbcc" from device ID (removes dash)
+     * Creates hostname like "ledz-aabbcc" from device ID (removes dash)
      */
     String generateHostname();
 
@@ -79,7 +79,7 @@ public:
      * Set webserver manager (must be called before task starts)
      * @param server Webserver manager pointer
      */
-    void setWebServer(WebServerManager *server);
+    void setWebServer(std::unique_ptr<WebServerManager> &&server);
 
     /**
      * Network task (runs on Core 1)

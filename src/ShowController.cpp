@@ -11,7 +11,7 @@
 
 ShowController::ShowController(ShowFactory &factory, Config::ConfigManager &config)
     : factory(factory), config(config), brightness(128), autoCycle(true),
-      layoutPtr(nullptr), baseStrip(nullptr)
+      layout(nullptr), baseStrip(nullptr)
 #ifdef ARDUINO
     , commandQueue(nullptr)
 #endif
@@ -51,7 +51,7 @@ void ShowController::begin() {
 
     // Load parameters if available
     const char* params = (strlen(showConfig.params_json) > 0) ? showConfig.params_json : "{}";
-    currentShow.reset(factory.createShow(currentShowName, params));
+    currentShow = factory.createShow(currentShowName, params);
 
     if (currentShow) {
 #ifdef ARDUINO
@@ -139,9 +139,9 @@ void ShowController::applyCommand(const ShowCommand& cmd) {
     switch (cmd.type) {
         case ShowCommandType::SET_SHOW: {
             // Create new show with parameters
-            Show::Show* newShow = factory.createShow(cmd.show_name, cmd.params_json);
+            std::unique_ptr<Show::Show> newShow = factory.createShow(cmd.show_name, cmd.params_json);
             if (newShow != nullptr) {
-                currentShow.reset(newShow);
+                currentShow = std::move(newShow);
                 strncpy(currentShowName, cmd.show_name, sizeof(currentShowName) - 1);
                 currentShowName[sizeof(currentShowName) - 1] = '\0';
 
@@ -198,9 +198,9 @@ void ShowController::applyCommand(const ShowCommand& cmd) {
 
         case ShowCommandType::SET_LAYOUT: {
 #ifdef ARDUINO
-            if (layoutPtr != nullptr && baseStrip != nullptr) {
+            if (layout != nullptr && baseStrip != nullptr) {
                 // Recreate layout with new parameters
-                layoutPtr->reset(new Strip::Layout(*baseStrip, cmd.layout_reverse,
+                layout.reset(new Strip::Layout(*baseStrip, cmd.layout_reverse,
                                                    cmd.layout_mirror, cmd.layout_dead_leds));
 
                 Serial.printf("ShowController: Layout updated - reverse=%d, mirror=%d, dead_leds=%u\n",
@@ -262,24 +262,22 @@ bool ShowController::queueLayoutChange(bool reverse, bool mirror, uint16_t dead_
 #endif
 }
 
-void ShowController::setLayoutPointers(std::unique_ptr<Strip::Strip>* layout, Strip::Strip* base) {
-    layoutPtr = layout;
-    baseStrip = base;
+void ShowController::setStrip(std::unique_ptr<Strip::Strip>&& base) {
+    baseStrip = std::move(base);
+
+    // Load and apply layout configuration
+    Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
+    layout.reset(new Strip::Layout(*base, layoutConfig.reverse, layoutConfig.mirror, layoutConfig.dead_leds));
+    Serial.printf("Layout initialized: reverse=%d, mirror=%d, dead_leds=%u\n",
+                 layoutConfig.reverse, layoutConfig.mirror, layoutConfig.dead_leds);
 }
 
 void ShowController::clearStrip() {
 #ifdef ARDUINO
-    if (layoutPtr != nullptr && *layoutPtr != nullptr) {
-        uint16_t num_leds = (*layoutPtr)->length();
+    if (layout) {
         Strip::Color black = color(0, 0, 0);
-
-        // Turn all LEDs off
-        for (uint16_t i = 0; i < num_leds; i++) {
-            (*layoutPtr)->setPixelColor(i, black);
-        }
-
-        // Show the cleared strip
-        (*layoutPtr)->show();
+        layout->fill(black);
+        layout->show();
 
         Serial.println("ShowController: Strip cleared");
     }
@@ -293,4 +291,8 @@ ShowController::~ShowController() {
         commandQueue = nullptr;
     }
 #endif
+}
+
+const std::vector<ShowFactory::ShowInfo> &ShowController::listShows() const {
+    return factory.listShows();
 }

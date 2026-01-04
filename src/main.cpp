@@ -32,7 +32,6 @@
 
 
 #ifdef ARDUINO
-std::unique_ptr<Strip::Strip> base;    // Will be initialized in setup() with config
 std::unique_ptr<Strip::Strip> layout;  // Will be initialized in setup() with config
 #endif
 
@@ -93,7 +92,6 @@ Config::ConfigManager config;
 ShowFactory showFactory;
 ShowController showController(showFactory, config);
 Network network(config, status);
-WebServerManager webServer(config, network);
 
 void setup() {
     // Serial.begin(115200);
@@ -108,13 +106,8 @@ void setup() {
     Serial.printf("Initializing LED strip with %u pixels\n", num_pixels);
 
     // Initialize base strip with configured number of pixels
-    base.reset(new Strip::Base(MOSI, num_pixels));
+    auto base = std::unique_ptr<Strip::Base>(new Strip::Base(MOSI, num_pixels));
 
-    // Load and apply layout configuration
-    Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
-    layout.reset(new Strip::Layout(*base, layoutConfig.reverse, layoutConfig.mirror, layoutConfig.dead_leds));
-    Serial.printf("Layout initialized: reverse=%d, mirror=%d, dead_leds=%u\n",
-                 layoutConfig.reverse, layoutConfig.mirror, layoutConfig.dead_leds);
 #endif
 
     // Initialize show controller
@@ -122,14 +115,13 @@ void setup() {
 
 #ifdef ARDUINO
     // Set layout pointers for runtime reconfiguration
-    showController.setLayoutPointers(&layout, base.get());
+    showController.setStrip(std::move(base));
 #endif
 
-    // Set show controller on webserver (must be done before webserver starts)
-    webServer.setShowController(&showController, &showFactory);
+    std::unique_ptr<WebServerManager> webServer(new WebServerManager(config, network, showController));
 
     // Set webserver on network (must be done before network task starts)
-    network.setWebServer(&webServer);
+    network.setWebServer(std::move(webServer));
 
     // Create LED show task on Core 0
     xTaskCreatePinnedToCore(

@@ -63,7 +63,7 @@ namespace Config {
     struct LayoutConfig {
         bool reverse;               // Reverse LED order
         bool mirror;                // Mirror LED pattern
-        uint16_t dead_leds;         // Number of dead LEDs at the end
+        int16_t dead_leds;         // Number of dead LEDs at the end
 
         LayoutConfig() : reverse(false), mirror(false), dead_leds(0) {
         }

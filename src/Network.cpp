@@ -36,8 +36,8 @@ String Network::generateHostname() {
 #endif
 }
 
-void Network::setWebServer(WebServerManager *server) {
-    this->webServer = server;
+void Network::setWebServer(std::unique_ptr<WebServerManager>&& server) {
+    this->webServer = std::move(server);
 }
 
 void Network::startAP() {

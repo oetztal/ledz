@@ -25,7 +25,7 @@
 ShowFactory::ShowFactory() : showConstructors(strLess) {
     // Register all available shows (in display order)
     registerShow("Solid", "Solid color (default: white)", []() {
-        return new Show::Solid(255, 255, 255); // Default to white
+        return std::unique_ptr<Show::Show>(new Show::Solid(255, 255, 255)); // Default to white
     });
 
     registerShow("ColorRanges", "Solid color sections (flags, patterns)", []() {
@@ -34,51 +34,51 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
             color(0, 87, 183),    // Blue
             color(255, 215, 0)    // Yellow
         };
-        return new Show::ColorRanges(colors);
+        return std::unique_ptr<Show::Show>(new Show::ColorRanges(colors));
     });
 
     registerShow("TwoColorBlend", "Gradient between two colors", []() {
-        return new Show::TwoColorBlend(255, 0, 0, 0, 0, 255); // Default: red to blue
+        return std::unique_ptr<Show::Show>(new Show::TwoColorBlend(255, 0, 0, 0, 0, 255)); // Default: red to blue
     });
 
     registerShow("Starlight", "Twinkling stars effect", []() {
-        return new Show::Starlight(); // Default: 0.1 probability, 5s length, 1s fade, warm white
+        return std::unique_ptr<Show::Show>(new Show::Starlight()); // Default: 0.1 probability, 5s length, 1s fade, warm white
     });
 
     registerShow("Stroboscope", "Flashing strobe effect", []() {
-        return new Show::Stroboscope(); // Default: white, 1 on, 10 off
+        return std::unique_ptr<Show::Show>(new Show::Stroboscope()); // Default: white, 1 on, 10 off
     });
 
     registerShow("ColorRun", "Running colors", []() {
-        return new Show::ColorRun();
+        return std::unique_ptr<Show::Show>(new Show::ColorRun());
     });
 
     registerShow("Jump", "Jumping lights", []() {
-        return new Show::Jump();
+        return std::unique_ptr<Show::Show>(new Show::Jump());
     });
 
     registerShow("Rainbow", "Rainbow color cycle", []() {
-        return new Show::Rainbow();
+        return std::unique_ptr<Show::Show>(new Show::Rainbow());
     });
 
     registerShow("Wave", "Propagating wave with rainbow colors", []() {
-        return new Show::Wave(); // Default: 1.0 speed, 2.0 decay, 0.1 freq, 6.0 wavelength
+        return std::unique_ptr<Show::Show>(new Show::Wave()); // Default: 1.0 speed, 2.0 decay, 0.1 freq, 6.0 wavelength
     });
 
     registerShow("TheaterChase", "Marquee-style chase with rainbow colors", []() {
-        return new Show::TheaterChase(); // Default: 21 steps per cycle
+        return std::unique_ptr<Show::Show>(new Show::TheaterChase()); // Default: 21 steps per cycle
     });
 
     registerShow("MorseCode", "Scrolling Morse code text display", []() {
-        return new Show::MorseCode(); // Default: "HELLO", 0.5 speed
+        return std::unique_ptr<Show::Show>(new Show::MorseCode()); // Default: "HELLO", 0.5 speed
     });
 
     registerShow("Chaos", "Chaotic pattern", []() {
-        return new Show::Chaos(2.95f, 4.0f, 0.0002f);
+        return std::unique_ptr<Show::Show>(new Show::Chaos(2.95f, 4.0f, 0.0002f));
     });
 
     registerShow("Mandelbrot", "Mandelbrot fractal zoom", []() {
-        return new Show::Mandelbrot(-1.05, -0.3616, -0.3156, 5, 50, 10);
+        return std::unique_ptr<Show::Show>(new Show::Mandelbrot(-1.05, -0.3616, -0.3156, 5, 50, 10));
     });
 }
 
@@ -87,15 +87,15 @@ void ShowFactory::registerShow(const char* name, const char* description, ShowCo
     showList.push_back({name, description});
 }
 
-Show::Show* ShowFactory::createShow(const char* name) {
+std::unique_ptr<Show::Show> &&ShowFactory::createShow(const char *name) {
     return createShow(name, "{}"); // Default to empty params
 }
 
-Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
+std::unique_ptr<Show::Show> &&ShowFactory::createShow(const char *name, const char *paramsJson) {
     // First check if show exists
     auto it = showConstructors.find(name);
     if (it == showConstructors.end()) {
-        return nullptr;
+        return std::move(std::unique_ptr<Show::Show>());
     }
 
 #ifdef ARDUINO
@@ -109,7 +109,7 @@ Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
         Serial.print(name);
         Serial.print(": ");
         Serial.println(error.c_str());
-        return it->second(); // Use default constructor
+        return std::move(it->second()); // Use default constructor
     }
 
     // Create show with parameters based on show type
@@ -119,7 +119,7 @@ Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
         uint8_t g = doc["g"] | 255;
         uint8_t b = doc["b"] | 255;
         Serial.printf("ShowFactory: Creating Solid with color RGB(%d,%d,%d)\n", r, g, b);
-        return new Show::Solid(r, g, b);
+        return std::unique_ptr<Show::Show>(new Show::Solid(r, g, b));
     }
     else if (strcmp(name, "Mandelbrot") == 0) {
         // Parse Mandelbrot parameters: {"Cre0":-1.05, "Cim0":-0.3616, "Cim1":-0.3156, "scale":5, "max_iterations":50, "color_scale":10}
@@ -131,7 +131,7 @@ Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
         unsigned int color_scale = doc["color_scale"] | 10;
         Serial.printf("ShowFactory: Creating Mandelbrot Cre0=%.4f, Cim0=%.4f, Cim1=%.4f, scale=%u, max_iter=%u, color_scale=%u\n",
                      Cre0, Cim0, Cim1, scale, max_iterations, color_scale);
-        return new Show::Mandelbrot(Cre0, Cim0, Cim1, scale, max_iterations, color_scale);
+        return std::unique_ptr<Show::Show>(new Show::Mandelbrot(Cre0, Cim0, Cim1, scale, max_iterations, color_scale));
     }
     else if (strcmp(name, "Chaos") == 0) {
         // Parse Chaos parameters: {"Rmin":2.95, "Rmax":4.0, "Rdelta":0.0002}
@@ -140,7 +140,7 @@ Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
         float Rdelta = doc["Rdelta"] | 0.0002f;
         Serial.printf("ShowFactory: Creating Chaos Rmin=%.4f, Rmax=%.4f, Rdelta=%.6f\n",
                      Rmin, Rmax, Rdelta);
-        return new Show::Chaos(Rmin, Rmax, Rdelta);
+        return std::unique_ptr<Show::Show>(new Show::Chaos(Rmin, Rmax, Rdelta));
     }
     else if (strcmp(name, "TwoColorBlend") == 0) {
         // Parse TwoColorBlend parameters: {"r1":255, "g1":0, "b1":0, "r2":0, "g2":0, "b2":255}
@@ -152,7 +152,7 @@ Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
         uint8_t b2 = doc["b2"] | 255;
         Serial.printf("ShowFactory: Creating TwoColorBlend color1 RGB(%d,%d,%d) to color2 RGB(%d,%d,%d)\n",
                      r1, g1, b1, r2, g2, b2);
-        return new Show::TwoColorBlend(r1, g1, b1, r2, g2, b2);
+        return std::unique_ptr<Show::Show>(new Show::TwoColorBlend(r1, g1, b1, r2, g2, b2));
     }
     else if (strcmp(name, "ColorRanges") == 0) {
         // Parse ColorRanges parameters: {"colors":[[r1,g1,b1],[r2,g2,b2],...], "ranges":[33.3, 66.6]}
@@ -209,7 +209,7 @@ Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
 
         Serial.printf("ShowFactory: Creating ColorRanges with %zu colors and %zu ranges\n",
                      colors.size(), ranges.size());
-        return new Show::ColorRanges(colors, ranges);
+        return std::unique_ptr<Show::Show>(new Show::ColorRanges(colors, ranges));
     }
     else if (strcmp(name, "Starlight") == 0) {
         // Parse Starlight parameters: {"probability":0.1, "length":5000, "fade":1000, "r":255, "g":180, "b":50}
@@ -222,7 +222,7 @@ Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
 
         Serial.printf("ShowFactory: Creating Starlight probability=%.2f, length=%lums, fade=%lums, RGB(%d,%d,%d)\n",
                      probability, length_ms, fade_ms, r, g, b);
-        return new Show::Starlight(probability, length_ms, fade_ms, r, g, b);
+        return std::unique_ptr<Show::Show>(new Show::Starlight(probability, length_ms, fade_ms, r, g, b));
     }
     else if (strcmp(name, "Wave") == 0) {
         // Parse Wave parameters: {"wave_speed":1.0, "decay_rate":2.0, "brightness_frequency":0.1, "wavelength":6.0}
@@ -233,7 +233,7 @@ Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
 
         Serial.printf("ShowFactory: Creating Wave speed=%.2f, decay=%.2f, freq=%.2f, wavelength=%.2f\n",
                      wave_speed, decay_rate, brightness_frequency, wavelength);
-        return new Show::Wave(wave_speed, decay_rate, brightness_frequency, wavelength);
+        return std::unique_ptr<Show::Show>(new Show::Wave(wave_speed, decay_rate, brightness_frequency, wavelength));
     }
     else if (strcmp(name, "MorseCode") == 0) {
         // Parse MorseCode parameters: {"message":"HELLO", "speed":0.5, "dot_length":2, "dash_length":4, "symbol_space":2, "letter_space":3, "word_space":5}
@@ -247,8 +247,8 @@ Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
 
         Serial.printf("ShowFactory: Creating MorseCode message=\"%s\", speed=%.2f, dot=%u, dash=%u\n",
                      message.c_str(), speed, dot_length, dash_length);
-        return new Show::MorseCode(message.c_str(), speed, dot_length, dash_length,
-                                   symbol_space, letter_space, word_space);
+        return std::unique_ptr<Show::Show>(new Show::MorseCode(message.c_str(), speed, dot_length, dash_length,
+                                   symbol_space, letter_space, word_space));
     }
     else if (strcmp(name, "TheaterChase") == 0) {
         // Parse TheaterChase parameters: {"num_steps_per_cycle":21}
@@ -256,7 +256,7 @@ Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
 
         Serial.printf("ShowFactory: Creating TheaterChase num_steps_per_cycle=%u\n",
                      num_steps_per_cycle);
-        return new Show::TheaterChase(num_steps_per_cycle);
+        return std::unique_ptr<Show::Show>(new Show::TheaterChase(num_steps_per_cycle));
     }
     else if (strcmp(name, "Stroboscope") == 0) {
         // Parse Stroboscope parameters: {"r":255, "g":255, "b":255, "on_cycles":1, "off_cycles":10}
@@ -268,7 +268,7 @@ Show::Show* ShowFactory::createShow(const char* name, const char* paramsJson) {
 
         Serial.printf("ShowFactory: Creating Stroboscope RGB(%d,%d,%d), on=%u, off=%u\n",
                      r, g, b, on_cycles, off_cycles);
-        return new Show::Stroboscope(r, g, b, on_cycles, off_cycles);
+        return std::unique_ptr<Show::Show>(new Show::Stroboscope(r, g, b, on_cycles, off_cycles));
     }
     // Other shows don't support parameters yet, use default constructor
     else {

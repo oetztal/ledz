@@ -17,6 +17,7 @@
 #include "show/Show.h"
 #include "ShowFactory.h"
 #include "Config.h"
+#include "strip/Base.h"
 #include "strip/Strip.h"
 #include "strip/Layout.h"
 
@@ -41,7 +42,7 @@ struct ShowCommand {
     bool auto_cycle_enabled;
     bool layout_reverse;
     bool layout_mirror;
-    uint16_t layout_dead_leds;
+    int16_t layout_dead_leds;
 };
 
 /**
@@ -64,9 +65,9 @@ private:
     uint8_t brightness;
     bool autoCycle;
 
-    // Pointer to layout for runtime reconfiguration
-    std::unique_ptr<Strip::Strip>* layoutPtr;
-    Strip::Strip* baseStrip;
+    // base strip and strip layout
+    std::unique_ptr<Strip::Strip> baseStrip;
+    std::unique_ptr<Strip::Strip> layout;
 
     /**
      * Apply a command (called from LED task)
@@ -119,10 +120,9 @@ public:
 
     /**
      * Set layout and base strip pointers for runtime reconfiguration
-     * @param layout Pointer to the layout unique_ptr
      * @param base Pointer to the base strip
      */
-    void setLayoutPointers(std::unique_ptr<Strip::Strip>* layout, Strip::Strip* base);
+    void setStrip(std::unique_ptr<Strip::Strip> &&base);
 
     /**
      * Process pending commands from queue (called from Core 0 - LED task)
@@ -164,6 +164,8 @@ public:
      * Destructor
      */
     ~ShowController();
+
+    const std::vector<ShowFactory::ShowInfo>& listShows() const;
 };
 
 #endif //UNTITLED_SHOWCONTROLLER_H
