@@ -5,7 +5,6 @@
 #include <memory>
 
 #include "Network.h"
-#include "Status.h"
 #include "Timer.h"
 #include "Config.h"
 #include "WebServerManager.h"
@@ -60,11 +59,10 @@ std::unique_ptr<Strip::Strip> layout; // Will be initialized in setup() with con
 TaskHandle_t showTaskHandle = nullptr;
 TaskHandle_t networkTaskHandle = nullptr;
 
-Status::Status status;
 Config::ConfigManager config;
 ShowFactory showFactory;
 ShowController showController(showFactory, config);
-Network network(config, status);
+Network network(config);
 
 void setup() {
     config.begin();

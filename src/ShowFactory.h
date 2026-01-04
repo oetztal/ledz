@@ -50,6 +50,9 @@ private:
 public:
     ShowFactory();
 
+    // disable copy constructor
+    ShowFactory(const ShowFactory&) = delete;
+
     /**
      * Register a show with the factory
      * @param name Show name (e.g., "Rainbow")

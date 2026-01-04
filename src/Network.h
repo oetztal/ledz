@@ -15,7 +15,6 @@
 #include <ESPmDNS.h>
 #endif
 
-#include "Status.h"
 #include "strip/Strip.h"
 #include "CaptivePortal.h"
 
@@ -44,7 +43,6 @@ private:
     NTPClient ntpClient;
 #endif
 
-    Status::Status &status;
     Config::ConfigManager &config;
     std::unique_ptr<WebServerManager> webServer;
     CaptivePortal captivePortal;
@@ -73,7 +71,10 @@ public:
      * @param config Configuration manager reference
      * @param status Status indicator reference
      */
-    Network(Config::ConfigManager &config, Status::Status& status);
+    Network(Config::ConfigManager &config);
+
+    // disable copy constructor
+    Network(const Network&) = delete;
 
     /**
      * Set webserver manager (must be called before task starts)
@@ -98,7 +99,7 @@ public:
     /**
      * Get current network mode
      */
-    NetworkMode getMode() const { return mode; }
+    [[nodiscard]] NetworkMode getMode() const { return mode; }
 };
 
 

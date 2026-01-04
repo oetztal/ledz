@@ -82,6 +82,9 @@ public:
      */
     ShowController(ShowFactory &factory, Config::ConfigManager &config);
 
+    // disable copy constructor
+    ShowController(const ShowController&) = delete;
+
     /**
      * Initialize the controller (call from setup)
      */

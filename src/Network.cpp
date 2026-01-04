@@ -17,8 +17,8 @@
 #include <set>
 #endif
 
-Network::Network(Config::ConfigManager &config, Status::Status &status)
-    : config(config), status(status), mode(NetworkMode::NONE), webServer(nullptr)
+Network::Network(Config::ConfigManager &config)
+    : config(config), mode(NetworkMode::NONE), webServer(nullptr)
 #ifdef ARDUINO
     , ntpClient(wifiUdp)
 #endif
@@ -90,14 +90,12 @@ void Network::startAP() {
     // Start captive portal (redirects all DNS to this device)
     captivePortal.begin();
 
-    status.connecting(); // Use connecting status for AP mode
 #endif
 }
 
 void Network::startSTA(const char* ssid, const char* password) {
 #ifdef ARDUINO
     mode = NetworkMode::STA;
-    status.connecting();
 
     WiFi.begin(ssid, password);
 
@@ -114,7 +112,6 @@ void Network::startSTA(const char* ssid, const char* password) {
     }
 
     if (WiFi.status() == WL_CONNECTED) {
-        status.connected();
         Serial.println("WiFi connected");
 
         Serial.print("IP address: ");
@@ -165,7 +162,6 @@ void Network::startSTA(const char* ssid, const char* password) {
         Serial.println(ntpClient.getFormattedTime());
     } else {
         Serial.println("\nConnection failed");
-        status.connecting(); // Keep in connecting state
     }
 #endif
 }
@@ -247,7 +243,6 @@ void Network::startSTA(const char* ssid, const char* password) {
     }
 
     // Connection successful - reset failure counter
-    Serial.println("Connected successfully - resetting failure counter");
     config.resetConnectionFailures();
 
     // Start webserver (if available)
@@ -264,7 +259,6 @@ void Network::startSTA(const char* ssid, const char* password) {
         // Check WiFi connection
         if (WiFi.status() != WL_CONNECTED) {
             Serial.println("WiFi disconnected - reconnecting ...");
-            status.connecting();
             WiFi.reconnect();
 
             int attempts = 0;
@@ -274,7 +268,6 @@ void Network::startSTA(const char* ssid, const char* password) {
             }
 
             if (WiFi.status() == WL_CONNECTED) {
-                status.connected();
                 Serial.println("WiFi reconnected");
             }
         }
