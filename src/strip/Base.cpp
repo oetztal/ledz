@@ -16,7 +16,7 @@ namespace Strip {
             digitalWrite(NEOPIXEL_POWER, HIGH);
         }
 #endif
-        strip = std::unique_ptr<Adafruit_NeoPixel>(new Adafruit_NeoPixel(length, pin, NEO_GRB + NEO_KHZ800));
+        strip = std::unique_ptr<Adafruit_NeoPixel>{new Adafruit_NeoPixel(length, pin, NEO_GRB + NEO_KHZ800)};
         strip->begin();
         // Brightness will be set by ShowController
 #endif
@@ -58,7 +58,10 @@ namespace Strip {
 
     void Base::setBrightness(uint8_t brightness) {
 #ifdef ARDUINO
-        strip->setBrightness(brightness);
+        auto currentBrightness = strip->getBrightness();
+        if (currentBrightness != brightness) {
+            strip->setBrightness(brightness);
+        }
 #endif
     }
 }

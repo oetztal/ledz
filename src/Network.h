@@ -90,6 +90,7 @@ public:
      * Static trampoline function for FreeRTOS
      */
     static void taskWrapper(void *pvParameters) {
+        Serial.println("Network: taskWrapper()");
         auto *instance = static_cast<Network *>(pvParameters);
         instance->task(pvParameters);
     }

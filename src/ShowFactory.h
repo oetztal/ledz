@@ -12,10 +12,10 @@
 #include <functional>
 #include <memory>
 
-#ifdef ARDUINO
+// #ifdef ARDUINO
 #include <Arduino.h>
 #include <ArduinoJson.h>
-#endif
+// #endif
 
 #include "show/Show.h"
 
@@ -29,7 +29,7 @@ public:
     /**
      * Show constructor function type that takes JSON parameters
      */
-    using ShowConstructor = std::function<std::unique_ptr<Show::Show>&&(const StaticJsonDocument<512>&)>;
+    using ShowConstructor = std::function<std::unique_ptr<Show::Show>(const StaticJsonDocument<512>&)>;
 
     /**
      * Show metadata for listing available shows
@@ -56,14 +56,14 @@ public:
      * @param description Human-readable description
      * @param constructor Function that creates the show instance
      */
-    void registerShow(const char* name, const char* description, ShowConstructor constructor);
+    void registerShow(const char *name, const char *description, ShowConstructor &&constructor);
 
     /**
      * Create a show by name
      * @param name Show name
      * @return Show instance (caller owns pointer) or nullptr if not found
      */
-    std::unique_ptr<Show::Show> &&createShow(const char *name);
+    std::unique_ptr<Show::Show> createShow(const char *name);
 
     /**
      * Create a show by name with JSON parameters
@@ -71,7 +71,7 @@ public:
      * @param paramsJson JSON string with parameters (e.g., {"r":255,"g":0,"b":0})
      * @return Show instance (caller owns pointer) or nullptr if not found
      */
-    std::unique_ptr<Show::Show> &&createShow(const char *name, const char *paramsJson);
+    std::unique_ptr<Show::Show> createShow(const char *name, const char *paramsJson);
 
     /**
      * Get list of all registered shows

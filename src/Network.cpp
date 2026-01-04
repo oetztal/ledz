@@ -172,6 +172,7 @@ void Network::startSTA(const char* ssid, const char* password) {
 
 [[noreturn]] void Network::task(void *pvParameters) {
 #ifdef ARDUINO
+    Serial.println("Network task started");
     // Check if WiFi is configured
     if (!config.isConfigured()) {
         Serial.println("No WiFi configuration found - starting AP mode");
@@ -200,6 +201,7 @@ void Network::startSTA(const char* ssid, const char* password) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         ESP.restart();
     }
+    Serial.println("Network task configured");
 
     // Check connection failure count
     uint8_t failures = config.getConnectionFailures();

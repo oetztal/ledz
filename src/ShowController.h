@@ -116,7 +116,7 @@ public:
      * @param dead_leds Number of dead LEDs at the end
      * @return true if queued successfully
      */
-    bool queueLayoutChange(bool reverse, bool mirror, uint16_t dead_leds);
+    bool queueLayoutChange(bool reverse, bool mirror, int16_t dead_leds);
 
     /**
      * Set layout and base strip pointers for runtime reconfiguration
@@ -129,12 +129,6 @@ public:
      * Non-blocking - processes all pending commands
      */
     void processCommands();
-
-    /**
-     * Get current show pointer (called from Core 0 - LED task)
-     * @return Current show instance
-     */
-    Show::Show* getCurrentShow();
 
     /**
      * Get current brightness
@@ -166,6 +160,10 @@ public:
     ~ShowController();
 
     const std::vector<ShowFactory::ShowInfo>& listShows() const;
+
+    void executeShow(unsigned int iteration) const;
+
+    void show() const;
 };
 
 #endif //UNTITLED_SHOWCONTROLLER_H

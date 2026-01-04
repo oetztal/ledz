@@ -7,6 +7,8 @@
 
 #ifdef ARDUINO
 #include <Arduino.h>
+#else
+#include <cstdlib>  // For rand(), RAND_MAX
 #endif
 
 namespace Show {
@@ -42,15 +44,28 @@ namespace Show {
     }
 
     void Starlight::execute(Strip::Strip &strip, Iteration iteration) {
+#ifdef ARDUINO
         unsigned long current_time = millis();
+#else
+        // For native builds, use iteration count as time proxy (10ms per iteration)
+        unsigned long current_time = iteration * 10;
+#endif
         uint16_t num_leds = strip.length();
 
         // Spawn new stars based on probability
         // Use a random float between 0.0 and 1.0
+#ifdef ARDUINO
         float spawn_chance = (float)random(1000) / 1000.0f;
+#else
+        float spawn_chance = (float)rand() / (float)RAND_MAX;
+#endif
         if (spawn_chance < probability) {
             // Pick a random LED that's not already an active star
+#ifdef ARDUINO
             uint16_t led = random(num_leds);
+#else
+            uint16_t led = rand() % num_leds;
+#endif
             if (active_stars.find(led) == active_stars.end()) {
                 active_stars[led] = current_time;
 #ifdef ARDUINO

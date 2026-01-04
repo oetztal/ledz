@@ -5,6 +5,11 @@
 #include "Layout.h"
 #include "../color.h"
 #include <cmath>
+#ifdef ARDUINO
+#include <esp32-hal.h>
+#include <USBCDC.h>
+#endif
+
 
 namespace Strip {
     PixelIndex Layout::real_index(PixelIndex index) const {
@@ -50,7 +55,6 @@ namespace Strip {
     }
 
     void Layout::show() {
-        turnOffDeadLeds();  // Ensure dead LEDs stay black
         strip.show();
     }
 

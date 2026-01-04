@@ -1,3 +1,7 @@
+#include <iostream>
+#include <memory>
+#include <ostream>
+
 #include "unity.h"
 #include "color.h"
 

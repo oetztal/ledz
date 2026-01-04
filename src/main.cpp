@@ -11,33 +11,17 @@
 #include "WebServerManager.h"
 #include "ShowFactory.h"
 #include "ShowController.h"
-#ifdef ARDUINO
-#include <codecvt>
-#endif
-#include "show/Chaos.h"
-#include "show/ColorRanges.h"
 #include "show/ColorRun.h"
-#include "show/Jump.h"
-#include "show/Mandelbrot.h"
-#include "show/Solid.h"
-#include "show/Starlight.h"
-#include "show/TwoColorBlend.h"
-#include "show/Wave.h"
-#include "show/MorseCode.h"
-#include "show/TheaterChase.h"
-#include "show/Stroboscope.h"
 #include "strip/Base.h"
-#include "show/Rainbow.h"
-#include "strip/Layout.h"
 
 
 #ifdef ARDUINO
-std::unique_ptr<Strip::Strip> layout;  // Will be initialized in setup() with config
+std::unique_ptr<Strip::Strip> layout; // Will be initialized in setup() with config
 #endif
 
 #ifdef ARDUINO
 [[noreturn]] void ledShowTask(void *pvParameters) {
-    auto* controller = static_cast<ShowController*>(pvParameters);
+    auto *controller = static_cast<ShowController *>(pvParameters);
 
     unsigned int iteration = 0;
     unsigned long total_execution_time = 0;
@@ -50,23 +34,12 @@ std::unique_ptr<Strip::Strip> layout;  // Will be initialized in setup() with co
         // Process any pending show change commands from webserver
         controller->processCommands();
 
-        // Get current show
-        Show::Show* show = controller->getCurrentShow();
-        if (show == nullptr) {
-            vTaskDelay(10 / portTICK_PERIOD_MS);
-            continue;
-        }
-
-        // Execute show
         auto timer = Support::Timer();
 
-        // Apply brightness setting
-        layout->setBrightness(controller->getBrightness());
-
-        show->execute(*layout, iteration++);
+        controller->executeShow(iteration++);
         auto execution_time = timer.lap();
 
-        layout->show();
+        controller->show();
         auto show_time = timer.lap();
 
         total_execution_time += execution_time;
@@ -94,9 +67,6 @@ ShowController showController(showFactory, config);
 Network network(config, status);
 
 void setup() {
-    // Serial.begin(115200);
-
-    // Initialize configuration manager
     config.begin();
 
 #ifdef ARDUINO
@@ -106,19 +76,16 @@ void setup() {
     Serial.printf("Initializing LED strip with %u pixels\n", num_pixels);
 
     // Initialize base strip with configured number of pixels
-    auto base = std::unique_ptr<Strip::Base>(new Strip::Base(MOSI, num_pixels));
+    auto base = std::make_unique<Strip::Base>(MOSI, num_pixels);
 
+    // Set layout pointers for runtime reconfiguration
+    showController.setStrip(std::move(base));
 #endif
 
     // Initialize show controller
     showController.begin();
 
-#ifdef ARDUINO
-    // Set layout pointers for runtime reconfiguration
-    showController.setStrip(std::move(base));
-#endif
-
-    std::unique_ptr<WebServerManager> webServer(new WebServerManager(config, network, showController));
+    auto webServer = std::make_unique<WebServerManager>(config, network, showController);
 
     // Set webserver on network (must be done before network task starts)
     network.setWebServer(std::move(webServer));
@@ -131,7 +98,7 @@ void setup() {
         &showController, // Parameters (pass controller)
         2, // Priority
         &showTaskHandle, // Task Handle
-        1 // Core Number (0)
+        1 // Core Number (1)
     );
 
     // Create Network task on Core 1
@@ -142,7 +109,7 @@ void setup() {
         &network, // Parameters
         1, // Priority
         &networkTaskHandle, // Task Handle
-        0 // Core Number (1)
+        0 // Core Number (0)
     );
 }
 

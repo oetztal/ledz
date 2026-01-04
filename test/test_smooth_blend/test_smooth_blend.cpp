@@ -37,6 +37,10 @@ public:
     void show() override {
         // Mock implementation
     }
+
+    void setBrightness(uint8_t brightness) override {
+        // Mock implementation
+    }
 };
 
 MockStrip* mock_strip;
