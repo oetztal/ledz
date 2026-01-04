@@ -42,7 +42,7 @@ namespace Show {
 #endif
 
             // Create SmoothBlend with the gradient target colors
-            blend.reset(new Support::SmoothBlend(strip, target_colors));
+            blend = std::make_unique<Support::SmoothBlend>(strip, target_colors);
             gradient_initialized = true;
         }
 

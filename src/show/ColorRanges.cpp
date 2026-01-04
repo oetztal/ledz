@@ -99,7 +99,7 @@ namespace Show {
 #endif
 
             // Create SmoothBlend with the color range pattern
-            blend.reset(new Support::SmoothBlend(strip, target_colors));
+            blend = std::make_unique<Support::SmoothBlend>(strip, target_colors);
             initialized = true;
         }
 

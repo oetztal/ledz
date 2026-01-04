@@ -202,8 +202,8 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
 #ifdef ARDUINO
             if (layout != nullptr && baseStrip != nullptr) {
                 // Recreate layout with new parameters
-                layout.reset(new Strip::Layout(*baseStrip, cmd.layout_reverse,
-                                               cmd.layout_mirror, cmd.layout_dead_leds));
+                layout = std::make_unique<Strip::Layout>(*baseStrip, cmd.layout_reverse,
+                                                         cmd.layout_mirror, cmd.layout_dead_leds);
 
                 Serial.printf("ShowController: Layout updated - reverse=%d, mirror=%d, dead_leds=%u\n",
                               cmd.layout_reverse, cmd.layout_mirror, cmd.layout_dead_leds);

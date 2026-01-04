@@ -16,7 +16,7 @@ namespace Strip {
             digitalWrite(NEOPIXEL_POWER, HIGH);
         }
 #endif
-        strip = std::unique_ptr<Adafruit_NeoPixel>{new Adafruit_NeoPixel(length, pin, NEO_GRB + NEO_KHZ800)};
+        strip = std::make_unique<Adafruit_NeoPixel>(length, pin, NEO_GRB + NEO_KHZ800);
         strip->begin();
         // Brightness will be set by ShowController
 #endif

@@ -41,7 +41,7 @@ namespace Show {
 #ifdef ARDUINO
             Serial.println("Solid: Starting new blend");
 #endif
-            blend.reset(new Support::SmoothBlend(strip, target_color));
+            blend = std::make_unique<Support::SmoothBlend>(strip, target_color);
         }
 
         // If blend is in progress
