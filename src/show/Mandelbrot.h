@@ -14,7 +14,7 @@ namespace Show {
         unsigned int max_iterations;
         unsigned int color_scale;
 
-        std::pair<float, float> func(float zre, float zim, float cre, float cim);
+        std::tuple<float, float> func(float zre, float zim, float cre, float cim);
 
     public:
         Mandelbrot(float cReMin, float cImMin, float cImMax, unsigned int scale = 5, unsigned int max_iterations = 50,

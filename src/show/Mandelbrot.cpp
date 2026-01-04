@@ -13,9 +13,9 @@
 #include "color.h"
 
 namespace Show {
-    std::pair<float, float> Mandelbrot::func(float zre, float zim, float cre, float cim) {
+    std::tuple<float, float> Mandelbrot::func(float zre, float zim, float cre, float cim) {
         // z_n+1 = z_n^2 + c
-        return std::pair<float, float>(zre * zre - zim * zim + cre, 2 * zre * zim + cim);
+        return std::make_tuple<float, float>(zre * zre - zim * zim + cre, 2 * zre * zim + cim);
     }
 
     Mandelbrot::Mandelbrot(float cReMin, float cImMin, float cImMax, unsigned int scale,
@@ -46,9 +46,9 @@ namespace Show {
 
             unsigned int iterations = max_iterations;
             for (int k = 0; k < max_iterations; k++) {
-                auto pair = func(zre, zim, cre, cim);
-                zre = pair.first;
-                zim = pair.second;
+                auto [zre1, zim1] = func(zre, zim, cre, cim);
+                zre = zre1;
+                zim = zim1;
 
                 if (zre * zre + zim * zim > 10) {
                     iterations = k;
