@@ -66,22 +66,28 @@ The ESP32's dual cores are utilized for concurrent operation:
 1. **WebServerManager** (Core 0) must NEVER directly modify shows or LED state - it queues commands via `ShowController::queueShowChange()`
 2. **LED Task** (Core 1) processes queued commands via `ShowController::processCommands()` each iteration
 3. The `showTaskHandle` can be suspended (e.g., for factory reset) to safely manipulate LED state
-4. Raw pointers in `Network` are non-owning references; ownership is managed by `std::unique_ptr` in main.cpp
+4. All ownership is managed via `std::unique_ptr` with C++ move semantics for transfers
 
 ### Component Relationships
 
+**Ownership hierarchy** (via `std::unique_ptr` and move semantics):
 ```
 main.cpp (setup)
-├─> ShowController (owns current show, manages queue)
-│   ├─> ShowFactory (creates show instances from JSON params)
-│   └─> Config (persistence to NVS)
-├─> Network (WiFi/mDNS/NTP management)
-│   └─> WebServerManager (HTTP server, API endpoints)
-│       └─> ShowController (queues show changes)
-└─> Strip hierarchy
-    ├─> Base (Adafruit_NeoPixel wrapper)
-    └─> Layout (reverse, mirror, dead LED handling)
+├─> ShowController (owns: currentShow, baseStrip, layout)
+│   ├─> ShowFactory& (reference, creates shows via unique_ptr)
+│   └─> Config& (reference, persistence to NVS)
+├─> Network (owns: webServer via unique_ptr)
+│   ├─> Status& (reference)
+│   ├─> Config& (reference)
+│   └─> WebServerManager (owned by Network, receives via std::move)
+│       ├─> Config& (reference)
+│       ├─> Network& (reference)
+│       └─> ShowController& (reference, queues show changes)
 ```
+
+**Strip hierarchy** (ShowController owns both):
+- `baseStrip` (unique_ptr): Wraps Adafruit_NeoPixel hardware
+- `layout` (unique_ptr): Decorates baseStrip with transformations
 
 ### Show System
 
@@ -92,8 +98,9 @@ main.cpp (setup)
 2. `WebServerManager` receives POST to `/api/show` with `{name, params}`
 3. `ShowController::queueShowChange()` adds command to FreeRTOS queue
 4. LED task calls `ShowController::processCommands()`
-5. `ShowFactory::createShow()` parses JSON and constructs show with parameters
-6. Parameters saved to NVS for persistence across reboots
+5. `ShowFactory::createShow()` parses JSON and returns `std::unique_ptr<Show::Show>&&` (rvalue reference)
+6. ShowController receives ownership via move: `currentShow = std::move(newShow)`
+7. Parameters saved to NVS for persistence across reboots
 
 **Adding a new show**:
 1. Create `src/show/MyShow.h` and `src/show/MyShow.cpp` inheriting from `Show::Show`
@@ -108,7 +115,12 @@ main.cpp (setup)
 **Base**: Wraps `Adafruit_NeoPixel`, handles hardware communication
 **Layout**: Decorates Base with transformations (reverse, mirror, dead LED masking)
 
-**Important**: When `Layout` is reconfigured at runtime, it must be reset via `layout.reset(new Strip::Layout(...))` and `ShowController::setLayoutPointers()` must be called to update the reference.
+**Initialization flow**:
+1. main.cpp creates baseStrip: `auto base = std::unique_ptr<Strip::Base>(new Strip::Base(...))`
+2. Transfers ownership to ShowController: `showController.setStrip(std::move(base))`
+3. ShowController creates layout internally: `layout.reset(new Strip::Layout(*baseStrip, ...))`
+
+**Runtime reconfiguration**: When layout settings change, ShowController recreates layout internally using `layout.reset(new Strip::Layout(*baseStrip, ...))` with updated parameters.
 
 ### Configuration Persistence
 
@@ -157,9 +169,58 @@ Access via `Config::ConfigManager` singleton. Always call `config.begin()` in se
 ## Important Patterns & Conventions
 
 ### Memory Management
-- Use `std::unique_ptr` for owned resources (webServer, base, layout)
-- Use raw pointers only for non-owning references (Network's webServer pointer)
-- WebServerManager is created with `std::move()` to transfer ownership to Network
+
+**The project uses zero raw pointers for resource ownership.** All dynamic memory is managed via `std::unique_ptr` with C++ move semantics for ownership transfer.
+
+**Ownership rules**:
+- Use `std::unique_ptr<T>` for owned resources
+- Transfer ownership with `std::move()`: `owner = std::move(resource)`
+- Non-owning access uses references: `T&` (never raw pointers)
+- Factory functions return rvalue references: `std::unique_ptr<T>&&`
+
+**Examples**:
+```cpp
+// Creating owned resource
+auto base = std::unique_ptr<Strip::Base>(new Strip::Base(pin, num_pixels));
+
+// Transferring ownership
+showController.setStrip(std::move(base));  // base is now nullptr
+
+// Factory returns unique_ptr via rvalue reference
+std::unique_ptr<Show::Show> newShow = factory.createShow(name, params);
+currentShow = std::move(newShow);
+
+// Non-owning access via reference
+WebServerManager(Config& config, Network& network, ShowController& controller);
+```
+
+**When adding new code**:
+- NEVER use `new` without immediately wrapping in `std::unique_ptr`
+- NEVER store raw pointers to owned resources
+- Use references (`&`) for non-owning access, never raw pointers
+- Pass `std::unique_ptr` by rvalue reference (`&&`) or via `std::move()`
+
+### ShowFactory Pattern
+
+ShowFactory uses lambda functions that return `std::unique_ptr<Show::Show>&&` (rvalue reference):
+
+```cpp
+// In ShowFactory.cpp constructor
+registerShow("Solid", "Solid color", []() {
+    return std::make_unique<Show::Solid>(255, 255, 255);
+});
+
+// Factory method signature
+std::unique_ptr<Show::Show>&& createShow(const char* name, const char* paramsJson);
+
+// Usage in ShowController
+std::unique_ptr<Show::Show> newShow = factory.createShow(name, params);
+if (newShow) {
+    currentShow = std::move(newShow);  // Transfer ownership
+}
+```
+
+The rvalue reference return type enables move semantics and prevents accidental copies.
 
 ### Show Parameter Defaults
 When adding JSON parsing in ShowFactory, always use the `|` operator for defaults:
