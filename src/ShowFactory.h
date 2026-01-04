@@ -14,6 +14,7 @@
 
 #ifdef ARDUINO
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #endif
 
 #include "show/Show.h"
@@ -26,9 +27,9 @@
 class ShowFactory {
 public:
     /**
-     * Show constructor function type
+     * Show constructor function type that takes JSON parameters
      */
-    using ShowConstructor = std::function<std::unique_ptr<Show::Show>&&()>;
+    using ShowConstructor = std::function<std::unique_ptr<Show::Show>&&(const StaticJsonDocument<512>&)>;
 
     /**
      * Show metadata for listing available shows
