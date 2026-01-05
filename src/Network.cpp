@@ -166,7 +166,7 @@ void Network::startSTA(const char *ssid, const char *password) {
 #endif
 }
 
-[[noreturn]] void Network::task(void *pvParameters) {
+[[noreturn]] void Network::task() {
 #ifdef ARDUINO
     Serial.println("Network task started");
     // Check if WiFi is configured
@@ -283,4 +283,23 @@ void Network::startSTA(const char *ssid, const char *password) {
         }
     }
 #endif
+}
+
+void Network::startTask() {
+    // Create Network task on Core 1
+    xTaskCreatePinnedToCore(
+        taskWrapper, // Task Function
+        "Network", // Task Name
+        10000, // Stack Size
+        this, // Parameters
+        1, // Priority
+        &taskHandle, // Task Handle
+        0 // Core Number (0)
+    );
+}
+
+void Network::taskWrapper(void *pvParameters) {
+    Serial.println("Network: taskWrapper()");
+    auto *instance = static_cast<Network *>(pvParameters);
+    instance->task();
 }

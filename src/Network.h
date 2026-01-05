@@ -46,6 +46,7 @@ private:
     Config::ConfigManager &config;
     std::unique_ptr<WebServerManager> webServer;
     CaptivePortal captivePortal;
+    TaskHandle_t taskHandle = nullptr;
 
     /**
      * Generate mDNS hostname from device ID
@@ -85,16 +86,14 @@ public:
     /**
      * Network task (runs on Core 1)
      */
-    [[noreturn]] void task(void *pvParameters);
+    [[noreturn]] void task();
+
+    void startTask();
 
     /**
      * Static trampoline function for FreeRTOS
      */
-    static void taskWrapper(void *pvParameters) {
-        Serial.println("Network: taskWrapper()");
-        auto *instance = static_cast<Network *>(pvParameters);
-        instance->task(pvParameters);
-    }
+    static void taskWrapper(void *pvParameters);
 
     /**
      * Get current network mode

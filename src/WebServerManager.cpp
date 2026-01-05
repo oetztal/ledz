@@ -1641,8 +1641,8 @@ void WebServerManager::setupAPIRoutes() {
               }
     );
 
-    // POST /api/settings/num-pixels - Update number of pixels
-    server.on("/api/settings/num-pixels", HTTP_POST,
+    // POST /api/settings/device - Update device hardware settings (num_pixels, led_pin)
+    server.on("/api/settings/device", HTTP_POST,
               [](AsyncWebServerRequest *request) {
               },
               NULL,
@@ -1656,30 +1656,52 @@ void WebServerManager::setupAPIRoutes() {
                           return;
                       }
 
-                      if (!doc.containsKey("num_pixels")) {
-                          request->send(400, "application/json",
-                                        "{\"success\":false,\"error\":\"Number of pixels required\"}");
-                          return;
-                      }
-
-                      uint16_t num_pixels = doc["num_pixels"];
-
-                      if (num_pixels < 1 || num_pixels > 1000) {
-                          request->send(400, "application/json",
-                                        "{\"success\":false,\"error\":\"Number of pixels must be between 1 and 1000\"}");
-                          return;
-                      }
-
-                      // Load current config, update num_pixels, and save
+                      // Load current config
                       Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
-                      deviceConfig.num_pixels = num_pixels;
-                      config.saveDeviceConfig(deviceConfig);
+                      bool changed = false;
 
-                      Serial.printf("Number of pixels updated: %u\n", deviceConfig.num_pixels);
+                      // Update num_pixels if provided
+                      if (doc.containsKey("num_pixels")) {
+                          uint16_t num_pixels = doc["num_pixels"];
+
+                          if (num_pixels < 1 || num_pixels > 1000) {
+                              request->send(400, "application/json",
+                                            "{\"success\":false,\"error\":\"Number of pixels must be between 1 and 1000\"}");
+                              return;
+                          }
+
+                          deviceConfig.num_pixels = num_pixels;
+                          Serial.printf("Number of pixels updated: %u\n", num_pixels);
+                          changed = true;
+                      }
+
+                      // Update led_pin if provided
+                      if (doc.containsKey("led_pin")) {
+                          uint8_t led_pin = doc["led_pin"];
+
+                          if (led_pin > 48) {
+                              request->send(400, "application/json",
+                                            "{\"success\":false,\"error\":\"LED pin must be between 0 and 48\"}");
+                              return;
+                          }
+
+                          deviceConfig.led_pin = led_pin;
+                          Serial.printf("LED pin updated: %u\n", led_pin);
+                          changed = true;
+                      }
+
+                      if (!changed) {
+                          request->send(400, "application/json",
+                                        "{\"success\":false,\"error\":\"No valid parameters provided\"}");
+                          return;
+                      }
+
+                      // Save config
+                      config.saveDeviceConfig(deviceConfig);
 
                       // Send success response and restart
                       request->send(200, "application/json",
-                                    "{\"success\":true,\"message\":\"Number of pixels updated, restarting...\"}");
+                                    "{\"success\":true,\"message\":\"Device settings updated, restarting...\"}");
                       delay(1000); // Give time for response to send
                       ESP.restart();
                   }
@@ -1695,19 +1717,6 @@ void WebServerManager::setupAPIRoutes() {
                       "{\"success\":true,\"message\":\"Factory reset complete, restarting...\"}");
 
         // Give time for response to send
-        delay(500);
-
-        // Suspend LED task to stop it from updating the strip
-        extern TaskHandle_t showTaskHandle;
-        if (showTaskHandle != nullptr) {
-            vTaskSuspend(showTaskHandle);
-            Serial.println("LED task suspended");
-        }
-
-        // Clear the LED strip
-        showController.clearStrip();
-
-        // Give time for the clear to be visible
         delay(500);
 
         // Clear all configuration
@@ -1727,6 +1736,7 @@ void WebServerManager::setupAPIRoutes() {
         Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
         doc["device_id"] = deviceConfig.device_id;
         doc["num_pixels"] = deviceConfig.num_pixels;
+        doc["led_pin"] = deviceConfig.led_pin;
 
         // Chip info
         doc["chip_model"] = ESP.getChipModel();
@@ -2213,11 +2223,17 @@ void WebServerManager::setupAPIRoutes() {
                     <input type="number" id="numPixels" placeholder="Enter number of LEDs" min="1" max="1000">
                 </div>
 
-                <button class="btn btn-primary" onclick="updateNumPixels()">Update LED Count</button>
+                <div class="form-group">
+                    <label for="ledPin">LED Strip Pin (GPIO)</label>
+                    <input type="number" id="ledPin" placeholder="Enter GPIO pin number" min="0" max="48">
+                    <small style="display:block; margin-top:4px; color:#666;">Default: 39 (PIN_NEOPIXEL for onboard LED), or 35 (MOSI for external strips)</small>
+                </div>
+
+                <button class="btn btn-primary" onclick="updateHardwareSettings()">Update Hardware Settings</button>
 
                 <div class="info-box">
-                    <strong>Current:</strong> <span id="currentNumPixels">Loading...</span> LEDs<br>
-                    <strong>Note:</strong> The device will restart after updating the LED count.
+                    <strong>Current:</strong> <span id="currentNumPixels">Loading...</span> LEDs on pin <span id="currentLedPin">Loading...</span><br>
+                    <strong>Note:</strong> The device will restart after updating these settings.
                 </div>
             </div>
 
@@ -2310,16 +2326,19 @@ void WebServerManager::setupAPIRoutes() {
             }
         }
 
-        // Load current num_pixels from /api/about endpoint
-        async function loadNumPixels() {
+        // Load current hardware settings from /api/about endpoint
+        async function loadHardwareSettings() {
             try {
                 const response = await fetch('/api/about');
                 const data = await response.json();
                 const numPixels = data.num_pixels || 300;
+                const ledPin = data.led_pin || 35;
                 document.getElementById('currentNumPixels').textContent = numPixels;
+                document.getElementById('currentLedPin').textContent = ledPin;
             } catch (error) {
-                console.error('Failed to load num_pixels:', error);
+                console.error('Failed to load hardware settings:', error);
                 document.getElementById('currentNumPixels').textContent = 'Error';
+                document.getElementById('currentLedPin').textContent = 'Error';
             }
         }
 
@@ -2353,36 +2372,61 @@ void WebServerManager::setupAPIRoutes() {
             }
         }
 
-        // Update number of pixels
-        async function updateNumPixels() {
+        // Update hardware settings (num_pixels and/or led_pin)
+        async function updateHardwareSettings() {
             const numPixels = parseInt(document.getElementById('numPixels').value);
+            const ledPin = parseInt(document.getElementById('ledPin').value);
 
-            if (isNaN(numPixels) || numPixels < 1 || numPixels > 1000) {
-                alert('Please enter a valid number of LEDs (1-1000)');
+            const updates = {};
+            let changes = [];
+
+            // Validate and add num_pixels if provided
+            if (!isNaN(numPixels)) {
+                if (numPixels < 1 || numPixels > 1000) {
+                    alert('Please enter a valid number of LEDs (1-1000)');
+                    return;
+                }
+                updates.num_pixels = numPixels;
+                changes.push(`${numPixels} LEDs`);
+            }
+
+            // Validate and add led_pin if provided
+            if (!isNaN(ledPin)) {
+                if (ledPin < 0 || ledPin > 48) {
+                    alert('Please enter a valid GPIO pin (0-48)');
+                    return;
+                }
+                updates.led_pin = ledPin;
+                changes.push(`pin ${ledPin}`);
+            }
+
+            if (changes.length === 0) {
+                alert('Please enter at least one value to update');
                 return;
             }
 
-            if (!confirm(`Update LED count to ${numPixels} LEDs?\n\nDevice will restart to apply changes.`)) {
+            if (!confirm(`Update hardware settings to ${changes.join(' and ')}?\n\nDevice will restart to apply changes.`)) {
                 return;
             }
 
             try {
-                const response = await fetch('/api/settings/num-pixels', {
+                const response = await fetch('/api/settings/device', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ num_pixels: numPixels })
+                    body: JSON.stringify(updates)
                 });
 
                 if (response.ok) {
-                    alert('LED count updated!\n\nDevice is restarting...\n\nPlease wait a moment and refresh the page.');
+                    alert('Hardware settings updated!\n\nDevice is restarting...\n\nPlease wait a moment and refresh the page.');
                     document.getElementById('numPixels').value = '';
+                    document.getElementById('ledPin').value = '';
                 } else {
                     const data = await response.json();
-                    alert('Failed to update LED count: ' + (data.error || 'Unknown error'));
+                    alert('Failed to update hardware settings: ' + (data.error || 'Unknown error'));
                 }
             } catch (error) {
-                console.error('Failed to update num_pixels:', error);
-                alert('Error updating LED count. Please try again.');
+                console.error('Failed to update hardware settings:', error);
+                alert('Error updating hardware settings. Please try again.');
             }
         }
 
@@ -2543,7 +2587,7 @@ void WebServerManager::setupAPIRoutes() {
 
         // Load device info on page load
         loadDeviceName();
-        loadNumPixels();
+        loadHardwareSettings();
         loadOTAStatus();
     </script>
 </body>

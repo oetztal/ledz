@@ -47,10 +47,17 @@ namespace Config {
     struct DeviceConfig {
         uint8_t brightness; // 0-255
         uint16_t num_pixels;
+        uint8_t led_pin; // GPIO pin for LED strip (default: PIN_NEOPIXEL=39 for onboard, or 35=MOSI for external)
         char device_id[16]; // e.g., "AABBCC"
         char device_name[32]; // Custom device name
 
-        DeviceConfig() : brightness(128), num_pixels(300) {
+        DeviceConfig() : brightness(128), num_pixels(300),
+#ifdef PIN_NEOPIXEL
+            led_pin(PIN_NEOPIXEL)
+#else
+            led_pin(39)
+#endif
+        {
             device_id[0] = '\0';
             device_name[0] = '\0';
         }
