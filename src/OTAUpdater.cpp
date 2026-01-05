@@ -49,9 +49,8 @@ bool OTAUpdater::checkForUpdate(const char* owner, const char* repo, FirmwareInf
   filter["tag_name"] = true;
   filter["name"] = true;
   filter["body"] = true;
-  filter["assets"][0]["name"] = true;
-  filter["assets"][0]["browser_download_url"] = true;
-  filter["assets"][0]["size"] = true;
+  // Include ALL assets (not just first one) - firmware.bin might not be first
+  filter["assets"] = true;
 
   // Parse JSON response with filter
   DynamicJsonDocument doc(8192);  // Increased from 4096 to 8192
@@ -82,19 +81,24 @@ bool OTAUpdater::checkForUpdate(const char* owner, const char* repo, FirmwareInf
   JsonArray assets = doc["assets"];
   bool foundBin = false;
 
+  Serial.printf("[OTA] Found %d assets in release\n", assets.size());
+
   for (JsonObject asset : assets) {
     String assetName = asset["name"].as<String>();
+    Serial.printf("[OTA] Asset: %s\n", assetName.c_str());
 
     if (assetName.endsWith(".bin")) {
       info.downloadUrl = asset["browser_download_url"].as<String>();
       info.size = asset["size"].as<size_t>();
       foundBin = true;
+      Serial.printf("[OTA] Found firmware: %s (%zu bytes)\n", assetName.c_str(), info.size);
       break;
     }
   }
 
   if (!foundBin) {
     Serial.println("[OTA] No .bin file found in release assets");
+    Serial.println("[OTA] Make sure the GitHub release has a firmware.bin file attached");
     return false;
   }
 
