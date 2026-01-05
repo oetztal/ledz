@@ -40,13 +40,31 @@ bool OTAUpdater::checkForUpdate(const char* owner, const char* repo, FirmwareInf
     return false;
   }
 
-  // Parse JSON response
-  DynamicJsonDocument doc(MAX_JSON_SIZE);
-  DeserializationError error = deserializeJson(doc, http.getStream());
+  // Log memory before parsing
+  uint32_t freeBefore = ESP.getFreeHeap();
+  Serial.printf("[OTA] Free heap before JSON parse: %u bytes\n", freeBefore);
+
+  // Use JSON filter to only parse fields we need (saves memory)
+  StaticJsonDocument<200> filter;
+  filter["tag_name"] = true;
+  filter["name"] = true;
+  filter["body"] = true;
+  filter["assets"][0]["name"] = true;
+  filter["assets"][0]["browser_download_url"] = true;
+  filter["assets"][0]["size"] = true;
+
+  // Parse JSON response with filter
+  DynamicJsonDocument doc(8192);  // Increased from 4096 to 8192
+  DeserializationError error = deserializeJson(doc, http.getStream(), DeserializationOption::Filter(filter));
+
+  uint32_t freeAfter = ESP.getFreeHeap();
+  Serial.printf("[OTA] Free heap after JSON parse: %u bytes (used: %d bytes)\n", freeAfter, freeBefore - freeAfter);
+
   http.end();
 
   if (error) {
     Serial.printf("[OTA] JSON parse error: %s\n", error.c_str());
+    Serial.printf("[OTA] Free heap: %u bytes, Required: ~8KB\n", ESP.getFreeHeap());
     return false;
   }
 

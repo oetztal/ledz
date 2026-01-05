@@ -102,10 +102,10 @@ public:
 
 private:
   // Configuration constants
-  static constexpr int TIMEOUT_MS = 300000;      // 5 minutes timeout
+  static constexpr int TIMEOUT_MS = 30000;       // 30 seconds timeout (HTTPClient max)
   static constexpr int CHUNK_SIZE = 4096;        // 4KB download chunks
   static constexpr int MIN_FREE_HEAP = 65536;    // 64KB minimum required
-  static constexpr int MAX_JSON_SIZE = 4096;     // JSON document size
+  static constexpr int MAX_JSON_SIZE = 8192;     // JSON document size (increased for GitHub API)
 
   /**
    * Initialize secure WiFi client with certificate bundle
