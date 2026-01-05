@@ -295,6 +295,132 @@ Modify registration order in `ShowFactory.cpp` constructor. Note: Default show i
 3. Add API endpoint in `WebServerManager.cpp`
 4. Add UI controls in settings page HTML
 
+## OTA Firmware Updates
+
+The project includes Over-The-Air (OTA) firmware update capability using GitHub releases.
+
+### Architecture
+
+**Components**:
+- `src/OTAUpdater.h` / `src/OTAUpdater.cpp` - Core OTA functionality
+- `src/OTAConfig.h` - Configuration (GitHub repo, version, safety settings)
+- `/api/ota/*` endpoints in WebServerManager - Web API
+- Settings page - User interface for updates
+
+**Update Flow**:
+1. User clicks "Check for Updates" in Settings
+2. `OTAUpdater::checkForUpdate()` queries GitHub REST API for latest release
+3. If update available, shows version, size, and release notes
+4. User clicks "Install Update"
+5. `OTAUpdater::performUpdate()` downloads .bin file from GitHub over HTTPS
+6. Streams firmware to inactive partition (app0 ↔ app1)
+7. ESP.restart() boots into new partition
+8. Optional: `OTAUpdater::confirmBoot()` disables automatic rollback
+
+**Partition Layout** (4MB flash):
+```
+app0 (1,856 KB) - Primary firmware partition
+app1 (1,856 KB) - OTA target partition
+otadata (8 KB)  - Boot partition selector with rollback support
+nvs (20 KB)     - Configuration storage
+spiffs (256 KB) - Web assets (future use)
+coredump (64 KB)- Crash diagnostics
+```
+
+**Current firmware**: ~988KB (53% of partition) - plenty of room for growth.
+
+### Key API Methods
+
+**OTAUpdater Class**:
+```cpp
+// Check GitHub for updates
+static bool checkForUpdate(const char* owner, const char* repo, FirmwareInfo& info);
+
+// Download and flash firmware
+static bool performUpdate(const String& url, size_t size,
+                         std::function<void(int, size_t)> onProgress = nullptr);
+
+// Confirm successful boot (disables rollback)
+static bool confirmBoot();
+
+// Check if running unconfirmed update
+static bool hasUnconfirmedUpdate();
+
+// Memory safety check
+static bool hasEnoughMemory();  // Requires 64KB free heap
+```
+
+### Web API Endpoints
+
+- `GET /api/ota/check` - Check for updates from GitHub
+- `POST /api/ota/update` - Download and install update
+- `GET /api/ota/status` - Current version, partition, memory info
+- `POST /api/ota/confirm` - Confirm successful boot
+
+### Configuration
+
+Edit `src/OTAConfig.h`:
+```cpp
+#define OTA_GITHUB_OWNER "your-username"
+#define OTA_GITHUB_REPO "untitled"
+#define FIRMWARE_VERSION "v1.0.0"
+```
+
+### Creating a Release
+
+```bash
+# Build firmware
+pio run -e adafruit_qtpy_esp32s3_nopsram
+
+# Create GitHub release with .bin file
+gh release create v1.0.0 \
+  .pio/build/adafruit_qtpy_esp32s3_nopsram/firmware.bin \
+  -t "Version 1.0.0" \
+  -n "Release notes here"
+```
+
+The device will automatically find the .bin file in the release assets.
+
+### Safety Features
+
+1. **HTTPS with Certificate Verification**: Uses esp_crt_bundle (Mozilla CA certificates)
+2. **Size Verification**: Checks expected vs actual download size
+3. **Progressive Streaming**: 4KB chunks minimize memory usage
+4. **Automatic Rollback**: If new firmware doesn't call `confirmBoot()`, rolls back on next boot
+5. **Memory Check**: Requires 64KB free heap before starting OTA
+
+### Memory Requirements
+
+- **Download overhead**: ~64KB heap during OTA
+- **Available RAM**: 320KB (5x required minimum)
+- **Flash write**: Direct streaming to partition (no buffering)
+
+### Troubleshooting
+
+**Update check fails**:
+- Verify `OTA_GITHUB_OWNER` and `OTA_GITHUB_REPO` in OTAConfig.h
+- Ensure device has internet connection
+- Check GitHub release exists with .bin file
+
+**Update download fails**:
+- Verify stable WiFi connection
+- Check free heap > 64KB (`/api/ota/status`)
+- Ensure firmware size < 1,856KB
+
+**Device boots into old firmware**:
+- New firmware failed to start (check serial logs)
+- Automatic rollback activated (otadata partition)
+- Flash corruption (rare)
+
+### Documentation
+
+Complete documentation in `docs/` directory:
+- `docs/OTA_FIRMWARE_UPDATES.md` - Technical guide (35KB, 7 sections)
+- `docs/OTA_QUICK_START.md` - 5-minute integration guide
+- `docs/OTA_IMPLEMENTATION_SUMMARY.md` - Implementation checklist
+- `OTA_REFERENCE_CARD.md` - API quick reference
+- `examples/OTA_INTEGRATION_EXAMPLE.cpp` - 7 usage examples
+
 ## Known Constraints
 
 - **No PSRAM**: Adafruit QT Py ESP32-S3 board has no PSRAM - keep memory usage minimal

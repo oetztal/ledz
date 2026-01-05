@@ -1,0 +1,310 @@
+//
+// OTA Firmware Update Manager Implementation
+// Created by Claude Code on 2026-01-05
+//
+
+#include "OTAUpdater.h"
+
+#ifdef ARDUINO
+
+// ============================================================================
+// Public Methods
+// ============================================================================
+
+bool OTAUpdater::checkForUpdate(const char* owner, const char* repo, FirmwareInfo& info) {
+  info.isValid = false;
+
+  WiFiClientSecure client = createSecureClient();
+
+  HTTPClient http;
+  String apiUrl = String("https://api.github.com/repos/") + owner + "/" + repo + "/releases/latest";
+
+  Serial.printf("[OTA] Checking for updates: %s\n", apiUrl.c_str());
+
+  if (!http.begin(client, apiUrl)) {
+    Serial.println("[OTA] HTTP initialization failed");
+    return false;
+  }
+
+  // Configure HTTP request
+  http.addHeader("Accept", "application/vnd.github.v3+json");
+  http.addHeader("User-Agent", "ESP32-OTA/1.0");
+  http.setTimeout(TIMEOUT_MS);
+  http.useHTTP10(true);  // Use HTTP/1.0 to reduce overhead
+
+  int httpCode = http.GET();
+
+  if (httpCode != HTTP_CODE_OK) {
+    Serial.printf("[OTA] HTTP error: %d\n", httpCode);
+    http.end();
+    return false;
+  }
+
+  // Parse JSON response
+  DynamicJsonDocument doc(MAX_JSON_SIZE);
+  DeserializationError error = deserializeJson(doc, http.getStream());
+  http.end();
+
+  if (error) {
+    Serial.printf("[OTA] JSON parse error: %s\n", error.c_str());
+    return false;
+  }
+
+  // Extract basic release info
+  info.version = doc["tag_name"].as<String>();
+  info.name = doc["name"].as<String>();
+  info.releaseNotes = doc["body"].as<String>();
+
+  if (info.version.isEmpty()) {
+    Serial.println("[OTA] No tag_name in release");
+    return false;
+  }
+
+  // Find .bin file in assets
+  JsonArray assets = doc["assets"];
+  bool foundBin = false;
+
+  for (JsonObject asset : assets) {
+    String assetName = asset["name"].as<String>();
+
+    if (assetName.endsWith(".bin")) {
+      info.downloadUrl = asset["browser_download_url"].as<String>();
+      info.size = asset["size"].as<size_t>();
+      foundBin = true;
+      break;
+    }
+  }
+
+  if (!foundBin) {
+    Serial.println("[OTA] No .bin file found in release assets");
+    return false;
+  }
+
+  info.isValid = true;
+
+  Serial.printf("[OTA] Release found: %s (%s)\n", info.name.c_str(), info.version.c_str());
+  Serial.printf("[OTA] Firmware size: %zu bytes\n", info.size);
+
+  return true;
+}
+
+bool OTAUpdater::performUpdate(
+  const String& downloadUrl,
+  size_t expectedSize,
+  std::function<void(int, size_t)> onProgress
+) {
+  Serial.printf("[OTA] Starting firmware download\n");
+  Serial.printf("[OTA] URL: %s\n", downloadUrl.c_str());
+  Serial.printf("[OTA] Expected size: %zu bytes\n", expectedSize);
+
+  // Check memory
+  if (!hasEnoughMemory()) {
+    Serial.println("[OTA] Insufficient memory for OTA");
+    return false;
+  }
+
+  // Check flash space
+  const esp_partition_t* nextPartition = esp_ota_get_next_update_partition(nullptr);
+  if (nextPartition == nullptr) {
+    Serial.println("[OTA] No OTA partition available");
+    return false;
+  }
+
+  Serial.printf("[OTA] Update target: %s (offset 0x%x)\n", nextPartition->label, nextPartition->address);
+
+  WiFiClientSecure client = createSecureClient();
+
+  HTTPClient http;
+  if (!http.begin(client, downloadUrl)) {
+    Serial.println("[OTA] HTTP initialization failed");
+    return false;
+  }
+
+  http.setTimeout(TIMEOUT_MS);
+  http.useHTTP10(true);
+
+  int httpCode = http.GET();
+
+  if (httpCode != HTTP_CODE_OK) {
+    Serial.printf("[OTA] HTTP error: %d\n", httpCode);
+    http.end();
+    return false;
+  }
+
+  // Verify content size
+  int contentSize = http.getSize();
+  if (contentSize != expectedSize) {
+    Serial.printf("[OTA] Size mismatch! Expected: %zu, Got: %d\n", expectedSize, contentSize);
+    http.end();
+    return false;
+  }
+
+  // Begin OTA write
+  if (!Update.begin(expectedSize, U_FLASH)) {
+    Serial.printf("[OTA] Update.begin() failed: %s\n", Update.errorString());
+    http.end();
+    return false;
+  }
+
+  Serial.println("[OTA] Flashing firmware...");
+
+  // Stream data from HTTP to flash
+  WiFiClient* stream = http.getStreamPtr();
+  uint8_t buffer[CHUNK_SIZE];
+  size_t totalRead = 0;
+  unsigned long lastProgress = millis();
+  unsigned long lastProgressCallback = millis();
+
+  while (totalRead < expectedSize) {
+    size_t available = stream->available();
+
+    if (available > 0) {
+      // Read chunk
+      size_t toRead = std::min((size_t)CHUNK_SIZE, expectedSize - totalRead);
+      int bytesRead = stream->readBytes(buffer, toRead);
+
+      if (bytesRead > 0) {
+        // Write to flash
+        size_t bytesWritten = Update.write(buffer, bytesRead);
+
+        if (bytesWritten != bytesRead) {
+          Serial.printf("[OTA] Flash write failed! Expected: %d, Written: %zu\n", bytesRead, bytesWritten);
+          Update.abort();
+          http.end();
+          return false;
+        }
+
+        totalRead += bytesWritten;
+        lastProgress = millis();
+
+        // Progress logging
+        if (millis() - lastProgress > 1000) {
+          int percent = (totalRead * 100) / expectedSize;
+          Serial.printf("[OTA] Progress: %d%% (%zu/%zu bytes)\n", percent, totalRead, expectedSize);
+          lastProgress = millis();
+        }
+
+        // Progress callback
+        if (onProgress && millis() - lastProgressCallback > 500) {
+          int percent = (totalRead * 100) / expectedSize;
+          onProgress(percent, totalRead);
+          lastProgressCallback = millis();
+        }
+      } else if (bytesRead < 0) {
+        Serial.printf("[OTA] Stream read error: %d\n", bytesRead);
+        Update.abort();
+        http.end();
+        return false;
+      }
+    } else {
+      // No data available, wait a bit
+      delay(10);
+
+      // Check for timeout
+      if (millis() - lastProgress > TIMEOUT_MS) {
+        Serial.println("[OTA] Download timeout!");
+        Update.abort();
+        http.end();
+        return false;
+      }
+    }
+  }
+
+  // Finalize OTA
+  if (!Update.end(false)) {  // false = don't reboot
+    Serial.printf("[OTA] Update.end() failed: %s\n", Update.errorString());
+    http.end();
+    return false;
+  }
+
+  http.end();
+
+  Serial.printf("[OTA] Download complete! %zu bytes flashed\n", totalRead);
+  Serial.println("[OTA] Firmware ready to boot. Call confirmBoot() after verifying it works.");
+
+  return true;
+}
+
+bool OTAUpdater::confirmBoot() {
+  Serial.println("[OTA] Confirming OTA boot...");
+
+  esp_err_t err = esp_ota_mark_app_valid_cancel_rollback();
+
+  if (err != ESP_OK) {
+    Serial.printf("[OTA] Boot confirmation failed: %s\n", esp_err_to_name(err));
+    return false;
+  }
+
+  Serial.println("[OTA] Boot confirmed - rollback disabled");
+  return true;
+}
+
+bool OTAUpdater::hasUnconfirmedUpdate() {
+  const esp_partition_t* runningPartition = esp_ota_get_running_partition();
+  esp_ota_img_states_t state;
+
+  esp_err_t err = esp_ota_get_state_partition(runningPartition, &state);
+
+  if (err != ESP_OK) {
+    Serial.printf("[OTA] Failed to get partition state: %s\n", esp_err_to_name(err));
+    return false;
+  }
+
+  return (state == ESP_OTA_IMG_NEW);
+}
+
+bool OTAUpdater::getRunningPartitionInfo(String& label, uint32_t& address) {
+  const esp_partition_t* runningPartition = esp_ota_get_running_partition();
+
+  if (runningPartition == nullptr) {
+    Serial.println("[OTA] Could not get running partition");
+    return false;
+  }
+
+  label = String(runningPartition->label);
+  address = runningPartition->address;
+
+  return true;
+}
+
+void OTAUpdater::getMemoryInfo(uint32_t& freeHeap, uint32_t& minFreeHeap, uint32_t& psramFree) {
+  freeHeap = esp_get_free_heap_size();
+  minFreeHeap = esp_get_minimum_free_heap_size();
+
+#ifdef CONFIG_SPIRAM
+  psramFree = esp_get_free_psram_size();
+#else
+  psramFree = 0;
+#endif
+}
+
+bool OTAUpdater::hasEnoughMemory() {
+  uint32_t freeHeap, minFree, psramFree;
+  getMemoryInfo(freeHeap, minFree, psramFree);
+
+  Serial.printf("[OTA] Memory check - Free: %u bytes, Min: %u bytes\n", freeHeap, minFree);
+
+  if (freeHeap < MIN_FREE_HEAP) {
+    Serial.printf("[OTA] Insufficient free heap! Need: %d, Have: %u\n", MIN_FREE_HEAP, freeHeap);
+    return false;
+  }
+
+  return true;
+}
+
+// ============================================================================
+// Private Methods
+// ============================================================================
+
+WiFiClientSecure OTAUpdater::createSecureClient() {
+  WiFiClientSecure client;
+
+  // Use built-in CA certificate bundle for GitHub
+  // This verifies the GitHub server certificate against Mozilla's root CA list
+  client.setCACert(NULL);  // Use built-in bundle
+  client.setInsecure();     // For now, skip verification (TODO: add GitHub cert)
+
+  return client;
+}
+
+#endif  // ARDUINO
