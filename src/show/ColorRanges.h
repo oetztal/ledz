@@ -11,15 +11,14 @@
 #include <vector>
 
 namespace Show {
-
     /**
      * ColorRanges - Displays solid color sections across the LED strip
      * Perfect for flags, multi-color patterns with sharp transitions
      */
     class ColorRanges : public Show {
     private:
-        std::vector<Strip::Color> colors;     // List of colors to display
-        std::vector<float> ranges;            // Boundary percentages (0-100)
+        std::vector<Strip::Color> colors; // List of colors to display
+        std::vector<float> ranges; // Boundary percentages (0-100)
         std::unique_ptr<Support::SmoothBlend> blend;
         bool initialized;
 
@@ -30,7 +29,7 @@ namespace Show {
          * @param ranges Vector of boundary percentages (0-100). If empty, colors distribute equally.
          *               Example: [30, 70] with 3 colors creates: color1 (0-30%), color2 (30-70%), color3 (70-100%)
          */
-        ColorRanges(const std::vector<Strip::Color>& colors, const std::vector<float>& ranges = {});
+        ColorRanges(const std::vector<Strip::Color> &colors, const std::vector<float> &ranges = {});
 
         /**
          * Execute the show - creates color ranges and smoothly blends to them
@@ -41,7 +40,6 @@ namespace Show {
 
         const char *name() { return "ColorRanges"; }
     };
-
 } // namespace Show
 
 #endif //UNTITLED_COLORRANGES_H

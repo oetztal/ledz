@@ -25,10 +25,10 @@
  * Show command types for queue communication
  */
 enum class ShowCommandType {
-    SET_SHOW,           // Change current show
-    SET_BRIGHTNESS,     // Change brightness
-    TOGGLE_AUTO_CYCLE,  // Enable/disable auto-cycling
-    SET_LAYOUT          // Change strip layout
+    SET_SHOW, // Change current show
+    SET_BRIGHTNESS, // Change brightness
+    TOGGLE_AUTO_CYCLE, // Enable/disable auto-cycling
+    SET_LAYOUT // Change strip layout
 };
 
 /**
@@ -37,7 +37,7 @@ enum class ShowCommandType {
 struct ShowCommand {
     ShowCommandType type;
     char show_name[32];
-    char params_json[256];  // JSON parameters for show
+    char params_json[256]; // JSON parameters for show
     uint8_t brightness_value;
     bool auto_cycle_enabled;
     bool layout_reverse;
@@ -72,7 +72,7 @@ private:
     /**
      * Apply a command (called from LED task)
      */
-    void applyCommand(const ShowCommand& cmd);
+    void applyCommand(const ShowCommand &cmd);
 
 public:
     /**
@@ -83,7 +83,7 @@ public:
     ShowController(ShowFactory &factory, Config::ConfigManager &config);
 
     // disable copy constructor
-    ShowController(const ShowController&) = delete;
+    ShowController(const ShowController &) = delete;
 
     /**
      * Initialize the controller (call from setup)
@@ -96,7 +96,7 @@ public:
      * @param paramsJson JSON parameters (optional, defaults to "{}")
      * @return true if queued successfully
      */
-    bool queueShowChange(const char* showName, const char* paramsJson = "{}");
+    bool queueShowChange(const char *showName, const char *paramsJson = "{}");
 
     /**
      * Queue a brightness change command (called from Core 1 - webserver)
@@ -143,7 +143,7 @@ public:
      * Get current show name
      * @return Show name
      */
-    const char* getCurrentShowName() const { return currentShowName; }
+    const char *getCurrentShowName() const { return currentShowName; }
 
     /**
      * Get auto-cycle status
@@ -162,7 +162,7 @@ public:
      */
     ~ShowController();
 
-    const std::vector<ShowFactory::ShowInfo>& listShows() const;
+    const std::vector<ShowFactory::ShowInfo> &listShows() const;
 
     void executeShow(unsigned int iteration) const;
 

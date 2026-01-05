@@ -20,7 +20,7 @@
 Network::Network(Config::ConfigManager &config)
     : config(config), mode(NetworkMode::NONE), webServer(nullptr)
 #ifdef ARDUINO
-    , ntpClient(wifiUdp)
+      , ntpClient(wifiUdp)
 #endif
 {
 }
@@ -36,7 +36,7 @@ String Network::generateHostname() {
 #endif
 }
 
-void Network::setWebServer(std::unique_ptr<WebServerManager>&& server) {
+void Network::setWebServer(std::unique_ptr<WebServerManager> &&server) {
     this->webServer = std::move(server);
 }
 
@@ -93,7 +93,7 @@ void Network::startAP() {
 #endif
 }
 
-void Network::startSTA(const char* ssid, const char* password) {
+void Network::startSTA(const char *ssid, const char *password) {
 #ifdef ARDUINO
     mode = NetworkMode::STA;
 

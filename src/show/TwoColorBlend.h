@@ -10,15 +10,14 @@
 #include <memory>
 
 namespace Show {
-
     /**
      * TwoColorBlend - Creates a linear gradient from one color at the start
      * of the strip to another color at the end, with smooth transitions
      */
     class TwoColorBlend : public Show {
     private:
-        Strip::Color color1;  // Starting color (beginning of strip)
-        Strip::Color color2;  // Ending color (end of strip)
+        Strip::Color color1; // Starting color (beginning of strip)
+        Strip::Color color2; // Ending color (end of strip)
         std::unique_ptr<Support::SmoothBlend> blend;
         bool gradient_initialized;
 
@@ -44,7 +43,6 @@ namespace Show {
 
         const char *name() { return "TwoColorBlend"; }
     };
-
 } // namespace Show
 
 #endif //UNTITLED_TWOCOLORBLEND_H

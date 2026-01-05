@@ -9,6 +9,7 @@
 #else
 // Stub millis() for native tests
 #include <chrono>
+
 unsigned long millis() {
     static auto start = std::chrono::steady_clock::now();
     auto now = std::chrono::steady_clock::now();

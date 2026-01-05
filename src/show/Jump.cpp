@@ -13,7 +13,7 @@ namespace Show {
     void Jump::execute(Strip::Strip &strip, Iteration iteration) {
         strip.fill(0x000000);
 
-        for (Ball& ball : balls) {
+        for (Ball &ball: balls) {
             auto pos = ball.get_position(iteration, strip.length());
             strip.setPixelColor(pos, ball.get_color());
 
@@ -72,5 +72,4 @@ namespace Show {
     Strip::Color Jump::Ball::get_color() const {
         return color;
     }
-
 } // Show

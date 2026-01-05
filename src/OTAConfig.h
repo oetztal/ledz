@@ -114,9 +114,9 @@
 // ============================================================================
 
 #ifdef OTA_DEBUG_LOGGING
-  #define OTA_LOG(fmt, ...) Serial.printf("[OTA] " fmt "\n", ##__VA_ARGS__)
+#define OTA_LOG(fmt, ...) Serial.printf("[OTA] " fmt "\n", ##__VA_ARGS__)
 #else
-  #define OTA_LOG(fmt, ...)
+#define OTA_LOG(fmt, ...)
 #endif
 
 // ============================================================================

@@ -10,8 +10,7 @@
 #endif
 
 namespace Show {
-
-    ColorRanges::ColorRanges(const std::vector<Strip::Color>& colors, const std::vector<float>& ranges)
+    ColorRanges::ColorRanges(const std::vector<Strip::Color> &colors, const std::vector<float> &ranges)
         : colors(colors), ranges(ranges), initialized(false) {
     }
 
@@ -30,8 +29,9 @@ namespace Show {
             bool use_custom_ranges = !ranges.empty();
             if (use_custom_ranges && ranges.size() != colors.size() - 1) {
 #ifdef ARDUINO
-                Serial.printf("ColorRanges WARNING: Expected %zu ranges for %zu colors, got %zu. Using equal distribution.\n",
-                             colors.size() - 1, colors.size(), ranges.size());
+                Serial.printf(
+                    "ColorRanges WARNING: Expected %zu ranges for %zu colors, got %zu. Using equal distribution.\n",
+                    colors.size() - 1, colors.size(), ranges.size());
 #endif
                 use_custom_ranges = false;
             }
@@ -42,7 +42,7 @@ namespace Show {
                 Serial.printf("ColorRanges: Using equal distribution for %zu colors\n", colors.size());
 #endif
                 for (size_t i = 1; i < colors.size(); i++) {
-                    uint16_t boundary = (uint16_t)((float)num_leds * i / colors.size());
+                    uint16_t boundary = (uint16_t)((float) num_leds * i / colors.size());
                     boundaries.push_back(boundary);
                 }
             } else {
@@ -54,8 +54,8 @@ namespace Show {
                 }
                 Serial.println();
 #endif
-                for (float range : ranges) {
-                    uint16_t boundary = (uint16_t)((float)num_leds * range / 100.0f);
+                for (float range: ranges) {
+                    uint16_t boundary = (uint16_t)((float) num_leds * range / 100.0f);
                     boundaries.push_back(boundary);
                 }
             }
@@ -66,10 +66,10 @@ namespace Show {
             for (size_t i = 0; i < boundaries.size(); i++) {
                 Serial.printf("  [%zu] LED %u", i, boundaries[i]);
                 if (i > 0 && i <= colors.size()) {
-                    uint8_t r = red(colors[i-1]);
-                    uint8_t g = green(colors[i-1]);
-                    uint8_t b = blue(colors[i-1]);
-                    Serial.printf(" (Color %zu: RGB(%d,%d,%d))", i-1, r, g, b);
+                    uint8_t r = red(colors[i - 1]);
+                    uint8_t g = green(colors[i - 1]);
+                    uint8_t b = blue(colors[i - 1]);
+                    Serial.printf(" (Color %zu: RGB(%d,%d,%d))", i - 1, r, g, b);
                 }
                 Serial.println();
             }
@@ -108,5 +108,4 @@ namespace Show {
             blend->step();
         }
     }
-
 } // namespace Show

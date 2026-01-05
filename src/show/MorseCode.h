@@ -10,7 +10,6 @@
 #include <string>
 
 namespace Show {
-
     /**
      * MorseCode - Scrolling International Morse Code text display
      * Encodes text as dots and dashes with color-coded words
@@ -18,19 +17,20 @@ namespace Show {
     class MorseCode : public Show {
     private:
         std::string message;
-        float speed;               // Scrolling speed (LEDs per frame)
-        unsigned int dot_length;   // Length of a dot in LEDs
-        unsigned int dash_length;  // Length of a dash in LEDs
+        float speed; // Scrolling speed (LEDs per frame)
+        unsigned int dot_length; // Length of a dot in LEDs
+        unsigned int dash_length; // Length of a dash in LEDs
         unsigned int symbol_space; // Space between dots/dashes within letters
         unsigned int letter_space; // Space between letters
-        unsigned int word_space;   // Space between words
+        unsigned int word_space; // Space between words
 
         std::vector<Strip::Color> pattern; // Precomputed color pattern
-        unsigned int index;        // Current frame index
+        unsigned int index; // Current frame index
 
         // Morse code encoding
         void buildPattern();
-        const char* getMorseCode(char c);
+
+        const char *getMorseCode(char c);
 
     public:
         /**
@@ -43,7 +43,7 @@ namespace Show {
          * @param letter_space Space between letters (default: 3)
          * @param word_space Space between words (default: 5)
          */
-        MorseCode(const std::string& message = "HELLO WORLD!",
+        MorseCode(const std::string &message = "HELLO WORLD!",
                   float speed = 0.2f,
                   unsigned int dot_length = 1,
                   unsigned int dash_length = 3,
@@ -60,7 +60,6 @@ namespace Show {
 
         const char *name() { return "MorseCode"; }
     };
-
 } // namespace Show
 
 #endif //UNTITLED_MORSECODE_H

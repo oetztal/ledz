@@ -2,7 +2,8 @@
 
 ## SmoothBlend
 
-The `SmoothBlend` class provides smooth color transitions for LED strips. It interpolates between initial colors and target colors over a specified duration.
+The `SmoothBlend` class provides smooth color transitions for LED strips. It interpolates between initial colors and
+target colors over a specified duration.
 
 ### Usage
 
@@ -61,9 +62,11 @@ if (blend.isComplete()) {
 
 ### Implementation Notes
 
-The class captures the initial colors from the strip when constructed, then smoothly blends to the target colors over the specified duration. The blend progress is calculated using the `millis()` function for accurate timing.
+The class captures the initial colors from the strip when constructed, then smoothly blends to the target colors over
+the specified duration. The blend progress is calculated using the `millis()` function for accurate timing.
 
 The blend uses a linear interpolation formula:
+
 ```
 blended_value = start_value * fade_progress + end_value * (1 - fade_progress)
 ```

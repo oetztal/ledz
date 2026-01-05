@@ -9,17 +9,16 @@
 #include <map>
 
 namespace Show {
-
     /**
      * Starlight - Creates a twinkling stars effect
      * LEDs randomly activate with fade-in, hold, and fade-out phases
      */
     class Starlight : public Show {
     private:
-        float probability;          // Probability of spawning a new star each frame (0.0-1.0)
-        unsigned long length_ms;    // Duration at full brightness (milliseconds)
-        unsigned long fade_ms;      // Fade-in/fade-out duration (milliseconds)
-        Strip::Color star_color;    // Color of the stars
+        float probability; // Probability of spawning a new star each frame (0.0-1.0)
+        unsigned long length_ms; // Duration at full brightness (milliseconds)
+        unsigned long fade_ms; // Fade-in/fade-out duration (milliseconds)
+        Strip::Color star_color; // Color of the stars
 
         // Track active stars: LED index -> start time (milliseconds)
         std::map<uint16_t, unsigned long> active_stars;
@@ -65,7 +64,6 @@ namespace Show {
 
         const char *name() { return "Starlight"; }
     };
-
 } // namespace Show
 
 #endif //UNTITLED_STARLIGHT_H

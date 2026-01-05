@@ -9,7 +9,6 @@
 #endif
 
 namespace Config {
-
     ConfigManager::ConfigManager() {
     }
 
@@ -50,7 +49,7 @@ namespace Config {
         return config;
     }
 
-    void ConfigManager::saveWiFiConfig(const WiFiConfig& config) {
+    void ConfigManager::saveWiFiConfig(const WiFiConfig &config) {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, false); // Read-write mode
 
@@ -91,7 +90,7 @@ namespace Config {
         return config;
     }
 
-    void ConfigManager::saveShowConfig(const ShowConfig& config) {
+    void ConfigManager::saveShowConfig(const ShowConfig &config) {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, false); // Read-write mode
 
@@ -131,7 +130,7 @@ namespace Config {
         return config;
     }
 
-    void ConfigManager::saveDeviceConfig(const DeviceConfig& config) {
+    void ConfigManager::saveDeviceConfig(const DeviceConfig &config) {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, false); // Read-write mode
 
@@ -210,13 +209,13 @@ namespace Config {
         prefs.end();
 
         Serial.printf("Config: Loaded layout - reverse=%d, mirror=%d, dead_leds=%u\n",
-                     config.reverse, config.mirror, config.dead_leds);
+                      config.reverse, config.mirror, config.dead_leds);
 #endif
 
         return config;
     }
 
-    void ConfigManager::saveLayoutConfig(const LayoutConfig& config) {
+    void ConfigManager::saveLayoutConfig(const LayoutConfig &config) {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, false); // Read-write mode
         prefs.putBool("layout_reverse", config.reverse);
@@ -225,8 +224,7 @@ namespace Config {
         prefs.end();
 
         Serial.printf("Config: Saved layout - reverse=%d, mirror=%d, dead_leds=%u\n",
-                     config.reverse, config.mirror, config.dead_leds);
+                      config.reverse, config.mirror, config.dead_leds);
 #endif
     }
-
 } // namespace Config

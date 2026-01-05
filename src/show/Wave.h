@@ -8,20 +8,19 @@
 #include "Show.h"
 
 namespace Show {
-
     /**
      * Wave - Creates a propagating wave effect with color cycling
      * Wave emanates from the start with changing brightness and exponential decay
      */
     class Wave : public Show {
     private:
-        float wave_speed;           // Speed of wave propagation (higher = faster)
-        float decay_rate;           // Rate of brightness decay towards ends (higher = faster decay)
+        float wave_speed; // Speed of wave propagation (higher = faster)
+        float decay_rate; // Rate of brightness decay towards ends (higher = faster decay)
         float brightness_frequency; // Frequency of brightness oscillation at source
-        float wavelength;           // Wavelength of the wave pattern (higher = longer waves)
+        float wavelength; // Wavelength of the wave pattern (higher = longer waves)
 
-        float time;                 // Time counter for wave position
-        float color_time;           // Time counter for color cycling
+        float time; // Time counter for wave position
+        float color_time; // Time counter for color cycling
 
     public:
         /**
@@ -45,7 +44,6 @@ namespace Show {
 
         const char *name() { return "Wave"; }
     };
-
 } // namespace Show
 
 #endif //UNTITLED_WAVE_H

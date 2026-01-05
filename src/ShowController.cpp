@@ -266,7 +266,8 @@ void ShowController::setStrip(std::unique_ptr<Strip::Strip> &&base) {
     if (baseStrip) {
         // Load and apply layout configuration
         Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
-        layout = std::make_unique<Strip::Layout>(*baseStrip, layoutConfig.reverse, layoutConfig.mirror, layoutConfig.dead_leds);
+        layout = std::make_unique<Strip::Layout>(*baseStrip, layoutConfig.reverse, layoutConfig.mirror,
+                                                 layoutConfig.dead_leds);
         Serial.printf("Layout initialized: reverse=%d, mirror=%d, dead_leds=%u\n",
                       layoutConfig.reverse, layoutConfig.mirror, layoutConfig.dead_leds);
     } else {

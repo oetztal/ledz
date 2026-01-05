@@ -110,7 +110,7 @@ namespace Strip {
 
     void Layout::turnOffEndLeds() {
         // Turn off LEDs at the end (negative dead, non-mirrored)
-        PixelIndex start = strip.length() + dead_leds;  // dead_leds is negative
+        PixelIndex start = strip.length() + dead_leds; // dead_leds is negative
         setRangeToBlack(start, strip.length());
     }
 
@@ -121,8 +121,9 @@ namespace Strip {
         }
     }
 
-    Layout::Layout(Strip& strip, bool reverse, bool mirror, PixelIndex dead_leds) : strip(strip), reverse(reverse), mirror(mirror), dead_leds(dead_leds) {
-        turnOffDeadLeds();  // Clear dead LEDs on initialization
+    Layout::Layout(Strip &strip, bool reverse, bool mirror, PixelIndex dead_leds) : strip(strip), reverse(reverse),
+        mirror(mirror), dead_leds(dead_leds) {
+        turnOffDeadLeds(); // Clear dead LEDs on initialization
     }
 
     void Layout::setBrightness(uint8_t brightness) {

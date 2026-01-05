@@ -26,7 +26,7 @@ namespace Show {
         auto num_leds = strip.length();
 
         auto x = x_initial;
-        for (int i; i< iterations; i++) {
+        for (int i; i < iterations; i++) {
             x = func(x);
 
             Strip::PixelIndex led = int(x * (num_leds - 1));

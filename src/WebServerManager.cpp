@@ -1792,43 +1792,44 @@ void WebServerManager::setupAPIRoutes() {
 
     // POST /api/ota/update - Perform OTA update
     server.on("/api/ota/update", HTTP_POST,
-        [](AsyncWebServerRequest *request) {
-            // Send immediate response before starting update
-            request->send(200, "application/json", "{\"status\":\"starting\",\"message\":\"OTA update started\"}");
-        },
-        nullptr,
-        [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-            if (index == 0) {
-                Serial.println("[WebServer] OTA update requested");
-            }
+              [](AsyncWebServerRequest *request) {
+                  // Send immediate response before starting update
+                  request->send(200, "application/json",
+                                "{\"status\":\"starting\",\"message\":\"OTA update started\"}");
+              },
+              nullptr,
+              [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+                  if (index == 0) {
+                      Serial.println("[WebServer] OTA update requested");
+                  }
 
-            if (index + len == total) {
-                StaticJsonDocument<512> doc;
-                deserializeJson(doc, data, len);
+                  if (index + len == total) {
+                      StaticJsonDocument<512> doc;
+                      deserializeJson(doc, data, len);
 
-                String downloadUrl = doc["download_url"] | "";
-                size_t size = doc["size"] | 0;
+                      String downloadUrl = doc["download_url"] | "";
+                      size_t size = doc["size"] | 0;
 
-                if (downloadUrl.isEmpty() || size == 0) {
-                    return;
-                }
+                      if (downloadUrl.isEmpty() || size == 0) {
+                          return;
+                      }
 
-                Serial.printf("[WebServer] Starting OTA: %s (%zu bytes)\n", downloadUrl.c_str(), size);
+                      Serial.printf("[WebServer] Starting OTA: %s (%zu bytes)\n", downloadUrl.c_str(), size);
 
-                // Perform OTA update (this will block)
-                bool success = OTAUpdater::performUpdate(downloadUrl, size, [](int percent, size_t bytes) {
-                    Serial.printf("[OTA] Progress: %d%% (%zu bytes)\n", percent, bytes);
-                });
+                      // Perform OTA update (this will block)
+                      bool success = OTAUpdater::performUpdate(downloadUrl, size, [](int percent, size_t bytes) {
+                          Serial.printf("[OTA] Progress: %d%% (%zu bytes)\n", percent, bytes);
+                      });
 
-                if (success) {
-                    Serial.println("[WebServer] OTA update successful, restarting...");
-                    delay(1000);
-                    ESP.restart();
-                } else {
-                    Serial.println("[WebServer] OTA update failed!");
-                }
-            }
-        }
+                      if (success) {
+                          Serial.println("[WebServer] OTA update successful, restarting...");
+                          delay(1000);
+                          ESP.restart();
+                      } else {
+                          Serial.println("[WebServer] OTA update failed!");
+                      }
+                  }
+              }
     );
 
     // GET /api/ota/status - Get OTA status

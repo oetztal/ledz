@@ -29,9 +29,9 @@ class WebServerManager;
  * Network operating modes
  */
 enum class NetworkMode {
-    STA,        // Station mode (WiFi client)
-    AP,         // Access Point mode (for configuration)
-    NONE        // Network disabled
+    STA, // Station mode (WiFi client)
+    AP, // Access Point mode (for configuration)
+    NONE // Network disabled
 };
 
 class Network {
@@ -63,7 +63,7 @@ private:
      * @param ssid WiFi network name
      * @param password WiFi password
      */
-    void startSTA(const char* ssid, const char* password);
+    void startSTA(const char *ssid, const char *password);
 
 public:
     /**
@@ -74,7 +74,7 @@ public:
     Network(Config::ConfigManager &config);
 
     // disable copy constructor
-    Network(const Network&) = delete;
+    Network(const Network &) = delete;
 
     /**
      * Set webserver manager (must be called before task starts)

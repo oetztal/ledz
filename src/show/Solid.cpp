@@ -10,7 +10,6 @@
 #endif
 
 namespace Show {
-
     Solid::Solid() : Solid(255, 255, 255) {
         // Default to white color
     }
@@ -65,5 +64,4 @@ namespace Show {
             }
         }
     }
-
 } // namespace Show

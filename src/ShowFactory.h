@@ -29,21 +29,21 @@ public:
     /**
      * Show constructor function type that takes JSON parameters
      */
-    using ShowConstructor = std::function<std::unique_ptr<Show::Show>(const StaticJsonDocument<512>&)>;
+    using ShowConstructor = std::function<std::unique_ptr<Show::Show>(const StaticJsonDocument<512> &)>;
 
     /**
      * Show metadata for listing available shows
      */
     struct ShowInfo {
-        const char* name;
-        const char* description;
+        const char *name;
+        const char *description;
     };
 
 private:
-    std::map<const char*, ShowConstructor, bool(*)(const char*, const char*)> showConstructors;
+    std::map<const char *, ShowConstructor, bool(*)(const char *, const char *)> showConstructors;
     std::vector<ShowInfo> showList;
 
-    static bool strLess(const char* a, const char* b) {
+    static bool strLess(const char *a, const char *b) {
         return strcmp(a, b) < 0;
     }
 
@@ -51,7 +51,7 @@ public:
     ShowFactory();
 
     // disable copy constructor
-    ShowFactory(const ShowFactory&) = delete;
+    ShowFactory(const ShowFactory &) = delete;
 
     /**
      * Register a show with the factory
@@ -80,14 +80,14 @@ public:
      * Get list of all registered shows
      * @return Vector of show names
      */
-    const std::vector<ShowInfo>& listShows() const;
+    const std::vector<ShowInfo> &listShows() const;
 
     /**
      * Check if a show is registered
      * @param name Show name
      * @return true if registered
      */
-    bool hasShow(const char* name) const;
+    bool hasShow(const char *name) const;
 };
 
 #endif //UNTITLED_SHOWFACTORY_H

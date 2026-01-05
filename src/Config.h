@@ -11,7 +11,6 @@
 #endif
 
 namespace Config {
-
     /**
      * WiFi configuration structure
      */
@@ -19,7 +18,7 @@ namespace Config {
         char ssid[64];
         char password[64];
         bool configured;
-        uint8_t connection_failures;  // Track consecutive connection failures
+        uint8_t connection_failures; // Track consecutive connection failures
 
         WiFiConfig() : configured(false), connection_failures(0) {
             ssid[0] = '\0';
@@ -31,8 +30,8 @@ namespace Config {
      * LED show configuration structure
      */
     struct ShowConfig {
-        char current_show[32];      // e.g., "Rainbow", "Mandelbrot"
-        char params_json[256];      // JSON string for show parameters
+        char current_show[32]; // e.g., "Rainbow", "Mandelbrot"
+        char params_json[256]; // JSON string for show parameters
         bool auto_cycle;
         uint16_t cycle_interval_ms; // milliseconds between shows
 
@@ -46,10 +45,10 @@ namespace Config {
      * Device configuration structure
      */
     struct DeviceConfig {
-        uint8_t brightness;         // 0-255
+        uint8_t brightness; // 0-255
         uint16_t num_pixels;
-        char device_id[16];         // e.g., "AABBCC"
-        char device_name[32];       // Custom device name
+        char device_id[16]; // e.g., "AABBCC"
+        char device_name[32]; // Custom device name
 
         DeviceConfig() : brightness(128), num_pixels(300) {
             device_id[0] = '\0';
@@ -61,9 +60,9 @@ namespace Config {
      * LED strip layout configuration structure
      */
     struct LayoutConfig {
-        bool reverse;               // Reverse LED order
-        bool mirror;                // Mirror LED pattern
-        int16_t dead_leds;         // Number of dead LEDs at the end
+        bool reverse; // Reverse LED order
+        bool mirror; // Mirror LED pattern
+        int16_t dead_leds; // Number of dead LEDs at the end
 
         LayoutConfig() : reverse(false), mirror(false), dead_leds(0) {
         }
@@ -78,7 +77,7 @@ namespace Config {
 #ifdef ARDUINO
         Preferences prefs;
 #endif
-        static constexpr const char* NAMESPACE = "ledz";
+        static constexpr const char *NAMESPACE = "ledz";
 
     public:
         ConfigManager();
@@ -105,7 +104,7 @@ namespace Config {
          * Save WiFi configuration to NVS
          * @param config WiFi configuration to save
          */
-        void saveWiFiConfig(const WiFiConfig& config);
+        void saveWiFiConfig(const WiFiConfig &config);
 
         /**
          * Load show configuration from NVS
@@ -117,7 +116,7 @@ namespace Config {
          * Save show configuration to NVS
          * @param config Show configuration to save
          */
-        void saveShowConfig(const ShowConfig& config);
+        void saveShowConfig(const ShowConfig &config);
 
         /**
          * Load device configuration from NVS
@@ -129,7 +128,7 @@ namespace Config {
          * Save device configuration to NVS
          * @param config Device configuration to save
          */
-        void saveDeviceConfig(const DeviceConfig& config);
+        void saveDeviceConfig(const DeviceConfig &config);
 
         /**
          * Factory reset - clear all stored configuration
@@ -169,9 +168,8 @@ namespace Config {
          * Save layout configuration to NVS
          * @param config Layout configuration to save
          */
-        void saveLayoutConfig(const LayoutConfig& config);
+        void saveLayoutConfig(const LayoutConfig &config);
     };
-
 } // namespace Config
 
 #endif //UNTITLED_CONFIG_H

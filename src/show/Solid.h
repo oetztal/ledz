@@ -13,7 +13,6 @@
 #include <memory>
 
 namespace Show {
-
     /**
      * Solid color show
      * Displays a single configurable color across all LEDs
@@ -64,7 +63,6 @@ namespace Show {
          */
         void execute(Strip::Strip &strip, Iteration iteration) override;
     };
-
 } // namespace Show
 
 #endif //UNTITLED_SOLID_H

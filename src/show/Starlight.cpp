@@ -12,7 +12,6 @@
 #endif
 
 namespace Show {
-
     Starlight::Starlight(float probability, unsigned long length_ms, unsigned long fade_ms,
                          uint8_t r, uint8_t g, uint8_t b)
         : probability(probability), length_ms(length_ms), fade_ms(fade_ms),
@@ -22,7 +21,7 @@ namespace Show {
     float Starlight::calculateBrightness(unsigned long elapsed_ms) {
         // Phase 1: Fade-in (0 to fade_ms)
         if (elapsed_ms < fade_ms) {
-            return (float)elapsed_ms / (float)fade_ms;
+            return (float) elapsed_ms / (float) fade_ms;
         }
 
         // Phase 2: Hold at full brightness (fade_ms to fade_ms + length_ms)
@@ -36,7 +35,7 @@ namespace Show {
         unsigned long fade_out_end = fade_out_start + fade_ms;
         if (elapsed_ms < fade_out_end) {
             unsigned long fade_out_elapsed = elapsed_ms - fade_out_start;
-            return 1.0f - ((float)fade_out_elapsed / (float)fade_ms);
+            return 1.0f - ((float) fade_out_elapsed / (float) fade_ms);
         }
 
         // Star has completed its lifecycle
@@ -55,9 +54,9 @@ namespace Show {
         // Spawn new stars based on probability
         // Use a random float between 0.0 and 1.0
 #ifdef ARDUINO
-        float spawn_chance = (float)random(1000) / 1000.0f;
+        float spawn_chance = (float) random(1000) / 1000.0f;
 #else
-        float spawn_chance = (float)rand() / (float)RAND_MAX;
+        float spawn_chance = (float) rand() / (float) RAND_MAX;
 #endif
         if (spawn_chance < probability) {
             // Pick a random LED that's not already an active star
@@ -72,7 +71,7 @@ namespace Show {
                 // Debug: Only log occasionally to avoid spam
                 if (active_stars.size() <= 5) {
                     Serial.printf("Starlight: New star at LED %u (total active: %zu)\n",
-                                 led, active_stars.size());
+                                  led, active_stars.size());
                 }
 #endif
             }
@@ -106,5 +105,4 @@ namespace Show {
             ++it;
         }
     }
-
 } // namespace Show

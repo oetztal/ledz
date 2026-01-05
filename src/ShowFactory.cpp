@@ -239,7 +239,7 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
     });
 }
 
-void ShowFactory::registerShow(const char *name, const char *description, ShowConstructor&& constructor) {
+void ShowFactory::registerShow(const char *name, const char *description, ShowConstructor &&constructor) {
     showConstructors[name] = std::move(constructor);
     showList.push_back({name, description});
 }

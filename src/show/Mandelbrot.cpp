@@ -19,7 +19,7 @@ namespace Show {
     }
 
     Mandelbrot::Mandelbrot(float cReMin, float cImMin, float cImMax, unsigned int scale,
-                                 unsigned int max_iterations, unsigned int colorScale) : c_re_min(cReMin),
+                           unsigned int max_iterations, unsigned int colorScale) : c_re_min(cReMin),
         c_im_min(cImMin), c_im_max(cImMax), scale(scale), max_iterations(max_iterations), color_scale(colorScale) {
     }
 

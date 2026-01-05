@@ -13,7 +13,6 @@
 #include "Strip.h"
 
 namespace Strip {
-
     class Base : public Strip {
     public:
         Base(Pin pin, unsigned short length);

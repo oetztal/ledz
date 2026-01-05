@@ -13,7 +13,6 @@
 #include <esp_system.h>
 
 namespace DeviceId {
-
     /**
      * Get unique device ID based on MAC address
      * Format: "AABBCC" where AABBCC are the last 3 bytes of MAC
@@ -46,7 +45,6 @@ namespace DeviceId {
                  mac_bytes[3], mac_bytes[4], mac_bytes[5]);
         return String(mac_str);
     }
-
 } // namespace DeviceId
 
 #endif // ARDUINO

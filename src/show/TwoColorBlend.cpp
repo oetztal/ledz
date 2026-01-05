@@ -10,7 +10,6 @@
 #endif
 
 namespace Show {
-
     TwoColorBlend::TwoColorBlend(uint8_t r1, uint8_t g1, uint8_t b1,
                                  uint8_t r2, uint8_t g2, uint8_t b2)
         : color1(color(r1, g1, b1)), color2(color(r2, g2, b2)),
@@ -27,7 +26,7 @@ namespace Show {
             // Calculate gradient for each LED position
             for (uint16_t i = 0; i < num_leds; i++) {
                 // Calculate blend factor (0.0 at start, 1.0 at end)
-                float blend_factor = (float)i / (float)(num_leds - 1);
+                float blend_factor = (float) i / (float) (num_leds - 1);
 
                 // Linear interpolation between color1 and color2
                 uint8_t r = (uint8_t)(red(color1) * (1.0f - blend_factor) + red(color2) * blend_factor);
@@ -51,5 +50,4 @@ namespace Show {
             blend->step();
         }
     }
-
 } // namespace Show

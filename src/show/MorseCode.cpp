@@ -8,9 +8,8 @@
 #include <cctype>
 
 namespace Show {
-
     // International Morse Code dictionary
-    const char* MorseCode::getMorseCode(char c) {
+    const char *MorseCode::getMorseCode(char c) {
         // Convert to uppercase
         c = toupper(c);
 
@@ -74,7 +73,7 @@ namespace Show {
         std::vector<std::string> words;
         std::string current_word;
 
-        for (char c : message) {
+        for (char c: message) {
             if (c == ' ') {
                 if (!current_word.empty()) {
                     words.push_back(current_word);
@@ -96,14 +95,14 @@ namespace Show {
         // Encode each word with a unique color
         for (size_t word_idx = 0; word_idx < words.size(); word_idx++) {
             // Assign color from wheel based on word index
-            uint8_t color_index = (uint8_t)((word_idx * 255) / std::max(1, (int)words.size()));
+            uint8_t color_index = (uint8_t) ((word_idx * 255) / std::max(1, (int) words.size()));
             Strip::Color word_color = wheel(color_index);
 
-            const std::string& word = words[word_idx];
+            const std::string &word = words[word_idx];
 
             // Encode each letter in the word
             for (size_t char_idx = 0; char_idx < word.length(); char_idx++) {
-                const char* morse = getMorseCode(word[char_idx]);
+                const char *morse = getMorseCode(word[char_idx]);
 
                 // Skip unknown characters
                 if (morse[0] == '\0') continue;
@@ -146,17 +145,16 @@ namespace Show {
         }
     }
 
-    MorseCode::MorseCode(const std::string& message, float speed,
+    MorseCode::MorseCode(const std::string &message, float speed,
                          unsigned int dot_length, unsigned int dash_length,
                          unsigned int symbol_space, unsigned int letter_space,
                          unsigned int word_space)
         : message(message), speed(speed), dot_length(dot_length),
           dash_length(dash_length), symbol_space(symbol_space),
           letter_space(letter_space), word_space(word_space), index(0) {
-
         // Convert message to uppercase
         std::transform(this->message.begin(), this->message.end(),
-                      this->message.begin(), ::toupper);
+                       this->message.begin(), ::toupper);
 
         // Build the pattern
         buildPattern();
@@ -167,7 +165,7 @@ namespace Show {
         unsigned int pattern_length = pattern.size();
 
         // Calculate scroll offset
-        unsigned int offset = (unsigned int)(index * speed) % pattern_length;
+        unsigned int offset = (unsigned int) (index * speed) % pattern_length;
 
         // Map pattern to strip with scrolling
         for (uint16_t i = 0; i < num_leds; i++) {
@@ -178,5 +176,4 @@ namespace Show {
         // Increment index for next frame
         index++;
     }
-
 } // namespace Show

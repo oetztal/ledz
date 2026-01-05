@@ -13,7 +13,6 @@
 #endif
 
 namespace Support {
-
     namespace {
         /**
          * Blend a single color component with power function
@@ -49,9 +48,9 @@ namespace Support {
         }
     }
 
-    SmoothBlend::SmoothBlend(Strip::Strip& strip, const std::vector<Strip::Color>& target_colors, unsigned long duration_ms)
+    SmoothBlend::SmoothBlend(Strip::Strip &strip, const std::vector<Strip::Color> &target_colors,
+                             unsigned long duration_ms)
         : strip(strip), target_colors(target_colors), duration_ms(duration_ms) {
-
         // Capture initial colors from the strip
         initial_colors.reserve(strip.length());
         for (Strip::PixelIndex i = 0; i < strip.length(); i++) {
@@ -66,9 +65,8 @@ namespace Support {
 #endif
     }
 
-    SmoothBlend::SmoothBlend(Strip::Strip& strip, Strip::Color target_color, unsigned long duration_ms)
+    SmoothBlend::SmoothBlend(Strip::Strip &strip, Strip::Color target_color, unsigned long duration_ms)
         : strip(strip), duration_ms(duration_ms) {
-
         // Fill target_colors with the same color for all LEDs
         target_colors.resize(strip.length(), target_color);
 
@@ -99,7 +97,8 @@ namespace Support {
         float fade_progress = 1.0f - std::min(elapsed / static_cast<float>(duration_ms), 1.0f);
 
         // Update each LED
-        for (Strip::PixelIndex i = 0; i < strip.length() && i < static_cast<Strip::PixelIndex>(target_colors.size()); i++) {
+        for (Strip::PixelIndex i = 0; i < strip.length() && i < static_cast<Strip::PixelIndex>(target_colors.size()); i
+             ++) {
             Strip::Color blended = linear_blend(initial_colors[i], target_colors[i], fade_progress);
             strip.setPixelColor(i, blended);
         }
@@ -117,5 +116,4 @@ namespace Support {
 #endif
         return (now - start_time) >= duration_ms;
     }
-
 } // namespace Support

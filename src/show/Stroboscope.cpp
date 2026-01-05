@@ -6,7 +6,6 @@
 #include "../color.h"
 
 namespace Show {
-
     Stroboscope::Stroboscope(uint8_t r, uint8_t g, uint8_t b,
                              unsigned int on_cycles, unsigned int off_cycles)
         : r(r), g(g), b(b), on_cycles(on_cycles), off_cycles(off_cycles),
@@ -34,5 +33,4 @@ namespace Show {
         // Increment cycle counter
         current_cycle++;
     }
-
 } // namespace Show

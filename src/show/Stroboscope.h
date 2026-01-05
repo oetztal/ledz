@@ -8,17 +8,16 @@
 #include "Show.h"
 
 namespace Show {
-
     /**
      * Stroboscope - Flashing strobe effect with configurable on/off cycles
      * Flashes a color for a specified number of cycles, then stays black
      */
     class Stroboscope : public Show {
     private:
-        uint8_t r, g, b;              // Color to flash
-        unsigned int on_cycles;       // Number of cycles to stay on
-        unsigned int off_cycles;      // Number of cycles to stay off
-        unsigned int current_cycle;   // Current cycle counter
+        uint8_t r, g, b; // Color to flash
+        unsigned int on_cycles; // Number of cycles to stay on
+        unsigned int off_cycles; // Number of cycles to stay off
+        unsigned int current_cycle; // Current cycle counter
 
     public:
         /**
@@ -41,7 +40,6 @@ namespace Show {
 
         const char *name() { return "Stroboscope"; }
     };
-
 } // namespace Show
 
 #endif //UNTITLED_STROBOSCOPE_H

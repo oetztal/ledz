@@ -6,7 +6,6 @@
 #include "../color.h"
 
 namespace Show {
-
     TheaterChase::TheaterChase(unsigned int num_steps_per_cycle)
         : num_steps_per_cycle(num_steps_per_cycle), index(0) {
     }
@@ -15,7 +14,7 @@ namespace Show {
         uint16_t num_leds = strip.length();
 
         // Calculate color progression through the wheel
-        float cycle_position = (float)(index % num_steps_per_cycle) / (float)num_steps_per_cycle;
+        float cycle_position = (float) (index % num_steps_per_cycle) / (float) num_steps_per_cycle;
         uint8_t color_index = (uint8_t)(cycle_position * 255.0f);
         Strip::Color chase_color = wheel(color_index);
 
@@ -37,5 +36,4 @@ namespace Show {
         // Increment index for next frame
         index++;
     }
-
 } // namespace Show

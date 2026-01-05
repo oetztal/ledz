@@ -39,7 +39,7 @@ namespace Show {
 
         strip.fill(0x000000);
 
-        for (auto state : states) {
+        for (auto state: states) {
             strip.setPixelColor(state.position(iteration), state.color);
         }
 

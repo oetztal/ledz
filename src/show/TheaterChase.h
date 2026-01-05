@@ -8,15 +8,14 @@
 #include "Show.h"
 
 namespace Show {
-
     /**
      * TheaterChase - Classic marquee-style LED animation with rotating rainbow colors
      * Creates a chase pattern where groups of LEDs light up in sequence with smooth color transitions
      */
     class TheaterChase : public Show {
     private:
-        unsigned int num_steps_per_cycle;  // Steps needed for one complete color rotation
-        unsigned int index;                 // Current animation step
+        unsigned int num_steps_per_cycle; // Steps needed for one complete color rotation
+        unsigned int index; // Current animation step
 
     public:
         /**
@@ -34,7 +33,6 @@ namespace Show {
 
         const char *name() { return "TheaterChase"; }
     };
-
 } // namespace Show
 
 #endif //UNTITLED_THEATERCHASE_H
