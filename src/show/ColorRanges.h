@@ -13,7 +13,8 @@
 namespace Show {
     /**
      * ColorRanges - Displays solid color sections across the LED strip
-     * Perfect for flags, multi-color patterns with sharp transitions
+     * Perfect for single solid colors, flags, and multi-color patterns with sharp transitions
+     * Supports both single color (like Solid show) and multiple color sections
      */
     class ColorRanges : public Show {
     private:

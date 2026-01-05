@@ -36,7 +36,7 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
         return std::make_unique<Show::Solid>(r, g, b);
     });
 
-    registerShow("ColorRanges", "Solid color sections (flags, patterns)", [](const StaticJsonDocument<512> &doc) {
+    registerShow("ColorRanges", "Single color or color sections (flags, patterns)", [](const StaticJsonDocument<512> &doc) {
         std::vector<Strip::Color> colors;
         std::vector<float> ranges;
 
@@ -47,8 +47,18 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
         Serial.println();
 #endif
 
-        // Parse colors array
-        if (doc.containsKey("colors") && doc["colors"].is<JsonArray>()) {
+        // Check if using single color format (like Solid show)
+        if (doc.containsKey("r") || doc.containsKey("g") || doc.containsKey("b")) {
+            uint8_t r = doc["r"] | 255; // Default to white if not specified
+            uint8_t g = doc["g"] | 255;
+            uint8_t b = doc["b"] | 255;
+            colors.push_back(color(r, g, b));
+#ifdef ARDUINO
+            Serial.printf("Single color format: RGB(%d,%d,%d)\n", r, g, b);
+#endif
+        }
+        // Parse colors array (multi-color format)
+        else if (doc.containsKey("colors") && doc["colors"].is<JsonArray>()) {
             JsonArrayConst colorsArray = doc["colors"];
 #ifdef ARDUINO
             Serial.printf("Found %d colors in array\n", colorsArray.size());
