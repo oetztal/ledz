@@ -1129,6 +1129,12 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
 
                 deviceIdElement.innerHTML = infoHTML;
             }
+
+            // Update firmware version
+            const firmwareVersionElement = document.getElementById('firmwareVersion');
+            if (firmwareVersionElement && currentStatus.firmware_version) {
+                firmwareVersionElement.textContent = 'v' + currentStatus.firmware_version;
+            }
         }
 
         // Fetch available shows
