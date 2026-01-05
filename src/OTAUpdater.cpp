@@ -144,8 +144,24 @@ bool OTAUpdater::performUpdate(
 
   http.setTimeout(TIMEOUT_MS);
   http.useHTTP10(true);
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);  // Follow GitHub redirects
 
   int httpCode = http.GET();
+
+  // Handle redirects manually if needed
+  if (httpCode == HTTP_CODE_MOVED_PERMANENTLY || httpCode == HTTP_CODE_FOUND) {
+    String redirectUrl = http.getLocation();
+    Serial.printf("[OTA] Following redirect to: %s\n", redirectUrl.c_str());
+    http.end();
+
+    // Follow redirect
+    if (!http.begin(client, redirectUrl)) {
+      Serial.println("[OTA] Failed to follow redirect");
+      return false;
+    }
+    http.setTimeout(TIMEOUT_MS);
+    httpCode = http.GET();
+  }
 
   if (httpCode != HTTP_CODE_OK) {
     Serial.printf("[OTA] HTTP error: %d\n", httpCode);
