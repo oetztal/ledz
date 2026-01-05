@@ -196,7 +196,6 @@ bool OTAUpdater::performUpdate(
   size_t totalRead = 0;
   unsigned long lastDataReceived = millis();
   unsigned long lastProgressLog = millis();
-  unsigned long lastProgressCallback = millis();
 
   while (totalRead < expectedSize) {
     size_t available = stream->available();
@@ -225,19 +224,18 @@ bool OTAUpdater::performUpdate(
         esp_task_wdt_reset();
         vTaskDelay(1);  // Let other tasks run
 
-        // Progress logging (every 1 second)
+        // Progress update (every 1 second)
         if (millis() - lastProgressLog > 1000) {
           int percent = (totalRead * 100) / expectedSize;
           uint32_t freeHeap = ESP.getFreeHeap();
           Serial.printf("[OTA] Progress: %d%% (%zu/%zu bytes), Free heap: %u\n", percent, totalRead, expectedSize, freeHeap);
-          lastProgressLog = millis();
-        }
 
-        // Progress callback
-        if (onProgress && millis() - lastProgressCallback > 500) {
-          int percent = (totalRead * 100) / expectedSize;
-          onProgress(percent, totalRead);
-          lastProgressCallback = millis();
+          // Call progress callback if provided
+          if (onProgress) {
+            onProgress(percent, totalRead);
+          }
+
+          lastProgressLog = millis();
         }
       } else if (bytesRead < 0) {
         Serial.printf("[OTA] Stream read error: %d\n", bytesRead);
