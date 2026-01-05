@@ -21,8 +21,11 @@
 // Firmware Version
 // ============================================================================
 
-// Current firmware version (should match your last release tag)
-#define FIRMWARE_VERSION "v0.0.1"
+// Firmware version is injected at build time from git tag via scripts/get_version.py
+// If not building with PlatformIO (e.g., manual compilation), fallback to this version
+#ifndef FIRMWARE_VERSION
+#define FIRMWARE_VERSION "v0.0.0-dev"
+#endif
 
 // Build timestamp (optional, for diagnostics)
 #define FIRMWARE_BUILD_DATE __DATE__
