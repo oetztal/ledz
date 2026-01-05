@@ -8,6 +8,8 @@
 #include "ShowController.h"
 #include "ShowFactory.h"
 #include "DeviceId.h"
+#include "OTAUpdater.h"
+#include "OTAConfig.h"
 
 #ifdef ARDUINO
 #include <ArduinoJson.h>
@@ -446,7 +448,10 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
     <div class="container">
         <div class="header">
             <h1 id="pageTitle">ledz</h1>
-            <div class="device-id" id="deviceId">Loading...</div>
+            <div class="device-id">
+                <span id="deviceId">Loading...</span>
+                <span id="firmwareVersion" style="opacity: 0.7; font-size: 0.9em; margin-left: 10px;"></span>
+            </div>
         </div>
 
         <div class="content">
@@ -1124,6 +1129,12 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
 
                 deviceIdElement.innerHTML = infoHTML;
             }
+
+            // Update firmware version
+            const firmwareVersionElement = document.getElementById('firmwareVersion');
+            if (firmwareVersionElement && currentStatus.firmware_version) {
+                firmwareVersionElement.textContent = currentStatus.firmware_version;
+            }
         }
 
         // Fetch available shows
@@ -1347,6 +1358,7 @@ void WebServerManager::setupAPIRoutes() {
         doc["device_id"] = deviceConfig.device_id;
         doc["device_name"] = deviceConfig.device_name;
         doc["brightness"] = showController.getBrightness();
+        doc["firmware_version"] = FIRMWARE_VERSION;
 
         // Show info
         doc["current_show"] = showController.getCurrentShowName();
@@ -1752,6 +1764,118 @@ void WebServerManager::setupAPIRoutes() {
         request->send(200, "application/json", response);
     });
 
+    // GET /api/ota/check - Check for firmware updates
+    server.on("/api/ota/check", HTTP_GET, [](AsyncWebServerRequest *request) {
+        StaticJsonDocument<1024> doc;
+
+        FirmwareInfo info;
+        bool updateAvailable = OTAUpdater::checkForUpdate(OTA_GITHUB_OWNER, OTA_GITHUB_REPO, info);
+
+        if (updateAvailable) {
+            doc["update_available"] = true;
+            doc["current_version"] = FIRMWARE_VERSION;
+            doc["latest_version"] = info.version;
+            doc["release_name"] = info.name;
+            doc["size_bytes"] = info.size;
+            doc["download_url"] = info.downloadUrl;
+            doc["release_notes"] = info.releaseNotes;
+        } else {
+            doc["update_available"] = false;
+            doc["current_version"] = FIRMWARE_VERSION;
+            doc["message"] = "No update available or failed to check";
+        }
+
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+
+    // POST /api/ota/update - Perform OTA update
+    server.on("/api/ota/update", HTTP_POST,
+        [](AsyncWebServerRequest *request) {
+            // Send immediate response before starting update
+            request->send(200, "application/json", "{\"status\":\"starting\",\"message\":\"OTA update started\"}");
+        },
+        nullptr,
+        [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+            if (index == 0) {
+                Serial.println("[WebServer] OTA update requested");
+            }
+
+            if (index + len == total) {
+                StaticJsonDocument<512> doc;
+                deserializeJson(doc, data, len);
+
+                String downloadUrl = doc["download_url"] | "";
+                size_t size = doc["size"] | 0;
+
+                if (downloadUrl.isEmpty() || size == 0) {
+                    return;
+                }
+
+                Serial.printf("[WebServer] Starting OTA: %s (%zu bytes)\n", downloadUrl.c_str(), size);
+
+                // Perform OTA update (this will block)
+                bool success = OTAUpdater::performUpdate(downloadUrl, size, [](int percent, size_t bytes) {
+                    Serial.printf("[OTA] Progress: %d%% (%zu bytes)\n", percent, bytes);
+                });
+
+                if (success) {
+                    Serial.println("[WebServer] OTA update successful, restarting...");
+                    delay(1000);
+                    ESP.restart();
+                } else {
+                    Serial.println("[WebServer] OTA update failed!");
+                }
+            }
+        }
+    );
+
+    // GET /api/ota/status - Get OTA status
+    server.on("/api/ota/status", HTTP_GET, [](AsyncWebServerRequest *request) {
+        StaticJsonDocument<512> doc;
+
+        doc["firmware_version"] = FIRMWARE_VERSION;
+        doc["build_date"] = FIRMWARE_BUILD_DATE;
+        doc["build_time"] = FIRMWARE_BUILD_TIME;
+
+        // Partition info
+        String partitionLabel;
+        uint32_t partitionAddress;
+        if (OTAUpdater::getRunningPartitionInfo(partitionLabel, partitionAddress)) {
+            doc["partition"] = partitionLabel;
+            doc["partition_address"] = partitionAddress;
+        }
+
+        // Check if running unconfirmed update
+        doc["unconfirmed_update"] = OTAUpdater::hasUnconfirmedUpdate();
+
+        // Memory info
+        uint32_t freeHeap, minFreeHeap, psramFree;
+        OTAUpdater::getMemoryInfo(freeHeap, minFreeHeap, psramFree);
+        doc["free_heap"] = freeHeap;
+        doc["min_free_heap"] = minFreeHeap;
+        doc["psram_free"] = psramFree;
+        doc["ota_safe"] = OTAUpdater::hasEnoughMemory();
+
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+
+    // POST /api/ota/confirm - Confirm successful boot after OTA
+    server.on("/api/ota/confirm", HTTP_POST, [](AsyncWebServerRequest *request) {
+        bool success = OTAUpdater::confirmBoot();
+
+        StaticJsonDocument<256> doc;
+        doc["success"] = success;
+        doc["message"] = success ? "Boot confirmed, rollback disabled" : "Failed to confirm boot";
+
+        String response;
+        serializeJson(doc, response);
+        request->send(success ? 200 : 500, "application/json", response);
+    });
+
     // GET /about - About page
     server.on("/about", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(200, "text/html", R"rawliteral(
@@ -2097,6 +2221,41 @@ void WebServerManager::setupAPIRoutes() {
             </div>
 
             <div class="settings-section">
+                <h2>Firmware Updates (OTA)</h2>
+                <p>Check for and install firmware updates from GitHub releases.</p>
+
+                <div class="info-box" id="otaCurrentVersion">
+                    <strong>Current Version:</strong> <span id="currentVersion">Loading...</span><br>
+                    <strong>Partition:</strong> <span id="currentPartition">Loading...</span><br>
+                    <strong>Build Date:</strong> <span id="buildDate">Loading...</span>
+                </div>
+
+                <button class="btn btn-primary" onclick="checkForUpdates()" id="checkUpdateBtn">Check for Updates</button>
+
+                <div id="updateAvailable" style="display: none; margin-top: 15px;">
+                    <div class="info-box" style="background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724;">
+                        <strong>Update Available!</strong><br>
+                        <strong>Version:</strong> <span id="latestVersion"></span><br>
+                        <strong>Size:</strong> <span id="updateSize"></span><br>
+                        <strong>Release Notes:</strong><br>
+                        <div id="releaseNotes" style="margin-top: 5px; white-space: pre-wrap; font-size: 12px;"></div>
+                    </div>
+                    <button class="btn btn-primary" onclick="performUpdate()" id="installUpdateBtn">Install Update</button>
+                </div>
+
+                <div id="updateProgress" style="display: none; margin-top: 15px;">
+                    <div class="info-box">
+                        <strong>Installing update...</strong><br>
+                        <div style="margin-top: 10px;">Please wait. The device will restart automatically after the update completes.</div>
+                    </div>
+                </div>
+
+                <div class="warning-box">
+                    <strong>⚠️ Note:</strong> The device will restart after installing an update. Make sure you have a stable WiFi connection before updating.
+                </div>
+            </div>
+
+            <div class="settings-section">
                 <h2>WiFi Configuration</h2>
                 <p>Update the WiFi network credentials. The device will restart after saving.</p>
 
@@ -2288,9 +2447,103 @@ void WebServerManager::setupAPIRoutes() {
             }
         }
 
+        // OTA Update Functions
+        let updateInfo = null;
+
+        async function loadOTAStatus() {
+            try {
+                const response = await fetch('/api/ota/status');
+                const data = await response.json();
+                document.getElementById('currentVersion').textContent = data.firmware_version || 'Unknown';
+                document.getElementById('currentPartition').textContent = data.partition || 'Unknown';
+                document.getElementById('buildDate').textContent = data.build_date || 'Unknown';
+            } catch (error) {
+                console.error('Failed to load OTA status:', error);
+                document.getElementById('currentVersion').textContent = 'Error loading';
+            }
+        }
+
+        async function checkForUpdates() {
+            const btn = document.getElementById('checkUpdateBtn');
+            btn.disabled = true;
+            btn.textContent = 'Checking...';
+
+            try {
+                const response = await fetch('/api/ota/check');
+                const data = await response.json();
+
+                if (data.update_available) {
+                    updateInfo = data;
+                    document.getElementById('latestVersion').textContent = data.latest_version;
+                    document.getElementById('updateSize').textContent = formatBytes(data.size_bytes);
+                    document.getElementById('releaseNotes').textContent = data.release_notes || 'No release notes available.';
+                    document.getElementById('updateAvailable').style.display = 'block';
+                    btn.textContent = 'Update Available!';
+                } else {
+                    alert('You are running the latest version: ' + data.current_version);
+                    btn.textContent = 'Check for Updates';
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Failed to check for updates:', error);
+                alert('Failed to check for updates. Please ensure you have internet connection.');
+                btn.textContent = 'Check for Updates';
+                btn.disabled = false;
+            }
+        }
+
+        async function performUpdate() {
+            if (!updateInfo) {
+                alert('No update information available. Please check for updates first.');
+                return;
+            }
+
+            if (!confirm('Install firmware update ' + updateInfo.latest_version + '?\n\nThe device will restart after the update completes.')) {
+                return;
+            }
+
+            document.getElementById('updateAvailable').style.display = 'none';
+            document.getElementById('updateProgress').style.display = 'block';
+            document.getElementById('checkUpdateBtn').disabled = true;
+
+            try {
+                const response = await fetch('/api/ota/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        download_url: updateInfo.download_url,
+                        size: updateInfo.size_bytes
+                    })
+                });
+
+                if (response.ok) {
+                    // Wait for device to restart
+                    setTimeout(() => {
+                        alert('Update started! The device will restart in a few moments.\n\nPlease wait about 30 seconds, then refresh this page.');
+                    }, 2000);
+                } else {
+                    alert('Failed to start update. Please try again.');
+                    document.getElementById('updateProgress').style.display = 'none';
+                    document.getElementById('checkUpdateBtn').disabled = false;
+                }
+            } catch (error) {
+                console.error('Failed to perform update:', error);
+                alert('Error performing update. Please try again.');
+                document.getElementById('updateProgress').style.display = 'none';
+                document.getElementById('checkUpdateBtn').disabled = false;
+            }
+        }
+
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
         // Load device info on page load
         loadDeviceName();
         loadNumPixels();
+        loadOTAStatus();
     </script>
 </body>
 </html>
