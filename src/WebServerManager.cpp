@@ -448,7 +448,10 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
     <div class="container">
         <div class="header">
             <h1 id="pageTitle">ledz</h1>
-            <div class="device-id" id="deviceId">Loading...</div>
+            <div class="device-id">
+                <span id="deviceId">Loading...</span>
+                <span id="firmwareVersion" style="opacity: 0.7; font-size: 0.9em; margin-left: 10px;"></span>
+            </div>
         </div>
 
         <div class="content">
@@ -1349,6 +1352,7 @@ void WebServerManager::setupAPIRoutes() {
         doc["device_id"] = deviceConfig.device_id;
         doc["device_name"] = deviceConfig.device_name;
         doc["brightness"] = showController.getBrightness();
+        doc["firmware_version"] = FIRMWARE_VERSION;
 
         // Show info
         doc["current_show"] = showController.getCurrentShowName();
