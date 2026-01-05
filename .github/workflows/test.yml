@@ -12,6 +12,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+
+      - name: Install Build Wrapper
+        uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -41,7 +46,7 @@ jobs:
       - name: Build for ESP32
         run: |
           echo "Building firmware for ESP32-S3..."
-          pio run -e adafruit_qtpy_esp32s3_nopsram
+          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} pio run -e adafruit_qtpy_esp32s3_nopsram
 
       - name: Check Firmware Size
         run: |
@@ -72,3 +77,11 @@ jobs:
             .pio/build/adafruit_qtpy_esp32s3_nopsram/firmware.bin
             .pio/build/adafruit_qtpy_esp32s3_nopsram/firmware.elf
           retention-days: 7
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            --define "sonar.cfamily.compile-commands=${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json"
