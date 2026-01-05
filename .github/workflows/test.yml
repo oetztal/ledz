@@ -34,7 +34,41 @@ jobs:
         pip install platformio
 
     - name: Run Native Tests
-      run: pio test -e native
+      run: |
+        echo "Running native tests..."
+        pio test -e native -v
 
     - name: Build for ESP32
-      run: pio run -e adafruit_qtpy_esp32s3_nopsram
+      run: |
+        echo "Building firmware for ESP32-S3..."
+        pio run -e adafruit_qtpy_esp32s3_nopsram
+
+    - name: Check Firmware Size
+      run: |
+        SIZE=$(stat -c%s .pio/build/adafruit_qtpy_esp32s3_nopsram/firmware.bin 2>/dev/null || stat -f%z .pio/build/adafruit_qtpy_esp32s3_nopsram/firmware.bin)
+        SIZE_KB=$((SIZE / 1024))
+        SIZE_MB=$((SIZE / 1024 / 1024))
+
+        echo "📦 Firmware Size: ${SIZE_KB}KB (${SIZE_MB}MB)"
+
+        # Check if firmware fits in partition (1856KB max)
+        MAX_SIZE=$((1856 * 1024))
+        if [ $SIZE -gt $MAX_SIZE ]; then
+          echo "❌ ERROR: Firmware too large! Size: ${SIZE_KB}KB, Max: 1856KB"
+          exit 1
+        else
+          REMAINING=$((MAX_SIZE - SIZE))
+          REMAINING_KB=$((REMAINING / 1024))
+          PERCENT=$((SIZE * 100 / MAX_SIZE))
+          echo "✅ Firmware fits! Using ${PERCENT}% of partition (${REMAINING_KB}KB remaining)"
+        fi
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      if: success()
+      with:
+        name: firmware-${{ github.sha }}
+        path: |
+          .pio/build/adafruit_qtpy_esp32s3_nopsram/firmware.bin
+          .pio/build/adafruit_qtpy_esp32s3_nopsram/firmware.elf
+        retention-days: 7
