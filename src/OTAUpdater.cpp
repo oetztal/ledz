@@ -6,6 +6,7 @@
 #include "OTAUpdater.h"
 
 #ifdef ARDUINO
+#include <esp_task_wdt.h>  // For watchdog timer control
 
 // ============================================================================
 // Public Methods
@@ -119,6 +120,9 @@ bool OTAUpdater::performUpdate(
   Serial.printf("[OTA] URL: %s\n", downloadUrl.c_str());
   Serial.printf("[OTA] Expected size: %zu bytes\n", expectedSize);
 
+  // Reset watchdog before starting long operation
+  esp_task_wdt_reset();
+
   // Check memory
   if (!hasEnoughMemory()) {
     Serial.println("[OTA] Insufficient memory for OTA");
@@ -190,7 +194,8 @@ bool OTAUpdater::performUpdate(
   WiFiClient* stream = http.getStreamPtr();
   uint8_t buffer[CHUNK_SIZE];
   size_t totalRead = 0;
-  unsigned long lastProgress = millis();
+  unsigned long lastDataReceived = millis();
+  unsigned long lastProgressLog = millis();
   unsigned long lastProgressCallback = millis();
 
   while (totalRead < expectedSize) {
@@ -207,19 +212,25 @@ bool OTAUpdater::performUpdate(
 
         if (bytesWritten != bytesRead) {
           Serial.printf("[OTA] Flash write failed! Expected: %d, Written: %zu\n", bytesRead, bytesWritten);
+          Serial.printf("[OTA] Update error: %s\n", Update.errorString());
           Update.abort();
           http.end();
           return false;
         }
 
         totalRead += bytesWritten;
-        lastProgress = millis();
+        lastDataReceived = millis();
 
-        // Progress logging
-        if (millis() - lastProgress > 1000) {
+        // Feed watchdog and yield to prevent reset during long download
+        esp_task_wdt_reset();
+        vTaskDelay(1);  // Let other tasks run
+
+        // Progress logging (every 1 second)
+        if (millis() - lastProgressLog > 1000) {
           int percent = (totalRead * 100) / expectedSize;
-          Serial.printf("[OTA] Progress: %d%% (%zu/%zu bytes)\n", percent, totalRead, expectedSize);
-          lastProgress = millis();
+          uint32_t freeHeap = ESP.getFreeHeap();
+          Serial.printf("[OTA] Progress: %d%% (%zu/%zu bytes), Free heap: %u\n", percent, totalRead, expectedSize, freeHeap);
+          lastProgressLog = millis();
         }
 
         // Progress callback
@@ -236,11 +247,13 @@ bool OTAUpdater::performUpdate(
       }
     } else {
       // No data available, wait a bit
-      delay(10);
+      esp_task_wdt_reset();  // Feed watchdog while waiting
+      vTaskDelay(10 / portTICK_PERIOD_MS);
 
-      // Check for timeout
-      if (millis() - lastProgress > TIMEOUT_MS) {
-        Serial.println("[OTA] Download timeout!");
+      // Check for timeout (60 seconds of no data)
+      if (millis() - lastDataReceived > 60000) {
+        Serial.println("[OTA] Download timeout! No data received for 60 seconds");
+        Serial.printf("[OTA] Downloaded: %zu/%zu bytes (%d%%)\n", totalRead, expectedSize, (totalRead * 100) / expectedSize);
         Update.abort();
         http.end();
         return false;
