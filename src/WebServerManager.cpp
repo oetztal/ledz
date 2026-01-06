@@ -757,7 +757,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 document.getElementById('chaosParams').classList.add('visible');
             } else if (showName === 'TwoColorBlend') {
                 document.getElementById('twoColorBlendParams').classList.add('visible');
-            } else if (showName === 'ColorRanges') {
+            } else if (showName === 'Solid') {
                 document.getElementById('colorRangesParams').classList.add('visible');
             } else if (showName === 'Starlight') {
                 document.getElementById('starlightParams').classList.add('visible');
@@ -981,20 +981,20 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 params.ranges = ranges;
             }
 
-            console.log('ColorRanges params:', JSON.stringify(params));
+            console.log('Solid params:', JSON.stringify(params));
 
             try {
                 await fetch('/api/show', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        name: 'ColorRanges',
+                        name: 'Solid',
                         params: params
                     })
                 });
                 pendingParameterConfig = false;  // Applied successfully
             } catch (error) {
-                console.error('Failed to apply ColorRanges parameters:', error);
+                console.error('Failed to apply Solid parameters:', error);
             }
         }
 
@@ -1222,7 +1222,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             const showName = e.target.value;
 
             // Don't auto-apply for shows with parameters - wait for user to click Apply button
-            const showsWithParams = ['Solid', 'Mandelbrot', 'Chaos', 'TwoColorBlend', 'ColorRanges',
+            const showsWithParams = ['Solid', 'Mandelbrot', 'Chaos', 'TwoColorBlend',
                                      'Starlight', 'Wave', 'MorseCode', 'TheaterChase', 'Stroboscope'];
 
             if (showsWithParams.includes(showName)) {

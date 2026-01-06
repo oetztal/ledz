@@ -26,17 +26,7 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
     // Register all available shows (in display order)
     // Each lambda receives a StaticJsonDocument and uses defaults via | operator
 
-    registerShow("Solid", "Solid color (default: white)", [](const StaticJsonDocument<512> &doc) {
-        uint8_t r = doc["r"] | 255; // Default to white
-        uint8_t g = doc["g"] | 255;
-        uint8_t b = doc["b"] | 255;
-#ifdef ARDUINO
-        Serial.printf("ShowFactory: Creating Solid with color RGB(%d,%d,%d)\n", r, g, b);
-#endif
-        return std::make_unique<Show::Solid>(r, g, b);
-    });
-
-    registerShow("ColorRanges", "Solid color or color sections (flags, patterns)", [](const StaticJsonDocument<512> &doc) {
+    registerShow("Solid", "Solid color or color sections (flags, patterns)", [](const StaticJsonDocument<512> &doc) {
         std::vector<Strip::Color> colors;
         std::vector<float> ranges;
 
@@ -67,10 +57,9 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
             }
         }
 
-        // If no colors parsed, use default Ukraine flag
+        // If no colors parsed, use default white
         if (colors.empty()) {
-            colors.push_back(color(0, 87, 183)); // Blue
-            colors.push_back(color(255, 215, 0)); // Yellow
+            colors.push_back(color(255, 255, 255)); // White
         }
 
         return std::make_unique<Show::ColorRanges>(colors, ranges);
