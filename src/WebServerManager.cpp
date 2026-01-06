@@ -474,14 +474,6 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 <div class="show-description" id="showDescription"></div>
 
                 <!-- Parameter controls (shown based on selected show) -->
-                <div id="solidParams" class="params-section">
-                    <div class="param-row">
-                        <label class="param-label" for="solidColor">Color</label>
-                        <input type="color" id="solidColor" value="#ffffff">
-                    </div>
-                    <button class="apply-button" onclick="applySolidColor()">Apply Color</button>
-                </div>
-
                 <div id="mandelbrotParams" class="params-section">
                     <div class="param-row">
                         <label class="param-label" for="mandelbrotCre0">Cre0 (Real min)</label>
@@ -738,7 +730,6 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
 
         // Show/hide parameter sections based on selected show
         function updateParameterVisibility(showName) {
-            document.getElementById('solidParams').classList.remove('visible');
             document.getElementById('mandelbrotParams').classList.remove('visible');
             document.getElementById('chaosParams').classList.remove('visible');
             document.getElementById('twoColorBlendParams').classList.remove('visible');
@@ -749,9 +740,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             document.getElementById('theaterChaseParams').classList.remove('visible');
             document.getElementById('stroboscopeParams').classList.remove('visible');
 
-            if (showName === 'Solid') {
-                document.getElementById('solidParams').classList.add('visible');
-            } else if (showName === 'Mandelbrot') {
+            if (showName === 'Mandelbrot') {
                 document.getElementById('mandelbrotParams').classList.add('visible');
             } else if (showName === 'Chaos') {
                 document.getElementById('chaosParams').classList.add('visible');
@@ -769,28 +758,6 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 document.getElementById('theaterChaseParams').classList.add('visible');
             } else if (showName === 'Stroboscope') {
                 document.getElementById('stroboscopeParams').classList.add('visible');
-            }
-        }
-
-        // Apply Solid color parameters
-        async function applySolidColor() {
-            const hex = document.getElementById('solidColor').value;
-            const r = parseInt(hex.substr(1,2), 16);
-            const g = parseInt(hex.substr(3,2), 16);
-            const b = parseInt(hex.substr(5,2), 16);
-
-            try {
-                await fetch('/api/show', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: 'Solid',
-                        params: { r, g, b }
-                    })
-                });
-                pendingParameterConfig = false;  // Applied successfully
-            } catch (error) {
-                console.error('Failed to apply color:', error);
             }
         }
 
@@ -1193,7 +1160,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 document.getElementById('currentShow').textContent = currentStatus.current_show;
                 document.getElementById('currentBrightness').textContent = currentStatus.brightness;
 
-                // Update UI controls without triggering change events
+                // Update UI controlst c without triggering change events
                 // Don't override dropdown if user is configuring parameters
                 const showSelect = document.getElementById('showSelect');
                 if (!pendingParameterConfig && showSelect.value !== currentStatus.current_show) {
@@ -1325,7 +1292,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
         loadLayout();
 
         // Update status every minute
-        setInterval(updateStatus, 60000);
+        setInterval(updateStatus, 10000);
     </script>
 </body>
 </html>
