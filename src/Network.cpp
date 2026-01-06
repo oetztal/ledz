@@ -286,7 +286,7 @@ void Network::startSTA(const char *ssid, const char *password) {
 }
 
 void Network::startTask() {
-    // Create Network task on Core 0 with high priority (3) to ensure webserver responsiveness
+    // Create Network task on Core 1 with high priority (3) to ensure webserver responsiveness
     // Priority 3 is higher than LED task (2) to prevent LED rendering from starving network
     xTaskCreatePinnedToCore(
         taskWrapper, // Task Function
@@ -295,7 +295,7 @@ void Network::startTask() {
         this, // Parameters
         3, // Priority (increased from 1 to 3)
         &taskHandle, // Task Handle
-        0 // Core Number (0)
+        1 // Core Number (1)
     );
 }
 

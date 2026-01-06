@@ -12,7 +12,7 @@ namespace Task {
             this, // Parameters
             2, // Priority
             &taskHandle, // Task Handle
-            1 // Core Number (1)
+            0 // Core Number (0)
         );
 #endif
     }
