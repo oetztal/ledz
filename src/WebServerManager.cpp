@@ -532,7 +532,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
 
                 <div id="colorRangesParams" class="params-section">
                     <small style="display:block; margin-bottom:8px; color:#666;">
-                        Supports 1 or more colors. Use 1 color for solid color with smooth fade-in, or multiple colors for patterns/flags.
+                        Single color with smooth fade-in (default: warm white), or use multiple colors for patterns/flags.
                     </small>
                     <div style="margin-bottom: 12px;">
                         <strong>Presets:</strong>
@@ -544,11 +544,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                     <div id="colorRangesColorInputs">
                         <div class="param-row">
                             <label class="param-label" for="colorRangesColor1">Color 1</label>
-                            <input type="color" id="colorRangesColor1" value="#0057b7">
-                        </div>
-                        <div class="param-row">
-                            <label class="param-label" for="colorRangesColor2">Color 2</label>
-                            <input type="color" id="colorRangesColor2" value="#ffd700">
+                            <input type="color" id="colorRangesColor1" value="#fffae6">
                         </div>
                     </div>
                     <div class="param-row">
@@ -834,7 +830,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
         }
 
         // ColorRanges color management
-        let colorRangesColorCount = 2;
+        let colorRangesColorCount = 1;
 
         function addColorRangesColor() {
             colorRangesColorCount++;

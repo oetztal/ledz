@@ -57,9 +57,9 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
             }
         }
 
-        // If no colors parsed, use default white
+        // If no colors parsed, use default warm white
         if (colors.empty()) {
-            colors.push_back(color(255, 255, 255)); // White
+            colors.push_back(color(255, 250, 230)); // Warm white
         }
 
         return std::make_unique<Show::ColorRanges>(colors, ranges);
