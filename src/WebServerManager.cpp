@@ -1324,8 +1324,8 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
         updateStatus();
         loadLayout();
 
-        // Update status every 2 seconds
-        setInterval(updateStatus, 2000);
+        // Update status every minute
+        setInterval(updateStatus, 60000);
     </script>
 </body>
 </html>
@@ -1531,6 +1531,7 @@ void WebServerManager::setupAPIRoutes() {
                           return;
                       }
 
+                      Serial.println("/api/layout POST called: loading config");
                       Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
 
                       // Update fields if provided
@@ -1557,6 +1558,7 @@ void WebServerManager::setupAPIRoutes() {
 
     // GET /api/layout - Get current layout configuration
     server.on("/api/layout", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        Serial.println("/api/layout GET called: loading config");
         Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
 
         StaticJsonDocument<256> doc;

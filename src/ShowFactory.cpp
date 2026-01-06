@@ -40,30 +40,18 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
         std::vector<Strip::Color> colors;
         std::vector<float> ranges;
 
-#ifdef ARDUINO
-        Serial.println("ShowFactory: Parsing ColorRanges parameters");
-        Serial.print("JSON: ");
-        serializeJson(doc, Serial);
-        Serial.println();
-#endif
-
         // Parse colors array (supports 1 or more colors)
-        if (doc.containsKey("colors") && doc["colors"].is<JsonArray>()) {
-            JsonArrayConst colorsArray = doc["colors"];
-#ifdef ARDUINO
-            Serial.printf("Found %d colors in array\n", colorsArray.size());
-#endif
-            for (JsonVariantConst colorVariant: colorsArray) {
-                if (colorVariant.is<JsonArray>()) {
-                    JsonArrayConst colorArray = colorVariant;
-                    if (colorArray.size() >= 3) {
-                        uint8_t r = colorArray[0] | 0;
-                        uint8_t g = colorArray[1] | 0;
-                        uint8_t b = colorArray[2] | 0;
+        // Note: Must use JsonArrayConst for StaticJsonDocument (not JsonArray)
+        if (doc.containsKey("colors")) {
+            JsonArrayConst colorsArray = doc["colors"].as<JsonArrayConst>();
+            if (!colorsArray.isNull() && colorsArray.size() > 0) {
+                for (JsonVariantConst colorVariant: colorsArray) {
+                    JsonArrayConst colorArray = colorVariant.as<JsonArrayConst>();
+                    if (!colorArray.isNull() && colorArray.size() >= 3) {
+                        uint8_t r = colorArray[0].as<uint8_t>();
+                        uint8_t g = colorArray[1].as<uint8_t>();
+                        uint8_t b = colorArray[2].as<uint8_t>();
                         colors.push_back(color(r, g, b));
-#ifdef ARDUINO
-                        Serial.printf("  Color: RGB(%d,%d,%d)\n", r, g, b);
-#endif
                     }
                 }
             }
@@ -71,45 +59,20 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
 
         // Parse ranges array (optional)
         if (doc.containsKey("ranges")) {
-#ifdef ARDUINO
-            Serial.println("Found 'ranges' key in JSON");
-#endif
-            if (doc["ranges"].is<JsonArray>()) {
-                JsonArrayConst rangesArray = doc["ranges"];
-#ifdef ARDUINO
-                Serial.printf("Ranges array size: %d\n", rangesArray.size());
-#endif
+            JsonArrayConst rangesArray = doc["ranges"].as<JsonArrayConst>();
+            if (!rangesArray.isNull() && rangesArray.size() > 0) {
                 for (JsonVariantConst rangeVariant: rangesArray) {
-                    float rangeValue = rangeVariant.as<float>();
-                    ranges.push_back(rangeValue);
-#ifdef ARDUINO
-                    Serial.printf("  Range: %.2f\n", rangeValue);
-#endif
+                    ranges.push_back(rangeVariant.as<float>());
                 }
-            } else {
-#ifdef ARDUINO
-                Serial.println("WARNING: 'ranges' exists but is not an array!");
-#endif
             }
-        } else {
-#ifdef ARDUINO
-            Serial.println("No 'ranges' key in JSON");
-#endif
         }
 
         // If no colors parsed, use default Ukraine flag
         if (colors.empty()) {
-#ifdef ARDUINO
-            Serial.println("No colors parsed, using default Ukraine flag");
-#endif
             colors.push_back(color(0, 87, 183)); // Blue
             colors.push_back(color(255, 215, 0)); // Yellow
         }
 
-#ifdef ARDUINO
-        Serial.printf("ShowFactory: Creating ColorRanges with %zu colors and %zu ranges\n",
-                      colors.size(), ranges.size());
-#endif
         return std::make_unique<Show::ColorRanges>(colors, ranges);
     });
 
@@ -259,8 +222,8 @@ std::unique_ptr<Show::Show> ShowFactory::createShow(const char *name, const char
     }
 
 #ifdef ARDUINO
-    // Parse JSON parameters (increased size for ColorRanges with many colors)
-    StaticJsonDocument<512> doc;
+    // Parse JSON parameters (increased buffer for ColorRanges with many colors and nested arrays)
+    StaticJsonDocument<1024> doc;
     DeserializationError error = deserializeJson(doc, paramsJson);
 
     // If JSON parsing fails, log warning and use empty document (will use defaults)

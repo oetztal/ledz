@@ -47,7 +47,8 @@ namespace Task {
             total_execution_time += execution_time;
             total_show_time += show_time;
             auto delay = 10 - std::min(10ul, timer.elapsed());
-            if (timer.start_time - last_show_stats > 10000) {
+            // Log stats every 60 seconds to reduce Serial blocking
+            if (timer.start_time - last_show_stats > 60000) {
                 Serial.printf(
                     "Durations: execution %lu ms (avg: %lu ms), show %lu ms (avg: %lu ms), avg. cycle %lu ms, delay %lu ms\n",
                     execution_time, total_execution_time / iteration,

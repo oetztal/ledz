@@ -265,6 +265,9 @@ void ShowController::setStrip(std::unique_ptr<Strip::Strip> &&base) {
 
     if (baseStrip) {
         // Load and apply layout configuration
+#ifdef ARDUINO
+        Serial.println("ShowController: Loading layout configuration...");
+#endif
         Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
         layout = std::make_unique<Strip::Layout>(*baseStrip, layoutConfig.reverse, layoutConfig.mirror,
                                                  layoutConfig.dead_leds);

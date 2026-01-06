@@ -17,6 +17,18 @@ namespace Show {
     void ColorRanges::execute(Strip::Strip &strip, Iteration iteration) {
         // Initialize color ranges on first run
         if (!initialized) {
+#ifdef ARDUINO
+            Serial.print("ColorRanges: colors=[");
+            for (auto color: colors) {
+                    Serial.printf("RGB(%d,%d,%d)), ", red(color), green(color), blue(color));
+            }
+            Serial.print("], ranges=[");
+            for (auto range: ranges) {
+                Serial.printf("%.1f%%, ", range);
+            }
+            Serial.println("]");
+#endif
+
             uint16_t num_leds = strip.length();
             std::vector<Strip::Color> target_colors;
             target_colors.reserve(num_leds);
@@ -61,20 +73,7 @@ namespace Show {
             }
             boundaries.push_back(num_leds); // Always end at num_leds
 
-#ifdef ARDUINO
-            Serial.printf("ColorRanges: Final boundaries (%zu total):\n", boundaries.size());
-            for (size_t i = 0; i < boundaries.size(); i++) {
-                Serial.printf("  [%zu] LED %u", i, boundaries[i]);
-                if (i > 0 && i <= colors.size()) {
-                    uint8_t r = red(colors[i - 1]);
-                    uint8_t g = green(colors[i - 1]);
-                    uint8_t b = blue(colors[i - 1]);
-                    Serial.printf(" (Color %zu: RGB(%d,%d,%d))", i - 1, r, g, b);
-                }
-                Serial.println();
-            }
-#endif
-
+            bool new_color = true;
             // Assign colors to each LED based on boundaries
             for (uint16_t led = 0; led < num_leds; led++) {
                 // Find which color range this LED belongs to
@@ -82,6 +81,7 @@ namespace Show {
                 for (size_t i = 0; i < boundaries.size() - 1; i++) {
                     if (led >= boundaries[i] && led < boundaries[i + 1]) {
                         color_index = i;
+                        new_color = true;
                         break;
                     }
                 }
@@ -91,7 +91,14 @@ namespace Show {
                     color_index = colors.size() - 1;
                 }
 
-                target_colors.push_back(colors[color_index]);
+                size_t color = colors[color_index];
+                target_colors.push_back(color);
+#ifdef ARDUINO
+                if (new_color) {
+                    Serial.printf("ColorRanges: LED %u: Color %zu (RGB(%d,%d,%d))\n", led, color_index, red(color), green(color), blue(color));
+                    new_color = false;
+                }
+#endif
             }
 
 #ifdef ARDUINO
