@@ -540,10 +540,11 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
 
                 <div id="colorRangesParams" class="params-section">
                     <small style="display:block; margin-bottom:8px; color:#666;">
-                        Use 1 color for solid color with smooth fade-in, or multiple colors for patterns/flags.
+                        Supports 1 or more colors. Use 1 color for solid color with smooth fade-in, or multiple colors for patterns/flags.
                     </small>
                     <div style="margin-bottom: 12px;">
-                        <strong>Flag Presets:</strong>
+                        <strong>Presets:</strong>
+                        <button class="preset-button" onclick="loadWarmWhite()">💡 Warm White</button>
                         <button class="preset-button" onclick="loadUkraineFlag()">🇺🇦 Ukraine</button>
                         <button class="preset-button" onclick="loadItalianFlag()">🇮🇹 Italy</button>
                         <button class="preset-button" onclick="loadFrenchFlag()">🇫🇷 France</button>
@@ -894,6 +895,16 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             }
         }
 
+        // Load Warm White preset (single color)
+        function loadWarmWhite() {
+            // Reset to 1 color
+            while (colorRangesColorCount > 1) {
+                removeColorRangesColor();
+            }
+            document.getElementById('colorRangesColor1').value = '#fffae6'; // Warm white
+            document.getElementById('colorRangesRanges').value = ''; // No ranges for single color
+        }
+
         // Load Ukraine flag preset
         function loadUkraineFlag() {
             // Reset to 2 colors
@@ -939,7 +950,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
         async function applyColorRangesParams() {
             const colors = [];
 
-            // Collect all color values
+            // Collect all color values (supports 1 or more colors)
             for (let i = 1; i <= colorRangesColorCount; i++) {
                 const colorInput = document.getElementById(`colorRangesColor${i}`);
                 if (colorInput) {
@@ -951,37 +962,26 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 }
             }
 
-            let params;
+            // Parse ranges (optional, only for multi-color mode)
+            const rangesText = document.getElementById('colorRangesRanges').value.trim();
+            let ranges = [];
+            if (rangesText && colors.length > 1) {
+                ranges = rangesText.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
 
-            // Use simple format for single color (like Solid show)
-            if (colors.length === 1) {
-                params = {
-                    r: colors[0][0],
-                    g: colors[0][1],
-                    b: colors[0][2]
-                };
-                console.log('ColorRanges params (single color):', JSON.stringify(params));
-            } else {
-                // Parse ranges (optional) for multi-color mode
-                const rangesText = document.getElementById('colorRangesRanges').value.trim();
-                let ranges = [];
-                if (rangesText) {
-                    ranges = rangesText.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
-
-                    // Validate: should have colors.length - 1 ranges
-                    if (ranges.length > 0 && ranges.length !== colors.length - 1) {
-                        alert(`Warning: For ${colors.length} colors, you need ${colors.length - 1} range value(s).\nYou provided ${ranges.length}. Using equal distribution instead.`);
-                        ranges = []; // Clear invalid ranges
-                    }
+                // Validate: should have colors.length - 1 ranges
+                if (ranges.length > 0 && ranges.length !== colors.length - 1) {
+                    alert(`Warning: For ${colors.length} colors, you need ${colors.length - 1} range value(s).\nYou provided ${ranges.length}. Using equal distribution instead.`);
+                    ranges = []; // Clear invalid ranges
                 }
-
-                params = { colors };
-                if (ranges.length > 0) {
-                    params.ranges = ranges;
-                }
-
-                console.log('ColorRanges params (multi-color):', JSON.stringify(params));
             }
+
+            // Always use colors array format
+            const params = { colors };
+            if (ranges.length > 0) {
+                params.ranges = ranges;
+            }
+
+            console.log('ColorRanges params:', JSON.stringify(params));
 
             try {
                 await fetch('/api/show', {
