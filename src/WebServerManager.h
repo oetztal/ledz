@@ -21,6 +21,11 @@ class Network;
 class ShowController;
 class ShowFactory;
 
+class AccessLogger : public AsyncMiddleware {
+public:
+    void run(__unused AsyncWebServerRequest* request, __unused ArMiddlewareNext next) override;
+};
+
 /**
  * WebServer Manager
  * Manages HTTP server and API endpoints for WiFi configuration
@@ -30,6 +35,7 @@ class WebServerManager {
 private:
 #ifdef ARDUINO
     AsyncWebServer server;
+    AccessLogger logging;
 #endif
 
     Config::ConfigManager &config;

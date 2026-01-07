@@ -3,6 +3,9 @@
 //
 
 #include "WebServerManager.h"
+
+#include <sstream>
+
 #include "Config.h"
 #include "Network.h"
 #include "ShowController.h"
@@ -1300,6 +1303,24 @@ WebServerManager::WebServerManager(Config::ConfigManager &config, Network &netwo
       , server(80)
 #endif
 {
+}
+
+void AccessLogger::run(AsyncWebServerRequest *request, ArMiddlewareNext next) {
+    Print *_out = &Serial;
+    std::stringstream ss;
+    ss << "[HTTP] " << request->client()->remoteIP().toString().c_str() << " " << request->url().c_str() << " " << request->methodToString();
+
+    uint32_t elapsed = millis();
+    next();
+    elapsed = millis() - elapsed;
+
+    AsyncWebServerResponse *response = request->getResponse();
+    if (response) {
+        ss << " (" << elapsed << " ms) " << response->code();
+    } else {
+        ss << " (no response)";
+    }
+    _out->println(ss.str().c_str());
 }
 
 void WebServerManager::setupConfigRoutes() {
@@ -2649,6 +2670,9 @@ void WebServerManager::begin() {
 #ifdef ARDUINO
     Serial.println("Starting webserver...");
 
+    // Add access logging middleware for all requests
+    server.addMiddleware(&logging);
+
     // Setup routes
     setupConfigRoutes();
     setupAPIRoutes();
@@ -2661,6 +2685,12 @@ void WebServerManager::begin() {
 
         // Redirect to the root page
         request->redirect("/");
+    });
+
+    // Add 404 handler
+    server.onNotFound([](AsyncWebServerRequest *request) {
+        Serial.printf("[HTTP] 404 Not Found: %s\n", request->url().c_str());
+        request->send(404, "text/plain", "Not found");
     });
 
     // Start server
