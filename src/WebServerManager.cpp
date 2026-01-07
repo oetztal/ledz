@@ -547,10 +547,13 @@ void WebServerManager::setupAPIRoutes() {
         StaticJsonDocument<1024> doc;
 
         FirmwareInfo info;
-        bool updateAvailable = OTAUpdater::checkForUpdate(OTA_GITHUB_OWNER, OTA_GITHUB_REPO, info);
+        bool releaseFound = OTAUpdater::checkForUpdate(OTA_GITHUB_OWNER, OTA_GITHUB_REPO, info);
 
-        if (updateAvailable) {
-            doc["update_available"] = true;
+        // Only report update available if release found AND version is different
+        bool updateAvailable = releaseFound && (info.version != FIRMWARE_VERSION);
+
+        if (releaseFound) {
+            doc["update_available"] = updateAvailable;
             doc["current_version"] = FIRMWARE_VERSION;
             doc["latest_version"] = info.version;
             doc["release_name"] = info.name;
