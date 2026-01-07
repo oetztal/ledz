@@ -890,8 +890,8 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
         // Load Ukraine flag preset
         function loadUkraineFlag() {
             ensureColorRangesColorCount(2);
-            document.getElementById('colorRangesColor1').value = '#ffd700'; // Yellow
-            document.getElementById('colorRangesColor2').value = '#0057b7'; // Blue
+            document.getElementById('colorRangesColor1').value = '#0057b7'; // Blue
+            document.getElementById('colorRangesColor2').value = '#ffd700'; // Yellow
             document.getElementById('colorRangesRanges').value = ''; // Equal distribution
         }
 
