@@ -253,7 +253,7 @@ void Network::startSTA(const char *ssid, const char *password) {
         auto wl_status = WiFi.status();
         unsigned long now = millis();
         if (now - lastCheck > 1100) {
-            Serial.printf("WiFi status: %d deplayed %lu\n", wl_status, now - lastCheck);
+            Serial.printf("WiFi status: %d delayed %lu\n", wl_status, now - lastCheck);
         }
         lastCheck = now;
 

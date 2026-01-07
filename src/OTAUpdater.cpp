@@ -227,11 +227,6 @@ bool OTAUpdater::performUpdate(
                 // Progress update (every 1 second)
                 if (millis() - lastProgressLog > 1000) {
                     int percent = (totalRead * 100) / expectedSize;
-                    uint32_t freeHeap = ESP.getFreeHeap();
-                    Serial.printf("[OTA] Progress: %d%% (%zu/%zu bytes), Free heap: %u\n", percent, totalRead,
-                                  expectedSize, freeHeap);
-
-                    // Call progress callback if provided
                     if (onProgress) {
                         onProgress(percent, totalRead);
                     }
