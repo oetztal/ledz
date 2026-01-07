@@ -22,51 +22,32 @@
 #include <ArduinoJson.h>
 #endif
 
-std::vector<uint32_t> ShowFactory::parseColors(const StaticJsonDocument<512> &doc,
-                                                size_t count,
-                                                uint32_t defaultColor) {
-    std::vector<uint32_t> colors;
-
-    // Parse colors array from JSON
-    if (doc.containsKey("colors")) {
-        JsonArrayConst colorsArray = doc["colors"].as<JsonArrayConst>();
-        if (!colorsArray.isNull() && colorsArray.size() > 0) {
-            for (JsonVariantConst colorVariant: colorsArray) {
-                JsonArrayConst colorArray = colorVariant.as<JsonArrayConst>();
-                if (!colorArray.isNull() && colorArray.size() >= 3) {
-                    uint8_t r = colorArray[0].as<uint8_t>();
-                    uint8_t g = colorArray[1].as<uint8_t>();
-                    uint8_t b = colorArray[2].as<uint8_t>();
-                    colors.push_back(color(r, g, b));
-                }
-            }
-        }
-    }
-
-    // If no colors parsed, use default
-    if (colors.empty()) {
-        colors.push_back(defaultColor);
-    }
-
-    // Ensure exactly 'count' colors by repeating/truncating
-    std::vector<uint32_t> result;
-    result.reserve(count);
-
-    for (size_t i = 0; i < count; i++) {
-        result.push_back(colors[i % colors.size()]);
-    }
-
-    return result;
-}
-
 ShowFactory::ShowFactory() : showConstructors(strLess) {
     // Register all available shows (in display order)
     // Each lambda receives a StaticJsonDocument and uses defaults via | operator
 
     registerShow("Solid", "Solid color or color sections (flags, patterns)", [](const StaticJsonDocument<512> &doc) {
+        std::vector<Strip::Color> colors;
         std::vector<float> ranges;
 
-        // Parse ranges array (optional) to determine number of colors needed
+        // Parse colors array (supports 1 or more colors)
+        // Note: Must use JsonArrayConst for StaticJsonDocument (not JsonArray)
+        if (doc.containsKey("colors")) {
+            JsonArrayConst colorsArray = doc["colors"].as<JsonArrayConst>();
+            if (!colorsArray.isNull() && colorsArray.size() > 0) {
+                for (JsonVariantConst colorVariant: colorsArray) {
+                    JsonArrayConst colorArray = colorVariant.as<JsonArrayConst>();
+                    if (!colorArray.isNull() && colorArray.size() >= 3) {
+                        uint8_t r = colorArray[0].as<uint8_t>();
+                        uint8_t g = colorArray[1].as<uint8_t>();
+                        uint8_t b = colorArray[2].as<uint8_t>();
+                        colors.push_back(color(r, g, b));
+                    }
+                }
+            }
+        }
+
+        // Parse ranges array (optional)
         if (doc.containsKey("ranges")) {
             JsonArrayConst rangesArray = doc["ranges"].as<JsonArrayConst>();
             if (!rangesArray.isNull() && rangesArray.size() > 0) {
@@ -76,13 +57,10 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
             }
         }
 
-        // Determine number of colors needed based on ranges
-        // If ranges provided: need ranges.size() + 1 colors
-        // If no ranges: need 1 color (solid)
-        size_t colorCount = ranges.empty() ? 1 : ranges.size() + 1;
-
-        // Parse colors, ensuring exactly colorCount colors are available
-        std::vector<Strip::Color> colors = parseColors(doc, colorCount, color(255, 250, 230)); // Warm white default
+        // If no colors parsed, use default warm white
+        if (colors.empty()) {
+            colors.push_back(color(255, 250, 230)); // Warm white
+        }
 
         return std::make_unique<Show::ColorRanges>(colors, ranges);
     });

@@ -74,14 +74,16 @@ namespace Show {
             boundaries.push_back(num_leds); // Always end at num_leds
 
             bool new_color = true;
+            size_t color_index = -1;
             // Assign colors to each LED based on boundaries
             for (uint16_t led = 0; led < num_leds; led++) {
                 // Find which color range this LED belongs to
-                size_t color_index = 0;
                 for (size_t i = 0; i < boundaries.size() - 1; i++) {
                     if (led >= boundaries[i] && led < boundaries[i + 1]) {
-                        color_index = i;
-                        new_color = true;
+                        if (color_index != i) {
+                            color_index = i;
+                            new_color = true;
+                        }
                         break;
                     }
                 }
@@ -100,10 +102,6 @@ namespace Show {
                 }
 #endif
             }
-
-#ifdef ARDUINO
-            Serial.println("ColorRanges: Creating smooth blend");
-#endif
 
             // Create SmoothBlend with the color range pattern
             blend = std::make_unique<Support::SmoothBlend>(strip, target_colors);
