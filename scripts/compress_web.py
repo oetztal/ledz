@@ -28,25 +28,30 @@ DATA_DIR = PROJECT_DIR / "data"
 GENERATED_DIR = PROJECT_DIR / "src" / "generated"
 
 
+def minify_css(css: str) -> str:
+    """Minify CSS content."""
+    # Remove CSS comments
+    css = re.sub(r'/\*.*?\*/', '', css, flags=re.DOTALL)
+    # Remove extra whitespace
+    css = re.sub(r'\s+', ' ', css)
+    # Remove spaces around special characters
+    css = re.sub(r'\s*([{};:,>~+])\s*', r'\1', css)
+    # Remove trailing semicolons before closing braces
+    css = re.sub(r';}', '}', css)
+    return css.strip()
+
+
 def minify_html(html: str) -> str:
     """Simple HTML/CSS/JS minifier."""
     # Remove HTML comments (but preserve IE conditional comments)
     html = re.sub(r'<!--(?!\[if).*?-->', '', html, flags=re.DOTALL)
 
     # Minify inline CSS
-    def minify_css(match):
+    def minify_inline_css(match):
         css = match.group(1)
-        # Remove CSS comments
-        css = re.sub(r'/\*.*?\*/', '', css, flags=re.DOTALL)
-        # Remove extra whitespace
-        css = re.sub(r'\s+', ' ', css)
-        # Remove spaces around special characters
-        css = re.sub(r'\s*([{};:,>~+])\s*', r'\1', css)
-        # Remove trailing semicolons before closing braces
-        css = re.sub(r';}', '}', css)
-        return f'<style>{css.strip()}</style>'
+        return f'<style>{minify_css(css)}</style>'
 
-    html = re.sub(r'<style[^>]*>(.*?)</style>', minify_css, html, flags=re.DOTALL | re.IGNORECASE)
+    html = re.sub(r'<style[^>]*>(.*?)</style>', minify_inline_css, html, flags=re.DOTALL | re.IGNORECASE)
 
     # Minify inline JavaScript (basic - preserve strings)
     def minify_js(match):
@@ -118,18 +123,21 @@ const size_t {var_name}_GZ_LEN = {len(data)};
     return header
 
 
-def process_file(html_path: Path) -> tuple[str, int, int]:
-    """Process a single HTML file. Returns (name, original_size, compressed_size)."""
-    print(f"Processing {html_path.name}...")
+def process_file(file_path: Path) -> tuple[str, int, int]:
+    """Process a single HTML or CSS file. Returns (name, original_size, compressed_size)."""
+    print(f"Processing {file_path.name}...")
 
-    # Read original HTML
-    with open(html_path, 'r', encoding='utf-8') as f:
-        html = f.read()
+    # Read original content
+    with open(file_path, 'r', encoding='utf-8') as f:
+        content = f.read()
 
-    original_size = len(html.encode('utf-8'))
+    original_size = len(content.encode('utf-8'))
 
-    # Minify
-    minified = minify_html(html)
+    # Minify based on file type
+    if file_path.suffix == '.css':
+        minified = minify_css(content)
+    else:
+        minified = minify_html(content)
     minified_size = len(minified.encode('utf-8'))
 
     # Gzip compress
@@ -137,7 +145,7 @@ def process_file(html_path: Path) -> tuple[str, int, int]:
     compressed_size = len(compressed)
 
     # Generate header file
-    name = html_path.stem.replace('-', '_').replace('.', '_')
+    name = file_path.stem.replace('-', '_').replace('.', '_')
     header = generate_header(name, compressed)
 
     # Write header file
@@ -165,20 +173,20 @@ def main():
     # Check if data directory exists
     if not DATA_DIR.exists():
         print(f"Error: Data directory not found: {DATA_DIR}")
-        print("Please create HTML files in the data/ directory.")
+        print("Please create web files in the data/ directory.")
         sys.exit(1)
 
-    # Process all HTML files
-    html_files = list(DATA_DIR.glob("*.html"))
-    if not html_files:
-        print(f"Warning: No HTML files found in {DATA_DIR}")
+    # Process all HTML and CSS files
+    web_files = list(DATA_DIR.glob("*.html")) + list(DATA_DIR.glob("*.css"))
+    if not web_files:
+        print(f"Warning: No HTML/CSS files found in {DATA_DIR}")
         sys.exit(0)
 
     total_original = 0
     total_compressed = 0
 
-    for html_path in html_files:
-        name, original, compressed = process_file(html_path)
+    for file_path in sorted(web_files):
+        name, original, compressed = process_file(file_path)
         total_original += original
         total_compressed += compressed
         print()
