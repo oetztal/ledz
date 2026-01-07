@@ -53,15 +53,15 @@ def minify_html(html: str) -> str:
 
     html = re.sub(r'<style[^>]*>(.*?)</style>', minify_inline_css, html, flags=re.DOTALL | re.IGNORECASE)
 
-    # Minify inline JavaScript (basic - preserve strings)
+    # Minify inline JavaScript (conservative - only remove comments and collapse whitespace)
+    # Note: Aggressive operator-space removal breaks template literals containing HTML/CSS
     def minify_js(match):
         js = match.group(1)
         # Remove single-line comments (but not URLs with //)
         js = re.sub(r'(?<!:)//(?!/).*?$', '', js, flags=re.MULTILINE)
         # Remove multi-line comments
         js = re.sub(r'/\*.*?\*/', '', js, flags=re.DOTALL)
-        # Collapse multiple spaces/newlines to single space (but preserve string contents)
-        # Simple approach: collapse whitespace outside strings
+        # Collapse multiple spaces/newlines to single space
         lines = js.split('\n')
         minified_lines = []
         for line in lines:
@@ -69,11 +69,8 @@ def minify_html(html: str) -> str:
             if line:
                 minified_lines.append(line)
         js = ' '.join(minified_lines)
-        # Remove spaces around operators (careful with strings)
-        js = re.sub(r'\s*([{};,=<>!+\-*/%&|^~?:])\s*', r'\1', js)
-        # Restore necessary spaces
-        js = re.sub(r'(\w)(return|if|else|for|while|function|const|let|var|async|await|typeof|instanceof|in|of|new|throw|try|catch|finally)\b', r'\1 \2', js)
-        js = re.sub(r'\b(return|if|else|for|while|function|const|let|var|async|await|typeof|instanceof|in|of|new|throw|try|catch|finally)(\w)', r'\1 \2', js)
+        # Collapse multiple spaces to single space
+        js = re.sub(r' +', ' ', js)
         return f'<script>{js.strip()}</script>'
 
     html = re.sub(r'<script[^>]*>(.*?)</script>', minify_js, html, flags=re.DOTALL | re.IGNORECASE)
@@ -138,7 +135,6 @@ def process_file(file_path: Path) -> tuple[str, int, int]:
         minified = minify_css(content)
     else:
         minified = minify_html(content)
-        minified = content
     minified_size = len(minified.encode('utf-8'))
 
 
