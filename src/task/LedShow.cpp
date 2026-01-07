@@ -10,9 +10,9 @@ namespace Task {
             "LED show", // Task Name
             10000, // Stack Size
             this, // Parameters
-            2, // Priority
+            1, // Priority
             &taskHandle, // Task Handle
-            0 // Core Number (0)
+            1 // Core Number
         );
 #endif
     }
@@ -46,7 +46,7 @@ namespace Task {
 
             total_execution_time += execution_time;
             total_show_time += show_time;
-            auto delay = 10 - std::min(10ul, timer.elapsed());
+            auto delay = 10ul - std::min(10ul, timer.elapsed());
             // Log stats every 60 seconds to reduce Serial blocking
             if (timer.start_time - last_show_stats > 60000) {
                 Serial.printf(

@@ -93,8 +93,22 @@ void Network::startSTA(const char *ssid, const char *password) {
 #ifdef ARDUINO
     mode = NetworkMode::STA;
 
+    // Disconnect any previous connection
+    WiFi.disconnect(true);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+
+    // Set WiFi mode explicitly
+    WiFi.mode(WIFI_STA);
+
     // Disable WiFi power saving for low latency
-    WiFi.setSleep(false);
+    WiFi.setSleep(WIFI_PS_NONE);
+
+    // Set transmit power to maximum
+    WiFi.setTxPower(WIFI_POWER_19_5dBm);
+
+    Serial.println("WiFi Configuration:");
+    Serial.printf("  Power save: NONE\n");
+    Serial.printf("  TX Power: 19.5dBm (max)\n");
 
     WiFi.begin(ssid, password);
 
@@ -115,6 +129,20 @@ void Network::startSTA(const char *ssid, const char *password) {
 
         Serial.print("IP address: ");
         Serial.println(WiFi.localIP());
+
+        // Print detailed WiFi diagnostics
+        Serial.println("\nWiFi Diagnostics:");
+        Serial.printf("  SSID: %s\n", WiFi.SSID().c_str());
+        Serial.printf("  BSSID: %s\n", WiFi.BSSIDstr().c_str());
+        Serial.printf("  Channel: %d\n", WiFi.channel());
+        Serial.printf("  RSSI: %d dBm\n", WiFi.RSSI());
+        Serial.printf("  MAC: %s\n", WiFi.macAddress().c_str());
+        Serial.printf("  Gateway: %s\n", WiFi.gatewayIP().toString().c_str());
+        Serial.printf("  DNS: %s\n", WiFi.dnsIP().toString().c_str());
+        Serial.printf("  TX Power: %d\n", WiFi.getTxPower());
+        Serial.printf("  Sleep Mode: %d (0=NONE)\n", WiFi.getSleep());
+        Serial.printf("  Auto Reconnect: %d\n", WiFi.getAutoReconnect());
+        Serial.println();
 
         // Start mDNS responder
         String hostname = generateHostname();
@@ -236,16 +264,12 @@ void Network::configureUsingAPMode() {
     // Connection successful - reset failure counter
     config.resetConnectionFailures();
 
-    Serial.println("[DIAG] About to create webserver...");
-    Serial.printf("[DIAG] Free heap before webserver: %u\n", ESP.getFreeHeap());
-
     // Create and start operational webserver for STA mode
-    // TODO: Temporarily disabled for network diagnostics
-    // webServer = std::make_unique<OperationalWebServerManager>(config, *this, showController);
-    // webServer->begin();
+    webServer = std::make_unique<OperationalWebServerManager>(config, *this, showController);
+    webServer->begin();
 
-    Serial.println("[DIAG] Skipped webserver creation for testing");
-    Serial.printf("[DIAG] Free heap after: %u\n", ESP.getFreeHeap());
+    Serial.println("Webserver started - system ready");
+    Serial.printf("Free heap: %u bytes\n", ESP.getFreeHeap());
 
     // Main loop - NTP updates
     auto lastNtpUpdate = ntpClient.getEpochTime();
@@ -297,7 +321,7 @@ void Network::startTask() {
         this, // Parameters
         1, // Priority
         &taskHandle, // Task Handle
-        1 // Core Number (1)
+        0 // Core Number
     );
 }
 

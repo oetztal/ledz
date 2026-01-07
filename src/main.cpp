@@ -43,7 +43,9 @@ void setup() {
     // Initialize show controller
     showController.begin();
 
-    // Network will create the appropriate webserver instance based on mode
+    // Start tasks on their designated cores
+    // LED task: Core 1 (isolated from WiFi)
+    // Network task: Core 0 (same as WiFi stack)
     ledShow.startTask();
     network.startTask();
 }

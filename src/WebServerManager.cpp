@@ -1335,7 +1335,8 @@ void AccessLogger::run(AsyncWebServerRequest *request, ArMiddlewareNext next) {
 void WebServerManager::setupConfigRoutes() {
 #ifdef ARDUINO
     Serial.println("Setting up config routes...");
-    // Serve main control page or config page based on configuration status
+
+    // Serve WiFi config page
     server.on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
         request->send(200, "text/html", CONFIG_HTML);
     });
@@ -1356,6 +1357,12 @@ void WebServerManager::setupConfigRoutes() {
 void WebServerManager::setupAPIRoutes() {
 #ifdef ARDUINO
     Serial.println("Setting up API routes...");
+
+    // Serve main control page
+    server.on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        request->send(200, "text/html", CONTROL_HTML);
+    });
+
     // GET /api/status - Get device status
     server.on("/api/status", HTTP_GET, [this](AsyncWebServerRequest *request) {
         StaticJsonDocument<512> doc;
@@ -2677,7 +2684,7 @@ void WebServerManager::begin() {
     Serial.println("Starting webserver...");
 
     // Add access logging middleware for all requests
-    server.addMiddleware(&logging);
+    // server.addMiddleware(&logging);
 
     // Setup routes (implemented by subclass)
     setupRoutes();
