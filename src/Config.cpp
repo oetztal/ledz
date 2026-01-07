@@ -29,6 +29,12 @@ namespace Config {
 #endif
     }
 
+    void ConfigManager::markUnconfigured() {
+        prefs.begin(NAMESPACE, false); // Read-only mode
+        prefs.putBool("configured", false);
+        prefs.end();
+    }
+
     WiFiConfig ConfigManager::loadWiFiConfig() {
         WiFiConfig config;
 

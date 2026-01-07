@@ -68,6 +68,8 @@ private:
      */
     void startSTA(const char *ssid, const char *password);
 
+    void configureUsingAPMode();
+
 public:
     /**
      * Network constructor

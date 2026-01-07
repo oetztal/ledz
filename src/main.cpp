@@ -22,6 +22,8 @@ Task::LedShow ledShow(showController);
 Network network(config, showController);
 
 void setup() {
+    delay(1000);
+    Serial.println("Started");
     config.begin();
 
 #ifdef ARDUINO

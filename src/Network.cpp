@@ -93,6 +93,9 @@ void Network::startSTA(const char *ssid, const char *password) {
 #ifdef ARDUINO
     mode = NetworkMode::STA;
 
+    // Disable WiFi power saving for low latency
+    WiFi.setSleep(false);
+
     WiFi.begin(ssid, password);
 
     Serial.print("Connecting to WiFi ...");
@@ -162,6 +165,31 @@ void Network::startSTA(const char *ssid, const char *password) {
 #endif
 }
 
+void Network::configureUsingAPMode() {
+    // Start Access Point mode
+    startAP();
+
+    // Create and start config webserver for AP mode
+    webServer = std::make_unique<ConfigWebServerManager>(config, *this, showController);
+    webServer->begin();
+
+    // Wait for configuration
+    while (!config.isConfigured()) {
+        captivePortal.handleClient(); // Handle DNS requests
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
+    Serial.println("Configuration received");
+
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+    Serial.println("Stopping captive portal");
+    captivePortal.end();
+
+    Serial.println("Restarting");
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    ESP.restart();
+}
+
 [[noreturn]] void Network::task() {
 #ifdef ARDUINO
     Serial.println("Network task started");
@@ -169,28 +197,7 @@ void Network::startSTA(const char *ssid, const char *password) {
     if (!config.isConfigured()) {
         Serial.println("No WiFi configuration found - starting AP mode");
 
-        // Start Access Point mode
-        startAP();
-
-        // Create and start config webserver for AP mode
-        webServer = std::make_unique<ConfigWebServerManager>(config, *this, showController);
-        webServer->begin();
-
-        // Wait for configuration
-        while (!config.isConfigured()) {
-            captivePortal.handleClient(); // Handle DNS requests
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-        }
-        Serial.println("Configuration received");
-
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-        Serial.println("Stopping captive portal");
-        captivePortal.end();
-
-        Serial.println("Restarting");
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-        ESP.restart();
+        configureUsingAPMode();
     }
     Serial.println("Network task configured");
 
@@ -201,19 +208,9 @@ void Network::startSTA(const char *ssid, const char *password) {
 
     if (failures >= 3) {
         Serial.println("Too many connection failures - starting AP mode for reconfiguration");
-
-        // Start Access Point mode for reconfiguration
-        startAP();
-
-        // Create and start config webserver for AP mode
-        webServer = std::make_unique<ConfigWebServerManager>(config, *this, showController);
-        webServer->begin();
-
-        // Stay in AP mode until user reconfigures or manually restarts
-        while (true) {
-            captivePortal.handleClient(); // Handle DNS requests
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-        }
+        config.markUnconfigured();
+        config.resetConnectionFailures();
+        configureUsingAPMode();
     }
 
     // Load WiFi configuration
@@ -239,9 +236,16 @@ void Network::startSTA(const char *ssid, const char *password) {
     // Connection successful - reset failure counter
     config.resetConnectionFailures();
 
+    Serial.println("[DIAG] About to create webserver...");
+    Serial.printf("[DIAG] Free heap before webserver: %u\n", ESP.getFreeHeap());
+
     // Create and start operational webserver for STA mode
-    webServer = std::make_unique<OperationalWebServerManager>(config, *this, showController);
-    webServer->begin();
+    // TODO: Temporarily disabled for network diagnostics
+    // webServer = std::make_unique<OperationalWebServerManager>(config, *this, showController);
+    // webServer->begin();
+
+    Serial.println("[DIAG] Skipped webserver creation for testing");
+    Serial.printf("[DIAG] Free heap after: %u\n", ESP.getFreeHeap());
 
     // Main loop - NTP updates
     auto lastNtpUpdate = ntpClient.getEpochTime();
@@ -291,7 +295,7 @@ void Network::startTask() {
         "Network", // Task Name
         10000, // Stack Size
         this, // Parameters
-        3, // Priority
+        1, // Priority
         &taskHandle, // Task Handle
         1 // Core Number (1)
     );

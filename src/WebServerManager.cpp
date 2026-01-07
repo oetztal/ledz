@@ -1316,7 +1316,8 @@ WebServerManager::WebServerManager(Config::ConfigManager &config, Network &netwo
 void AccessLogger::run(AsyncWebServerRequest *request, ArMiddlewareNext next) {
     Print *_out = &Serial;
     std::stringstream ss;
-    ss << "[HTTP] " << request->client()->remoteIP().toString().c_str() << " " << request->url().c_str() << " " << request->methodToString();
+    ss << "[HTTP] " << request->client()->remoteIP().toString().c_str() << " " << request->url().c_str() << " " <<
+            request->methodToString();
 
     uint32_t elapsed = millis();
     next();
@@ -1333,17 +1334,9 @@ void AccessLogger::run(AsyncWebServerRequest *request, ArMiddlewareNext next) {
 
 void WebServerManager::setupConfigRoutes() {
 #ifdef ARDUINO
+    Serial.println("Setting up config routes...");
     // Serve main control page or config page based on configuration status
     server.on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        if (config.isConfigured()) {
-            request->send(200, "text/html", CONTROL_HTML);
-        } else {
-            request->send(200, "text/html", CONFIG_HTML);
-        }
-    });
-
-    // WiFi configuration page (always accessible)
-    server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(200, "text/html", CONFIG_HTML);
     });
 
@@ -1362,6 +1355,7 @@ void WebServerManager::setupConfigRoutes() {
 
 void WebServerManager::setupAPIRoutes() {
 #ifdef ARDUINO
+    Serial.println("Setting up API routes...");
     // GET /api/status - Get device status
     server.on("/api/status", HTTP_GET, [this](AsyncWebServerRequest *request) {
         StaticJsonDocument<512> doc;
@@ -1374,7 +1368,7 @@ void WebServerManager::setupAPIRoutes() {
         doc["firmware_version"] = FIRMWARE_VERSION;
 
         // OTA partition info
-        const esp_partition_t* running_partition = esp_ota_get_running_partition();
+        const esp_partition_t *running_partition = esp_ota_get_running_partition();
         if (running_partition != nullptr) {
             doc["ota_partition"] = running_partition->label;
         }
@@ -2703,14 +2697,13 @@ void WebServerManager::end() {
 }
 
 // ConfigWebServerManager implementation
-ConfigWebServerManager::ConfigWebServerManager(Config::ConfigManager &config, Network &network, ShowController &showController)
+ConfigWebServerManager::ConfigWebServerManager(Config::ConfigManager &config, Network &network,
+                                               ShowController &showController)
     : WebServerManager(config, network, showController) {
 }
 
 void ConfigWebServerManager::setupRoutes() {
 #ifdef ARDUINO
-    Serial.println("Setting up config-only routes...");
-
     // Setup config routes only (WiFi setup, OTA)
     setupConfigRoutes();
 
@@ -2724,17 +2717,13 @@ void ConfigWebServerManager::setupRoutes() {
 }
 
 // OperationalWebServerManager implementation
-OperationalWebServerManager::OperationalWebServerManager(Config::ConfigManager &config, Network &network, ShowController &showController)
+OperationalWebServerManager::OperationalWebServerManager(Config::ConfigManager &config, Network &network,
+                                                         ShowController &showController)
     : WebServerManager(config, network, showController) {
 }
 
 void OperationalWebServerManager::setupRoutes() {
 #ifdef ARDUINO
-    Serial.println("Setting up operational routes...");
-
-    // Setup config routes (for reconfiguration access)
-    setupConfigRoutes();
-
     // Setup API routes (LED control, status, etc.)
     setupAPIRoutes();
 

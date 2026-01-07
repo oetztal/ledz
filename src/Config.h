@@ -102,6 +102,11 @@ namespace Config {
         bool isConfigured();
 
         /**
+         * Mark as unconfigured
+         */
+        void markUnconfigured();
+
+        /**
          * Load WiFi configuration from NVS
          * @return WiFiConfig structure
          */
