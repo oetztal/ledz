@@ -328,7 +328,7 @@ void WebServerManager::setupAPIRoutes() {
               []([[maybe_unused]] AsyncWebServerRequest *request) {
               },
               nullptr,
-              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, [[maybe_unused]] size_t total) {
                   if (index == 0) {
                       StaticJsonDocument<256> doc;
 
@@ -376,7 +376,7 @@ void WebServerManager::setupAPIRoutes() {
               []([[maybe_unused]] AsyncWebServerRequest *request) {
               },
               nullptr,
-              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, [[maybe_unused]] size_t total) {
                   if (index == 0) {
                       StaticJsonDocument<256> doc;
                       DeserializationError error = deserializeJson(doc, data, len);
@@ -576,7 +576,7 @@ void WebServerManager::setupAPIRoutes() {
                                 R"({"status":"starting","message":"OTA update started"})");
               },
               nullptr,
-              [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+              []([[maybe_unused]] AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
                   if (index == 0) {
                       Serial.println("[WebServer] OTA update requested");
                   }
