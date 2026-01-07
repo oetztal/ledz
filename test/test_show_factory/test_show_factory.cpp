@@ -3,8 +3,6 @@
 #include "show/ColorRanges.h"
 #include <vector>
 
-#include "ShowFactory.h"
-
 // Test the color parsing logic used by ShowFactory
 // Note: ShowFactory itself has Arduino dependencies that don't compile in native environment
 // This test verifies the core parsing logic that ensures exactly n colors are available
