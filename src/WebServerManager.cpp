@@ -16,6 +16,7 @@
 
 #ifdef ARDUINO
 #include <ArduinoJson.h>
+#include <esp_ota_ops.h>
 #endif
 
 // Simple WiFi configuration HTML page (embedded)
@@ -454,6 +455,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             <div class="device-id">
                 <span id="deviceId">Loading...</span>
                 <span id="firmwareVersion" style="opacity: 0.7; font-size: 0.9em; margin-left: 10px;"></span>
+                <span id="otaPartition" style="opacity: 0.6; font-size: 0.85em; margin-left: 5px;"></span>
             </div>
         </div>
 
@@ -1122,6 +1124,12 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             if (firmwareVersionElement && currentStatus.firmware_version) {
                 firmwareVersionElement.textContent = currentStatus.firmware_version;
             }
+
+            // Update OTA partition
+            const otaPartitionElement = document.getElementById('otaPartition');
+            if (otaPartitionElement && currentStatus.ota_partition) {
+                otaPartitionElement.textContent = `(${currentStatus.ota_partition})`;
+            }
         }
 
         // Fetch available shows
@@ -1365,6 +1373,12 @@ void WebServerManager::setupAPIRoutes() {
         doc["brightness"] = showController.getBrightness();
         doc["firmware_version"] = FIRMWARE_VERSION;
 
+        // OTA partition info
+        const esp_partition_t* running_partition = esp_ota_get_running_partition();
+        if (running_partition != nullptr) {
+            doc["ota_partition"] = running_partition->label;
+        }
+
         // Show info
         doc["current_show"] = showController.getCurrentShowName();
         doc["auto_cycle"] = showController.isAutoCycleEnabled();
@@ -1515,7 +1529,6 @@ void WebServerManager::setupAPIRoutes() {
                           return;
                       }
 
-                      Serial.println("/api/layout POST called: loading config");
                       Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
 
                       // Update fields if provided
@@ -1542,7 +1555,6 @@ void WebServerManager::setupAPIRoutes() {
 
     // GET /api/layout - Get current layout configuration
     server.on("/api/layout", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        Serial.println("/api/layout GET called: loading config");
         Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
 
         StaticJsonDocument<256> doc;

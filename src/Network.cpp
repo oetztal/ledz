@@ -246,11 +246,19 @@ void Network::startSTA(const char *ssid, const char *password) {
     // Main loop - NTP updates
     auto lastNtpUpdate = ntpClient.getEpochTime();
 
+    unsigned long lastCheck = millis();
     while (true) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
 
+        auto wl_status = WiFi.status();
+        unsigned long now = millis();
+        if (now - lastCheck > 1100) {
+            Serial.printf("WiFi status: %d deplayed %lu\n", wl_status, now - lastCheck);
+        }
+        lastCheck = now;
+
         // Check WiFi connection
-        if (WiFi.status() != WL_CONNECTED) {
+        if (wl_status != WL_CONNECTED) {
             Serial.println("WiFi disconnected - reconnecting ...");
             WiFi.reconnect();
 

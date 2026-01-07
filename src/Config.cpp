@@ -209,9 +209,6 @@ namespace Config {
         config.mirror = prefs.getBool("layout_mirror", false);
         config.dead_leds = prefs.getUShort("layout_dead", 0);
         prefs.end();
-
-        Serial.printf("Config: Loaded layout - reverse=%d, mirror=%d, dead_leds=%u\n",
-                      config.reverse, config.mirror, config.dead_leds);
 #endif
 
         return config;
