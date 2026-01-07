@@ -863,22 +863,32 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
             }
         }
 
-        // Load Warm White preset (single color)
-        function loadWarmWhite() {
-            // Reset to 1 color
-            while (colorRangesColorCount > 1) {
+        /**
+         * Ensure exactly n color inputs exist for ColorRanges
+         * Adds or removes color inputs as needed
+         * @param {number} count - Desired number of color inputs
+         */
+        function ensureColorRangesColorCount(count) {
+            // Add colors if needed
+            while (colorRangesColorCount < count) {
+                addColorRangesColor();
+            }
+            // Remove colors if needed
+            while (colorRangesColorCount > count) {
                 removeColorRangesColor();
             }
+        }
+
+        // Load Warm White preset (single color)
+        function loadWarmWhite() {
+            ensureColorRangesColorCount(1);
             document.getElementById('colorRangesColor1').value = '#fffae6'; // Warm white
             document.getElementById('colorRangesRanges').value = ''; // No ranges for single color
         }
 
         // Load Ukraine flag preset
         function loadUkraineFlag() {
-            // Reset to 2 colors
-            while (colorRangesColorCount > 2) {
-                removeColorRangesColor();
-            }
+            ensureColorRangesColorCount(2);
             document.getElementById('colorRangesColor1').value = '#0057b7'; // Blue
             document.getElementById('colorRangesColor2').value = '#ffd700'; // Yellow
             document.getElementById('colorRangesRanges').value = ''; // Equal distribution
@@ -886,13 +896,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
 
         // Load Italian flag preset
         function loadItalianFlag() {
-            // Ensure we have 3 colors
-            while (colorRangesColorCount < 3) {
-                addColorRangesColor();
-            }
-            while (colorRangesColorCount > 3) {
-                removeColorRangesColor();
-            }
+            ensureColorRangesColorCount(3);
             document.getElementById('colorRangesColor1').value = '#008c45'; // Green
             document.getElementById('colorRangesColor2').value = '#ffffff'; // White
             document.getElementById('colorRangesColor3').value = '#cd212a'; // Red
@@ -901,13 +905,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
 
         // Load French flag preset
         function loadFrenchFlag() {
-            // Ensure we have 3 colors
-            while (colorRangesColorCount < 3) {
-                addColorRangesColor();
-            }
-            while (colorRangesColorCount > 3) {
-                removeColorRangesColor();
-            }
+            ensureColorRangesColorCount(3);
             document.getElementById('colorRangesColor1').value = '#0055a4'; // Blue
             document.getElementById('colorRangesColor2').value = '#ffffff'; // White
             document.getElementById('colorRangesColor3').value = '#ef4135'; // Red
@@ -1157,6 +1155,105 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
         }
 
         // Fetch device status
+        // Populate parameter fields from show_params
+        function populateShowParams(showName, params) {
+            if (!params) return;
+
+            // Helper to convert RGB array to hex
+            const rgbToHex = (r, g, b) => {
+                return '#' + [r, g, b].map(x => {
+                    const hex = x.toString(16);
+                    return hex.length === 1 ? '0' + hex : hex;
+                }).join('');
+            };
+
+            switch(showName) {
+                case 'Solid':
+                    if (params.colors && Array.isArray(params.colors)) {
+                        // Ensure we have the right number of color inputs
+                        ensureColorRangesColorCount(params.colors.length);
+
+                        // Populate color inputs
+                        params.colors.forEach((color, index) => {
+                            const input = document.getElementById(`colorRangesColor${index + 1}`);
+                            if (input && Array.isArray(color) && color.length >= 3) {
+                                input.value = rgbToHex(color[0], color[1], color[2]);
+                            }
+                        });
+
+                        // Populate ranges
+                        if (params.ranges && Array.isArray(params.ranges)) {
+                            document.getElementById('colorRangesRanges').value = params.ranges.join(', ');
+                        } else {
+                            document.getElementById('colorRangesRanges').value = '';
+                        }
+                    }
+                    break;
+
+                case 'TwoColorBlend':
+                    if (params.r1 !== undefined) {
+                        document.getElementById('twoColorBlendColor1').value = rgbToHex(params.r1, params.g1, params.b1);
+                    }
+                    if (params.r2 !== undefined) {
+                        document.getElementById('twoColorBlendColor2').value = rgbToHex(params.r2, params.g2, params.b2);
+                    }
+                    break;
+
+                case 'Starlight':
+                    if (params.probability !== undefined) document.getElementById('starlightProbability').value = params.probability;
+                    if (params.length !== undefined) document.getElementById('starlightLength').value = params.length;
+                    if (params.fade !== undefined) document.getElementById('starlightFade').value = params.fade;
+                    if (params.r !== undefined) {
+                        document.getElementById('starlightColor').value = rgbToHex(params.r, params.g, params.b);
+                    }
+                    break;
+
+                case 'Stroboscope':
+                    if (params.r !== undefined) {
+                        document.getElementById('stroboscopeColor').value = rgbToHex(params.r, params.g, params.b);
+                    }
+                    if (params.on_cycles !== undefined) document.getElementById('stroboscopeOnCycles').value = params.on_cycles;
+                    if (params.off_cycles !== undefined) document.getElementById('stroboscopeOffCycles').value = params.off_cycles;
+                    break;
+
+                case 'Wave':
+                    if (params.wave_speed !== undefined) document.getElementById('waveSpeed').value = params.wave_speed;
+                    if (params.decay_rate !== undefined) document.getElementById('waveDecay').value = params.decay_rate;
+                    if (params.brightness_frequency !== undefined) document.getElementById('waveBrightnessFreq').value = params.brightness_frequency;
+                    if (params.wavelength !== undefined) document.getElementById('waveWavelength').value = params.wavelength;
+                    break;
+
+                case 'MorseCode':
+                    if (params.message !== undefined) document.getElementById('morseMessage').value = params.message;
+                    if (params.speed !== undefined) document.getElementById('morseSpeed').value = params.speed;
+                    if (params.dot_length !== undefined) document.getElementById('morseDotLength').value = params.dot_length;
+                    if (params.dash_length !== undefined) document.getElementById('morseDashLength').value = params.dash_length;
+                    if (params.symbol_space !== undefined) document.getElementById('morseSymbolSpace').value = params.symbol_space;
+                    if (params.letter_space !== undefined) document.getElementById('morseLetterSpace').value = params.letter_space;
+                    if (params.word_space !== undefined) document.getElementById('morseWordSpace').value = params.word_space;
+                    break;
+
+                case 'TheaterChase':
+                    if (params.num_steps_per_cycle !== undefined) document.getElementById('theaterStepsPerCycle').value = params.num_steps_per_cycle;
+                    break;
+
+                case 'Mandelbrot':
+                    if (params.Cre0 !== undefined) document.getElementById('mandelbrotCre0').value = params.Cre0;
+                    if (params.Cim0 !== undefined) document.getElementById('mandelbrotCim0').value = params.Cim0;
+                    if (params.Cim1 !== undefined) document.getElementById('mandelbrotCim1').value = params.Cim1;
+                    if (params.scale !== undefined) document.getElementById('mandelbrotScale').value = params.scale;
+                    if (params.max_iterations !== undefined) document.getElementById('mandelbrotMaxIter').value = params.max_iterations;
+                    if (params.color_scale !== undefined) document.getElementById('mandelbrotColorScale').value = params.color_scale;
+                    break;
+
+                case 'Chaos':
+                    if (params.Rmin !== undefined) document.getElementById('chaosRmin').value = params.Rmin;
+                    if (params.Rmax !== undefined) document.getElementById('chaosRmax').value = params.Rmax;
+                    if (params.Rdelta !== undefined) document.getElementById('chaosRdelta').value = params.Rdelta;
+                    break;
+            }
+        }
+
         async function updateStatus() {
             try {
                 const response = await fetch('/api/status');
@@ -1176,6 +1273,11 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                     document.getElementById('showDescription').textContent =
                         selectedShow ? selectedShow.description : '';
                     updateParameterVisibility(currentStatus.current_show);
+
+                    // Populate parameter fields with current values
+                    if (currentStatus.show_params) {
+                        populateShowParams(currentStatus.current_show, currentStatus.show_params);
+                    }
                 }
 
                 const brightnessSlider = document.getElementById('brightnessSlider');
@@ -1365,7 +1467,7 @@ void WebServerManager::setupAPIRoutes() {
 
     // GET /api/status - Get device status
     server.on("/api/status", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        StaticJsonDocument<512> doc;
+        StaticJsonDocument<1024> doc;
 
         // Device info
         Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
@@ -1383,6 +1485,17 @@ void WebServerManager::setupAPIRoutes() {
         // Show info
         doc["current_show"] = showController.getCurrentShowName();
         doc["auto_cycle"] = showController.isAutoCycleEnabled();
+
+        // Current show configuration
+        Config::ShowConfig showConfig = config.loadShowConfig();
+        if (strlen(showConfig.params_json) > 0) {
+            // Parse the params_json and include it
+            StaticJsonDocument<512> paramsDoc;
+            DeserializationError error = deserializeJson(paramsDoc, showConfig.params_json);
+            if (!error) {
+                doc["show_params"] = paramsDoc.as<JsonObject>();
+            }
+        }
 
         // Network info
         doc["wifi_connected"] = (WiFi.status() == WL_CONNECTED);

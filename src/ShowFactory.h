@@ -47,6 +47,17 @@ private:
         return strcmp(a, b) < 0;
     }
 
+    /**
+     * Parse colors from JSON and ensure exactly n colors are returned
+     * @param doc JSON document containing "colors" array
+     * @param count Number of colors to return
+     * @param defaultColor Default color if none provided
+     * @return Vector with exactly n colors
+     */
+    static std::vector<uint32_t> parseColors(const StaticJsonDocument<512> &doc,
+                                              size_t count,
+                                              uint32_t defaultColor);
+
 public:
     ShowFactory();
 
