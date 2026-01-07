@@ -728,6 +728,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
         let shows = [];
         let currentStatus = {};
         let pendingParameterConfig = false;  // Track if user is configuring parameters
+        let lastPopulatedShow = null;  // Track which show we've populated params for
 
         // Show/hide parameter sections based on selected show
         function updateParameterVisibility(showName) {
@@ -959,6 +960,7 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                     })
                 });
                 pendingParameterConfig = false;  // Applied successfully
+                lastPopulatedShow = null;  // Allow repopulation with backend values
             } catch (error) {
                 console.error('Failed to apply Solid parameters:', error);
             }
@@ -1264,19 +1266,23 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
                 document.getElementById('currentShow').textContent = currentStatus.current_show;
                 document.getElementById('currentBrightness').textContent = currentStatus.brightness;
 
-                // Update UI controlst c without triggering change events
+                // Update UI controls without triggering change events
                 // Don't override dropdown if user is configuring parameters
                 const showSelect = document.getElementById('showSelect');
-                if (!pendingParameterConfig && showSelect.value !== currentStatus.current_show) {
-                    showSelect.value = currentStatus.current_show;
-                    const selectedShow = shows.find(s => s.name === currentStatus.current_show);
-                    document.getElementById('showDescription').textContent =
-                        selectedShow ? selectedShow.description : '';
-                    updateParameterVisibility(currentStatus.current_show);
+                if (!pendingParameterConfig) {
+                    if (showSelect.value !== currentStatus.current_show) {
+                        showSelect.value = currentStatus.current_show;
+                        const selectedShow = shows.find(s => s.name === currentStatus.current_show);
+                        document.getElementById('showDescription').textContent =
+                            selectedShow ? selectedShow.description : '';
+                        updateParameterVisibility(currentStatus.current_show);
+                        lastPopulatedShow = null; // Reset so params will be populated for new show
+                    }
 
-                    // Populate parameter fields with current values
-                    if (currentStatus.show_params) {
+                    // Populate parameter fields with current values (only if show changed or first time)
+                    if (currentStatus.show_params && lastPopulatedShow !== currentStatus.current_show) {
                         populateShowParams(currentStatus.current_show, currentStatus.show_params);
+                        lastPopulatedShow = currentStatus.current_show;
                     }
                 }
 
