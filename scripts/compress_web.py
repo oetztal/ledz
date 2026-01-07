@@ -138,7 +138,9 @@ def process_file(file_path: Path) -> tuple[str, int, int]:
         minified = minify_css(content)
     else:
         minified = minify_html(content)
+        minified = content
     minified_size = len(minified.encode('utf-8'))
+
 
     # Gzip compress
     compressed = gzip.compress(minified.encode('utf-8'), compresslevel=9)
