@@ -12,10 +12,10 @@
 #include <functional>
 #include <memory>
 
-// #ifdef ARDUINO
+#ifdef ARDUINO
 #include <Arduino.h>
 #include <ArduinoJson.h>
-// #endif
+#endif
 
 #include "show/Show.h"
 
@@ -91,7 +91,7 @@ public:
      * Get list of all registered shows
      * @return Vector of show names
      */
-    const std::vector<ShowInfo> &listShows() const;
+    [[nodiscard]] const std::vector<ShowInfo> &listShows() const;
 
     /**
      * Check if a show is registered
