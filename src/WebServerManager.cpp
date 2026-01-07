@@ -28,14 +28,14 @@
 // Helper functions to send gzipped responses
 #ifdef ARDUINO
 static void sendGzippedHtml(AsyncWebServerRequest *request, const uint8_t *data, size_t len) {
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", data, len);
+    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", data, len);
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Cache-Control", "max-age=86400");
     request->send(response);
 }
 
 static void sendGzippedCss(AsyncWebServerRequest *request, const uint8_t *data, size_t len) {
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css", data, len);
+    AsyncWebServerResponse *response = request->beginResponse(200, "text/css", data, len);
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Cache-Control", "max-age=86400");
     request->send(response);
@@ -79,6 +79,11 @@ void WebServerManager::setupConfigRoutes() {
     // Serve WiFi config page (gzip compressed)
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         sendGzippedHtml(request, CONFIG_GZ, CONFIG_GZ_LEN);
+    });
+
+    // Serve common CSS (gzip compressed)
+    server.on("/common.css", HTTP_GET, [](AsyncWebServerRequest *request) {
+        sendGzippedCss(request, COMMON_GZ, COMMON_GZ_LEN);
     });
 
     // Handle WiFi configuration POST
