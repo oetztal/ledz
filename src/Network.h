@@ -24,6 +24,7 @@ namespace Config {
 }
 
 class WebServerManager;
+class ShowController;
 
 /**
  * Network operating modes
@@ -44,6 +45,7 @@ private:
 #endif
 
     Config::ConfigManager &config;
+    ShowController &showController;
     std::unique_ptr<WebServerManager> webServer;
     CaptivePortal captivePortal;
     TaskHandle_t taskHandle = nullptr;
@@ -70,18 +72,12 @@ public:
     /**
      * Network constructor
      * @param config Configuration manager reference
-     * @param status Status indicator reference
+     * @param showController Show controller reference
      */
-    Network(Config::ConfigManager &config);
+    Network(Config::ConfigManager &config, ShowController &showController);
 
     // disable copy constructor
     Network(const Network &) = delete;
-
-    /**
-     * Set webserver manager (must be called before task starts)
-     * @param server Webserver manager pointer
-     */
-    void setWebServer(std::unique_ptr<WebServerManager> &&server);
 
     /**
      * Network task (runs on Core 1)

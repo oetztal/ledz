@@ -2673,25 +2673,8 @@ void WebServerManager::begin() {
     // Add access logging middleware for all requests
     server.addMiddleware(&logging);
 
-    // Setup routes
-    setupConfigRoutes();
-    setupAPIRoutes();
-
-    // Captive portal: redirect all unknown requests to root
-    // This makes the captive portal work on phones/tablets
-    server.onNotFound([](AsyncWebServerRequest *request) {
-        // Check if this is a captive portal detection request
-        String host = request->host();
-
-        // Redirect to the root page
-        request->redirect("/");
-    });
-
-    // Add 404 handler
-    server.onNotFound([](AsyncWebServerRequest *request) {
-        Serial.printf("[HTTP] 404 Not Found: %s\n", request->url().c_str());
-        request->send(404, "text/plain", "Not found");
-    });
+    // Setup routes (implemented by subclass)
+    setupRoutes();
 
     // Start server
     server.begin();
@@ -2704,5 +2687,49 @@ void WebServerManager::end() {
 #ifdef ARDUINO
     server.end();
     Serial.println("Webserver stopped");
+#endif
+}
+
+// ConfigWebServerManager implementation
+ConfigWebServerManager::ConfigWebServerManager(Config::ConfigManager &config, Network &network, ShowController &showController)
+    : WebServerManager(config, network, showController) {
+}
+
+void ConfigWebServerManager::setupRoutes() {
+#ifdef ARDUINO
+    Serial.println("Setting up config-only routes...");
+
+    // Setup config routes only (WiFi setup, OTA)
+    setupConfigRoutes();
+
+    // Captive portal: redirect all unknown requests to root
+    // This makes the captive portal work on phones/tablets
+    server.onNotFound([](AsyncWebServerRequest *request) {
+        // Redirect to the root page for captive portal detection
+        request->redirect("/");
+    });
+#endif
+}
+
+// OperationalWebServerManager implementation
+OperationalWebServerManager::OperationalWebServerManager(Config::ConfigManager &config, Network &network, ShowController &showController)
+    : WebServerManager(config, network, showController) {
+}
+
+void OperationalWebServerManager::setupRoutes() {
+#ifdef ARDUINO
+    Serial.println("Setting up operational routes...");
+
+    // Setup config routes (for reconfiguration access)
+    setupConfigRoutes();
+
+    // Setup API routes (LED control, status, etc.)
+    setupAPIRoutes();
+
+    // Add 404 handler
+    server.onNotFound([](AsyncWebServerRequest *request) {
+        Serial.printf("[HTTP] 404 Not Found: %s\n", request->url().c_str());
+        request->send(404, "text/plain", "Not found");
+    });
 #endif
 }

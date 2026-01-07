@@ -27,12 +27,11 @@ public:
 };
 
 /**
- * WebServer Manager
- * Manages HTTP server and API endpoints for WiFi configuration
- * and LED show control
+ * Base WebServer Manager
+ * Abstract base class for different webserver modes
  */
 class WebServerManager {
-private:
+protected:
 #ifdef ARDUINO
     AsyncWebServer server;
     AccessLogger logging;
@@ -59,6 +58,11 @@ private:
     void handleWiFiConfig(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total);
 #endif
 
+    /**
+     * Setup routes - implemented by subclasses
+     */
+    virtual void setupRoutes() = 0;
+
 public:
     /**
      * WebServerManager constructor
@@ -69,7 +73,13 @@ public:
     WebServerManager(Config::ConfigManager &config, Network &network, ShowController &showController);
 
     /**
+     * Virtual destructor
+     */
+    virtual ~WebServerManager() = default;
+
+    /**
      * Start the webserver
+     * Calls setupRoutes() then starts server
      */
     void begin();
 
@@ -77,6 +87,30 @@ public:
      * Stop the webserver
      */
     void end();
+};
+
+/**
+ * Config WebServer Manager
+ * Webserver for AP mode - only serves WiFi configuration pages
+ */
+class ConfigWebServerManager : public WebServerManager {
+protected:
+    void setupRoutes() override;
+
+public:
+    ConfigWebServerManager(Config::ConfigManager &config, Network &network, ShowController &showController);
+};
+
+/**
+ * Operational WebServer Manager
+ * Webserver for STA mode - serves full LED control interface
+ */
+class OperationalWebServerManager : public WebServerManager {
+protected:
+    void setupRoutes() override;
+
+public:
+    OperationalWebServerManager(Config::ConfigManager &config, Network &network, ShowController &showController);
 };
 
 #endif //UNTITLED_WEBSERVERMANAGER_H

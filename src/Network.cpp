@@ -17,8 +17,8 @@
 #include <set>
 #endif
 
-Network::Network(Config::ConfigManager &config)
-    : config(config), mode(NetworkMode::NONE), webServer(nullptr)
+Network::Network(Config::ConfigManager &config, ShowController &showController)
+    : config(config), showController(showController), mode(NetworkMode::NONE), webServer(nullptr)
 #ifdef ARDUINO
       , ntpClient(wifiUdp)
 #endif
@@ -34,10 +34,6 @@ String Network::generateHostname() {
 #else
     return "ledz";
 #endif
-}
-
-void Network::setWebServer(std::unique_ptr<WebServerManager> &&server) {
-    this->webServer = std::move(server);
 }
 
 void Network::startAP() {
@@ -176,10 +172,9 @@ void Network::startSTA(const char *ssid, const char *password) {
         // Start Access Point mode
         startAP();
 
-        // Start webserver (if available)
-        if (webServer != nullptr) {
-            webServer->begin();
-        }
+        // Create and start config webserver for AP mode
+        webServer = std::make_unique<ConfigWebServerManager>(config, *this, showController);
+        webServer->begin();
 
         // Wait for configuration
         while (!config.isConfigured()) {
@@ -210,10 +205,9 @@ void Network::startSTA(const char *ssid, const char *password) {
         // Start Access Point mode for reconfiguration
         startAP();
 
-        // Start webserver (if available)
-        if (webServer != nullptr) {
-            webServer->begin();
-        }
+        // Create and start config webserver for AP mode
+        webServer = std::make_unique<ConfigWebServerManager>(config, *this, showController);
+        webServer->begin();
 
         // Stay in AP mode until user reconfigures or manually restarts
         while (true) {
@@ -245,10 +239,9 @@ void Network::startSTA(const char *ssid, const char *password) {
     // Connection successful - reset failure counter
     config.resetConnectionFailures();
 
-    // Start webserver (if available)
-    if (webServer != nullptr) {
-        webServer->begin();
-    }
+    // Create and start operational webserver for STA mode
+    webServer = std::make_unique<OperationalWebServerManager>(config, *this, showController);
+    webServer->begin();
 
     // Main loop - NTP updates
     auto lastNtpUpdate = ntpClient.getEpochTime();
@@ -268,12 +261,11 @@ void Network::startSTA(const char *ssid, const char *password) {
             }
 
             if (WiFi.status() == WL_CONNECTED) {
-                Serial.println("WiFi reconnected");
+                Serial.printf("WiFi reconnected (%d attempts)\n", attempts);
             }
         }
 
-        // Update NTP every 300 seconds
-        if (ntpClient.getEpochTime() - lastNtpUpdate > 300) {
+        if (ntpClient.getEpochTime() - lastNtpUpdate > 600) {
             bool result = ntpClient.update();
             Serial.print("NTP update: ");
             Serial.print(ntpClient.getFormattedTime());

@@ -19,7 +19,7 @@ Config::ConfigManager config;
 ShowFactory showFactory;
 ShowController showController(showFactory, config);
 Task::LedShow ledShow(showController);
-Network network(config);
+Network network(config, showController);
 
 void setup() {
     config.begin();
@@ -41,11 +41,7 @@ void setup() {
     // Initialize show controller
     showController.begin();
 
-    auto webServer = std::make_unique<WebServerManager>(config, network, showController);
-
-    // Set webserver on network (must be done before network task starts)
-    network.setWebServer(std::move(webServer));
-
+    // Network will create the appropriate webserver instance based on mode
     ledShow.startTask();
     network.startTask();
 }
