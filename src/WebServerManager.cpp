@@ -883,33 +883,33 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
         // Load Warm White preset (single color)
         function loadWarmWhite() {
             ensureColorRangesColorCount(1);
-            document.getElementById('colorRangesColor1').value = '#fffae6'; // Warm white
+            document.getElementById('colorRangesColor1').value = '#fff4dc'; // Warm white
             document.getElementById('colorRangesRanges').value = ''; // No ranges for single color
         }
 
         // Load Ukraine flag preset
         function loadUkraineFlag() {
             ensureColorRangesColorCount(2);
-            document.getElementById('colorRangesColor1').value = '#0057b7'; // Blue
             document.getElementById('colorRangesColor2').value = '#ffd700'; // Yellow
+            document.getElementById('colorRangesColor1').value = '#0057b7'; // Blue
             document.getElementById('colorRangesRanges').value = ''; // Equal distribution
         }
 
         // Load Italian flag preset
         function loadItalianFlag() {
             ensureColorRangesColorCount(3);
-            document.getElementById('colorRangesColor1').value = '#008c45'; // Green
+            document.getElementById('colorRangesColor3').value = '#008c45'; // Green
             document.getElementById('colorRangesColor2').value = '#ffffff'; // White
-            document.getElementById('colorRangesColor3').value = '#cd212a'; // Red
+            document.getElementById('colorRangesColor1').value = '#cd212a'; // Red
             document.getElementById('colorRangesRanges').value = ''; // Equal distribution
         }
 
         // Load French flag preset
         function loadFrenchFlag() {
             ensureColorRangesColorCount(3);
-            document.getElementById('colorRangesColor1').value = '#0055a4'; // Blue
+            document.getElementById('colorRangesColor3').value = '#0055a4'; // Blue
             document.getElementById('colorRangesColor2').value = '#ffffff'; // White
-            document.getElementById('colorRangesColor3').value = '#ef4135'; // Red
+            document.getElementById('colorRangesColor1').value = '#ef4135'; // Red
             document.getElementById('colorRangesRanges').value = ''; // Equal distribution
         }
 
