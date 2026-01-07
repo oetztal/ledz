@@ -17,6 +17,7 @@ namespace Strip {
         }
 #endif
         strip = std::make_unique<Adafruit_NeoPixel>(length, pin, NEO_GRB + NEO_KHZ800);
+        colors = std::unique_ptr<Color[]>(new Color[length]);
         strip->begin();
         // Brightness will be set by ShowController
 #endif
@@ -24,19 +25,24 @@ namespace Strip {
 
     void Base::fill(Color c) const {
 #ifdef ARDUINO
-        strip->fill(c);
+        for (int i=0; i<strip->numPixels(); i++) {
+            colors[i]=c;
+        }
+
+        strip->fill(Adafruit_NeoPixel::gamma32(c));
 #endif
     }
 
     void Base::setPixelColor(PixelIndex pixel_index, Color color) {
 #ifdef ARDUINO
-        strip->setPixelColor(pixel_index, color);
+        colors[pixel_index]=color;
+        strip->setPixelColor(pixel_index, Adafruit_NeoPixel::gamma32(color));
 #endif
     }
 
     Color Base::getPixelColor(PixelIndex pixel_index) const {
 #ifdef ARDUINO
-        return strip->getPixelColor(pixel_index);
+        return colors[pixel_index];
 #else
         return 0;
 #endif

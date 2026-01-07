@@ -14,6 +14,10 @@
 
 namespace Strip {
     class Base : public Strip {
+#ifdef ARDUINO
+        std::unique_ptr<Adafruit_NeoPixel> strip;
+        std::unique_ptr<Color[]> colors;
+#endif
     public:
         Base(Pin pin, unsigned short length);
 
@@ -29,10 +33,6 @@ namespace Strip {
 
         void setBrightness(uint8_t brightness) override;
 
-    private:
-#ifdef ARDUINO
-        std::unique_ptr<Adafruit_NeoPixel> strip;
-#endif
     };
 }
 

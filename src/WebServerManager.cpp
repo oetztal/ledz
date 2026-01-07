@@ -890,26 +890,26 @@ const char CONTROL_HTML[] PROGMEM = R"rawliteral(
         // Load Ukraine flag preset
         function loadUkraineFlag() {
             ensureColorRangesColorCount(2);
-            document.getElementById('colorRangesColor2').value = '#ffd700'; // Yellow
-            document.getElementById('colorRangesColor1').value = '#0057b7'; // Blue
+            document.getElementById('colorRangesColor1').value = '#ffd700'; // Yellow
+            document.getElementById('colorRangesColor2').value = '#0057b7'; // Blue
             document.getElementById('colorRangesRanges').value = ''; // Equal distribution
         }
 
         // Load Italian flag preset
         function loadItalianFlag() {
             ensureColorRangesColorCount(3);
-            document.getElementById('colorRangesColor3').value = '#008c45'; // Green
+            document.getElementById('colorRangesColor1').value = '#008c45'; // Green
             document.getElementById('colorRangesColor2').value = '#ffffff'; // White
-            document.getElementById('colorRangesColor1').value = '#cd212a'; // Red
+            document.getElementById('colorRangesColor3').value = '#cd212a'; // Red
             document.getElementById('colorRangesRanges').value = ''; // Equal distribution
         }
 
         // Load French flag preset
         function loadFrenchFlag() {
             ensureColorRangesColorCount(3);
-            document.getElementById('colorRangesColor3').value = '#0055a4'; // Blue
+            document.getElementById('colorRangesColor1').value = '#0055a4'; // Blue
             document.getElementById('colorRangesColor2').value = '#ffffff'; // White
-            document.getElementById('colorRangesColor1').value = '#ef4135'; // Red
+            document.getElementById('colorRangesColor3').value = '#ef4135'; // Red
             document.getElementById('colorRangesRanges').value = ''; // Equal distribution
         }
 
