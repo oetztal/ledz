@@ -959,12 +959,18 @@
             }
         }
 
-        // Initialize
-        loadShows();
-        updateStatus();
-        loadLayout();
+        // Initialize (loadShows must complete before updateStatus to avoid race condition)
+        async function init() {
+            await loadShows();
+            await updateStatus();
+            // Ensure parameter visibility is set for initial show (updateStatus skips this
+            // if dropdown value already matches current show)
+            updateParameterVisibility(document.getElementById('showSelect').value);
+            loadLayout();
+        }
+        init();
 
-        // Update status every minute
+        // Update status periodically
         setInterval(updateStatus, 10000);
     </script>
 </body>
