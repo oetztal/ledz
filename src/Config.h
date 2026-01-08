@@ -2,8 +2,8 @@
 // Created by Claude Code on 03.01.26.
 //
 
-#ifndef UNTITLED_CONFIG_H
-#define UNTITLED_CONFIG_H
+#ifndef LEDZ_CONFIG_H
+#define LEDZ_CONFIG_H
 
 #ifdef ARDUINO
 #include <Preferences.h>
@@ -184,4 +184,4 @@ namespace Config {
     };
 } // namespace Config
 
-#endif //UNTITLED_CONFIG_H
+#endif //LEDZ_CONFIG_H

@@ -2,8 +2,8 @@
 // Created by Andreas W. on 02.01.26.
 //
 
-#ifndef UNTITLED_WIFI_H
-#define UNTITLED_WIFI_H
+#ifndef LEDZ_WIFI_H
+#define LEDZ_WIFI_H
 
 #include "Network.h"
 
@@ -100,4 +100,4 @@ public:
 };
 
 
-#endif //UNTITLED_WIFI_H
+#endif //LEDZ_WIFI_H

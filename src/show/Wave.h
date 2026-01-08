@@ -2,8 +2,8 @@
 // Created by Claude Code on 03.01.26.
 //
 
-#ifndef UNTITLED_WAVE_H
-#define UNTITLED_WAVE_H
+#ifndef LEDZ_WAVE_H
+#define LEDZ_WAVE_H
 
 #include "Show.h"
 
@@ -46,4 +46,4 @@ namespace Show {
     };
 } // namespace Show
 
-#endif //UNTITLED_WAVE_H
+#endif //LEDZ_WAVE_H

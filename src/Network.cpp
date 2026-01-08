@@ -221,6 +221,7 @@ void Network::configureUsingAPMode() {
 [[noreturn]] void Network::task() {
 #ifdef ARDUINO
     Serial.println("Network task started");
+
     // Check if WiFi is configured
     if (!config.isConfigured()) {
         Serial.println("No WiFi configuration found - starting AP mode");

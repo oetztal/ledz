@@ -4,8 +4,8 @@
 // ShowController - Thread-safe show management using FreeRTOS queue
 //
 
-#ifndef UNTITLED_SHOWCONTROLLER_H
-#define UNTITLED_SHOWCONTROLLER_H
+#ifndef LEDZ_SHOWCONTROLLER_H
+#define LEDZ_SHOWCONTROLLER_H
 
 #include <memory>
 
@@ -169,4 +169,4 @@ public:
     void show() const;
 };
 
-#endif //UNTITLED_SHOWCONTROLLER_H
+#endif //LEDZ_SHOWCONTROLLER_H

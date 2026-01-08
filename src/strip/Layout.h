@@ -2,8 +2,8 @@
 // Created by Andreas W. on 02.01.26.
 //
 
-#ifndef UNTITLED_LAYOUT_H
-#define UNTITLED_LAYOUT_H
+#ifndef LEDZ_LAYOUT_H
+#define LEDZ_LAYOUT_H
 #include "Strip.h"
 
 namespace Strip {
@@ -49,4 +49,4 @@ namespace Strip {
     };
 }
 
-#endif //UNTITLED_LAYOUT_H
+#endif //LEDZ_LAYOUT_H

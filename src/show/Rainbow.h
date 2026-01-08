@@ -2,8 +2,8 @@
 // Created by Andreas W. on 02.01.26.
 //
 
-#ifndef UNTITLED_RAINBOW_H
-#define UNTITLED_RAINBOW_H
+#ifndef LEDZ_RAINBOW_H
+#define LEDZ_RAINBOW_H
 #include "Show.h"
 #include "strip/Strip.h"
 
@@ -17,4 +17,4 @@ namespace Show {
 }
 
 
-#endif //UNTITLED_RAINBOW_H
+#endif //LEDZ_RAINBOW_H

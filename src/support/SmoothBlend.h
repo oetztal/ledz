@@ -2,8 +2,8 @@
 // Created by Andreas W. on 03.01.26.
 //
 
-#ifndef UNTITLED_SMOOTHBLEND_H
-#define UNTITLED_SMOOTHBLEND_H
+#ifndef LEDZ_SMOOTHBLEND_H
+#define LEDZ_SMOOTHBLEND_H
 
 #include <vector>
 #include "../strip/Strip.h"
@@ -53,4 +53,4 @@ namespace Support {
     };
 } // namespace Support
 
-#endif //UNTITLED_SMOOTHBLEND_H
+#endif //LEDZ_SMOOTHBLEND_H

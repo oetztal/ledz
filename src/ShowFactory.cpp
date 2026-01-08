@@ -17,6 +17,7 @@
 #include "show/TheaterChase.h"
 #include "show/Stroboscope.h"
 #include "color.h"
+#include "show/Fire.h"
 
 #ifdef ARDUINO
 #include <ArduinoJson.h>
@@ -77,6 +78,18 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
                       r1, g1, b1, r2, g2, b2);
 #endif
         return std::make_unique<Show::TwoColorBlend>(r1, g1, b1, r2, g2, b2);
+    });
+
+    registerShow("Fire", "Burning flames", [](const StaticJsonDocument<512> &doc) {
+        float cooling = doc["cooling"] | 1.0f;
+        float spread = doc["spread"] | 1.0f;
+        float ignition = doc["ignition"] | 1.0f;
+        Serial.printf("ShowFactory: Creating Fire cooling=%.2f, spread=%.2f, ignition=%.2f\n", cooling, spread, ignition);
+        auto show = new Show::Fire(cooling, spread, ignition);
+        Serial.printf("ShowFactory: Created Fire %p\n", show);
+        return std::unique_ptr<Show::Show>(show);
+
+        // return std::make_unique<Show::Fire>(cooling, spread, ignition);
     });
 
     registerShow("Starlight", "Twinkling stars effect", [](const StaticJsonDocument<512> &doc) {

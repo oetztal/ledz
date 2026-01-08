@@ -4,6 +4,7 @@
 
 #include "unity.h"
 #include "color.h"
+#include "support/color.h"
 
 void setUp() {
 }
@@ -45,6 +46,13 @@ void test_color_blue_component() {
     TEST_ASSERT_EQUAL_UINT8(0xFF, blue(pure_blue));
 }
 
+void test_black_body_color() {
+    TEST_ASSERT_EQUAL_UINT32(0x000000, Support::Color::black_body_color(0.0f));
+    TEST_ASSERT_EQUAL_UINT32(0xFF0000, Support::Color::black_body_color(0.333333f));
+    TEST_ASSERT_EQUAL_UINT32(0xFFFF00, Support::Color::black_body_color(0.666666f));
+    TEST_ASSERT_EQUAL_UINT32(0xFFFFFF, Support::Color::black_body_color(1.0f));
+}
+
 int runUnityTests() {
     UNITY_BEGIN();
     RUN_TEST(test_color_extraction);
@@ -52,6 +60,7 @@ int runUnityTests() {
     RUN_TEST(test_color_red_component);
     RUN_TEST(test_color_green_component);
     RUN_TEST(test_color_blue_component);
+    RUN_TEST(test_black_body_color);
     return UNITY_END();
 }
 

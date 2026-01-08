@@ -2,8 +2,8 @@
 // Created by Claude Code on 03.01.26.
 //
 
-#ifndef UNTITLED_COLORRANGES_H
-#define UNTITLED_COLORRANGES_H
+#ifndef LEDZ_COLORRANGES_H
+#define LEDZ_COLORRANGES_H
 
 #include "Show.h"
 #include "../support/SmoothBlend.h"
@@ -43,4 +43,4 @@ namespace Show {
     };
 } // namespace Show
 
-#endif //UNTITLED_COLORRANGES_H
+#endif //LEDZ_COLORRANGES_H

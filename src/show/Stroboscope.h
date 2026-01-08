@@ -2,8 +2,8 @@
 // Created by Claude Code on 04.01.26.
 //
 
-#ifndef UNTITLED_STROBOSCOPE_H
-#define UNTITLED_STROBOSCOPE_H
+#ifndef LEDZ_STROBOSCOPE_H
+#define LEDZ_STROBOSCOPE_H
 
 #include "Show.h"
 
@@ -42,4 +42,4 @@ namespace Show {
     };
 } // namespace Show
 
-#endif //UNTITLED_STROBOSCOPE_H
+#endif //LEDZ_STROBOSCOPE_H

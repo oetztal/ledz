@@ -2,8 +2,8 @@
 // Created by Claude Code on 03.01.26.
 //
 
-#ifndef UNTITLED_MORSECODE_H
-#define UNTITLED_MORSECODE_H
+#ifndef LEDZ_MORSECODE_H
+#define LEDZ_MORSECODE_H
 
 #include "Show.h"
 #include <vector>
@@ -62,4 +62,4 @@ namespace Show {
     };
 } // namespace Show
 
-#endif //UNTITLED_MORSECODE_H
+#endif //LEDZ_MORSECODE_H

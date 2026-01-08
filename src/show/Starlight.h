@@ -2,8 +2,8 @@
 // Created by Claude Code on 03.01.26.
 //
 
-#ifndef UNTITLED_STARLIGHT_H
-#define UNTITLED_STARLIGHT_H
+#ifndef LEDZ_STARLIGHT_H
+#define LEDZ_STARLIGHT_H
 
 #include "Show.h"
 #include <map>
@@ -66,4 +66,4 @@ namespace Show {
     };
 } // namespace Show
 
-#endif //UNTITLED_STARLIGHT_H
+#endif //LEDZ_STARLIGHT_H
