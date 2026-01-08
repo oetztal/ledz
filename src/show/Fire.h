@@ -3,6 +3,7 @@
 #include <random>
 #include <functional>
 
+#include <vector>
 #include "Show.h"
 
 namespace Show {
@@ -20,7 +21,7 @@ namespace Show {
 
         void cooldown(float value) const;
 
-        void spread(float spread_rate, float ignition, Strip::PixelIndex spark_range, bool log = false);
+        void spread(float spread_rate, float ignition, Strip::PixelIndex spark_range, const std::vector<float>& weights = {1.0f}, bool log = false);
 
         float *temperature;
     };
@@ -34,9 +35,10 @@ namespace Show {
         float cooling;
         float spread;
         float ignition;
+        std::vector<float> weights;
 
     public:
-        Fire(float cooling=1.0f, float spread=1.0f, float ignition=1.0f);
+        Fire(float cooling=1.0f, float spread=1.0f, float ignition=1.0f, std::vector<float> weights = {1.0f});
 
         void ensureState(Strip::Strip &strip);
 
