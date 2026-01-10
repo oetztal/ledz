@@ -48,11 +48,11 @@ void test_color_blue_component() {
 
 void test_black_body_color() {
     TEST_ASSERT_EQUAL_UINT32(0x000000, Support::Color::black_body_color(0.0f));
-    TEST_ASSERT_EQUAL_UINT32(0xFF0000, Support::Color::black_body_color(0.333333f));
-    TEST_ASSERT_EQUAL_UINT32(0xFFFF00, Support::Color::black_body_color(0.666666f));
-    TEST_ASSERT_EQUAL_UINT32(0xFFFFFF, Support::Color::black_body_color(1.0f));
-    TEST_ASSERT_EQUAL_UINT32(0xFFFFFF, Support::Color::black_body_color(5.0f));
-    TEST_ASSERT_EQUAL_UINT32(0xFFFFFF, Support::Color::black_body_color(100.0f));
+    TEST_ASSERT_EQUAL_UINT32(0xAA0000, Support::Color::black_body_color(0.20f));
+    TEST_ASSERT_EQUAL_UINT32(0xFFB600, Support::Color::black_body_color(0.80f));
+    TEST_ASSERT_EQUAL_UINT32(0xFFFF00, Support::Color::black_body_color(1.0f));
+    TEST_ASSERT_EQUAL_UINT32(0xFFFF00, Support::Color::black_body_color(5.0f));
+    TEST_ASSERT_EQUAL_UINT32(0xFFFF00, Support::Color::black_body_color(100.0f));
 }
 
 int runUnityTests() {

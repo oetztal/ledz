@@ -84,8 +84,10 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
         float cooling = doc["cooling"] | 1.0f;
         float spread = doc["spread"] | 1.0f;
         float ignition = doc["ignition"] | 1.0f;
-        Serial.printf("ShowFactory: Creating Fire cooling=%.2f, spread=%.2f, ignition=%.2f\n", cooling, spread, ignition);
-        auto show = new Show::Fire(cooling, spread, ignition);
+        float spark_amount = doc["spark_amount"] | 0.5f;
+        Serial.printf("ShowFactory: Creating Fire cooling=%.2f, spread=%.2f, ignition=%.2f, spark_amount=%.2f\n",
+                      cooling, spread, ignition, spark_amount);
+        auto show = new Show::Fire(cooling, spread, ignition, spark_amount);
         Serial.printf("ShowFactory: Created Fire %p\n", show);
         return std::unique_ptr<Show::Show>(show);
 
