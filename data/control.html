@@ -144,6 +144,11 @@
                         <input type="number" id="ignition" step="0.1" min="0.0" max="1.0" value="0.5">
                         <small style="display:block; margin-top:4px; color:#666;">Ignition rate</small>
                     </div>
+                    <div class="param-row">
+                        <label class="param-label" for="sparkAmount">Spark Amount</label>
+                        <input type="number" id="sparkAmount" step="0.05" min="0.0" max="1.0" value="0.5">
+                        <small style="display:block; margin-top:4px; color:#666;">Brightness of new sparks</small>
+                    </div>
                     <button class="apply-button" onclick="applyFireParams()">Apply Parameters</button>
                 </div>
 
@@ -546,11 +551,11 @@
             }
         }
 
-        // Apply Fire parameters
         async function applyFireParams() {
-            const cooing = parseFloat(document.getElementById('cooling').value);
+            const cooling = parseFloat(document.getElementById('cooling').value);
             const spread = parseFloat(document.getElementById('spread').value);
             const ignition = parseFloat(document.getElementById('ignition').value);
+            const spark_amount = parseFloat(document.getElementById('sparkAmount').value);
 
             try {
                 await fetch('/api/show', {
@@ -558,7 +563,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         name: 'Fire',
-                        params: { cooling: cooing, spread: spread, ignition: ignition}
+                        params: { cooling, spread, ignition, spark_amount }
                     })
                 });
                 pendingParameterConfig = false;  // Applied successfully
@@ -806,6 +811,7 @@
                     if (params.cooling !== undefined) document.getElementById('cooling').value = params.cooling;
                     if (params.spread !== undefined) document.getElementById('spread').value = params.spread;
                     if (params.ignition !== undefined) document.getElementById('ignition').value = params.ignition;
+                    if (params.spark_amount !== undefined) document.getElementById('sparkAmount').value = params.spark_amount;
                     break;
 
                 case 'Starlight':
