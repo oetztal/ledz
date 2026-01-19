@@ -47,12 +47,17 @@ void test_color_blue_component() {
 }
 
 void test_black_body_color() {
+    // temp=0.0: brightness=0, result is black
     TEST_ASSERT_EQUAL_UINT32(0x000000, Support::Color::black_body_color(0.0f));
-    TEST_ASSERT_EQUAL_UINT32(0xAA0000, Support::Color::black_body_color(0.20f));
-    TEST_ASSERT_EQUAL_UINT32(0xFFB600, Support::Color::black_body_color(0.80f));
-    TEST_ASSERT_EQUAL_UINT32(0xFFFF00, Support::Color::black_body_color(1.0f));
-    TEST_ASSERT_EQUAL_UINT32(0xFFFF00, Support::Color::black_body_color(5.0f));
-    TEST_ASSERT_EQUAL_UINT32(0xFFFF00, Support::Color::black_body_color(100.0f));
+    // temp=0.2: 1000K, brightness=0.667 → (169, 44, 0)
+    TEST_ASSERT_EQUAL_UINT32(0xA92C00, Support::Color::black_body_color(0.20f));
+    // temp=0.8: 1600K, green=114, brightness=1.0 → (255, 114, 0)
+    TEST_ASSERT_EQUAL_UINT32(0xFF7200, Support::Color::black_body_color(0.80f));
+    // temp=1.0: 1800K, green=126, brightness=1.0 → (255, 126, 0)
+    TEST_ASSERT_EQUAL_UINT32(0xFF7E00, Support::Color::black_body_color(1.0f));
+    // Values > 1.0 are clamped to 1.0
+    TEST_ASSERT_EQUAL_UINT32(0xFF7E00, Support::Color::black_body_color(5.0f));
+    TEST_ASSERT_EQUAL_UINT32(0xFF7E00, Support::Color::black_body_color(100.0f));
 }
 
 int runUnityTests() {
