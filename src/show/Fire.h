@@ -9,13 +9,12 @@
 namespace Show {
     class FireState {
         Strip::PixelIndex _length;
-        Strip::PixelIndex start_offset;
         std::function<float()> randomFloat;
         float *temperature;
 
     public:
-        FireState(std::function<float()> randomFloat,
-                  Strip::PixelIndex length, Strip::PixelIndex start_offset = 0);
+        explicit FireState(std::function<float()> randomFloat,
+                  Strip::PixelIndex length);
 
         virtual ~FireState();
 
@@ -40,10 +39,11 @@ namespace Show {
         float ignition;
         float spark_amount;
         std::vector<float> weights;
+        Strip::PixelIndex start_offset;
 
     public:
         Fire(float cooling = 1.0f, float spread = 1.0f, float ignition = 1.0f, float spark_amount = 0.5f,
-             std::vector<float> weights = {1.0f});
+             std::vector<float> weights = {1.0f}, Strip::PixelIndex start_offset = 5);
 
         void ensureState(Strip::Strip &strip);
 
