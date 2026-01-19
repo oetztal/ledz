@@ -95,8 +95,6 @@ void test_spark_amount() {
     TEST_ASSERT_EQUAL_FLOAT(0.7f, state->get_temperature(0));
 }
 
-void test_create_fire();
-
 int runUnityTests() {
     UNITY_BEGIN();
 

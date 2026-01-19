@@ -11,6 +11,8 @@
 #endif
 
 namespace Show {
+    // Maximum heat transfer per frame - limits how fast heat propagates upward
+    constexpr float MAX_SPREAD_PER_FRAME = 0.25f;
     FireState::FireState(std::function<float()> randomFloat, Strip::PixelIndex length) :
         randomFloat(std::move(randomFloat)),
         _length(length),
@@ -28,17 +30,17 @@ namespace Show {
     }
 
     void FireState::cooldown(float value) const {
-        for (int i = 0; i < length(); i++) {
+        for (Strip::PixelIndex i = 0; i < length(); i++) {
             temperature[i] = std::max(0.0f, temperature[i] - value);
         }
     }
 
     void FireState::spread(float spread_rate, float ignition, Strip::PixelIndex spark_range, float spark_amount,
-                           const std::vector<float> &weights, bool log) {
+                           const std::vector<float> &weights) {
         // Copy current state to previous buffer for consistent reads during this frame
         std::copy(temperature.get(), temperature.get() + length(), prev_temperature.get());
 
-        for (int i = 0; i < length(); i++) {
+        for (Strip::PixelIndex i = 0; i < length(); i++) {
             float weighted_previous = 0.0f;
             float available_energy = 0.0f;
             float local_total_weight = 0.0f;
@@ -62,19 +64,19 @@ namespace Show {
                 }
             }
 
-            auto spreadValue = std::min(0.25f, weighted_previous) * spread_rate * randomFloat();
+            auto spread_value = std::min(MAX_SPREAD_PER_FRAME, weighted_previous) * spread_rate * randomFloat();
             // We can't take more than what's available in any of the contributing pixels if we want to be safe,
             // but the weighted_previous already gives us a good limit.
-            // To ensure energy conservation, we must ensure spread <= sum of contributing temperatures.
-            auto spread = std::min(available_energy, spreadValue);
+            // To ensure energy conservation, we must ensure spread_amount <= sum of contributing temperatures.
+            auto spread_amount = std::min(available_energy, spread_value);
 
-            if (spread > 0) {
-                temperature[i] += spread;
+            if (spread_amount > 0) {
+                temperature[i] += spread_amount;
                 for (size_t w_idx = 0; w_idx < weights.size(); ++w_idx) {
                     int prev_idx = i - 1 - (int) w_idx;
                     if (prev_idx >= 0) {
                         float w = weights[w_idx] / local_total_weight;
-                        temperature[prev_idx] -= spread * w;
+                        temperature[prev_idx] -= spread_amount * w;
                     }
                 }
             }
@@ -120,7 +122,7 @@ namespace Show {
 
         state->cooldown(this->cooling * randomFloat(gen));
 
-        state->spread(this->spread, this->ignition, 2, this->spark_amount, this->weights, iteration % 100 == 0);
+        state->spread(this->spread, this->ignition, this->start_offset, this->spark_amount, this->weights);
 
         for (Strip::PixelIndex i = 0; i < strip.length(); i++) {
             // Mapping strip index i to state index i + visual_offset

@@ -29,7 +29,7 @@ namespace Show {
         void cooldown(float value) const;
 
         void spread(float spread_rate, float ignition, Strip::PixelIndex spark_range, float spark_amount,
-                    const std::vector<float> &weights = {1.0f}, bool log = false);
+                    const std::vector<float> &weights = {1.0f});
 
         float get_temperature(Strip::PixelIndex pixel_index) const;
         void set_temperature(Strip::PixelIndex pixel_index, float value);
