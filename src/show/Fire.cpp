@@ -14,11 +14,13 @@ namespace Show {
     FireState::FireState(std::function<float()> randomFloat, Strip::PixelIndex length) :
         randomFloat(std::move(randomFloat)),
         _length(length),
-        temperature(std::make_unique<float[]>(length)) {
+        temperature(std::make_unique<float[]>(length)),
+        prev_temperature(std::make_unique<float[]>(length)) {
 #ifdef ARDUINO
         Serial.printf("Fire::State::State %d\n", length);
 #endif
         std::fill(temperature.get(), temperature.get() + length, 0.0f);
+        std::fill(prev_temperature.get(), prev_temperature.get() + length, 0.0f);
     }
 
     Strip::PixelIndex FireState::length() const {
@@ -33,6 +35,9 @@ namespace Show {
 
     void FireState::spread(float spread_rate, float ignition, Strip::PixelIndex spark_range, float spark_amount,
                            const std::vector<float> &weights, bool log) {
+        // Copy current state to previous buffer for consistent reads during this frame
+        std::copy(temperature.get(), temperature.get() + length(), prev_temperature.get());
+
         for (int i = 0; i < length(); i++) {
             float weighted_previous = 0.0f;
             float available_energy = 0.0f;
@@ -50,8 +55,9 @@ namespace Show {
                     int prev_idx = i - 1 - (int) w_idx;
                     if (prev_idx >= 0) {
                         float w = weights[w_idx] / local_total_weight;
-                        weighted_previous += temperature[prev_idx] * w;
-                        available_energy += temperature[prev_idx];
+                        // Read from previous frame snapshot
+                        weighted_previous += prev_temperature[prev_idx] * w;
+                        available_energy += prev_temperature[prev_idx];
                     }
                 }
             }

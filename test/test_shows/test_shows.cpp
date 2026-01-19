@@ -34,17 +34,21 @@ void test_spread() {
     state->set_temperature(0, 1.0f);
     state->spread(1.0, 0.0, 0, 0.5f);
 
+    // With double-buffering, heat only spreads one step per frame
+    // Heat from index 0 spreads to index 1, not teleporting to index 9
     TEST_ASSERT_EQUAL_FLOAT(0.75f, state->get_temperature(0));
-    TEST_ASSERT_EQUAL_FLOAT(0.0f, state->get_temperature(1));
-    TEST_ASSERT_EQUAL_FLOAT(0.25f, state->get_temperature(9));
+    TEST_ASSERT_EQUAL_FLOAT(0.25f, state->get_temperature(1));
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, state->get_temperature(9));
 }
 
 void test_spread_limited() {
     state->set_temperature(0, 0.1f);
     state->spread(1.0, 0.0, 0, 0.5f);
 
+    // With double-buffering, heat spreads to adjacent pixel only
     TEST_ASSERT_EQUAL_FLOAT(0.0f, state->get_temperature(0));
-    TEST_ASSERT_EQUAL_FLOAT(0.1f, state->get_temperature(9));
+    TEST_ASSERT_EQUAL_FLOAT(0.1f, state->get_temperature(1));
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, state->get_temperature(9));
 }
 
 void test_create_fire() {
@@ -63,18 +67,17 @@ void test_spread_multiple_weights() {
     state->set_temperature(0, 1.0f);
     state->set_temperature(1, 1.0f);
 
-    // Element 2 will take from 1 and 0.
-    // weights = {2.0f, 1.0f} -> total_weight = 3.0f
-    // w0 = 2/3, w1 = 1/3
-    // weighted_previous for i=2: get_temperature(1]*2/3 + get_temperature(0]*1/3 = 1.0*2/3 + 1.0*1/3 = 1.0
-    // spreadValue = min(0.25, 1.0) * 1.0 * 1.0 = 0.25
-    // spread = min(1.0, 0.25) = 0.25
-    // get_temperature(2] += 0.25 -> 0.25
-    // get_temperature(1] -= 0.25 * (2/3) = 0.25 * 0.666... = 0.1666... -> 1.0 - 0.1666... = 0.8333...
-    // get_temperature(0] -= 0.25 * (1/3) = 0.25 * 0.333... = 0.0833... -> 1.0 - 0.0833... = 0.9166...
+    // With double-buffering, all reads come from the snapshot.
+    // weights = {2.0f, 1.0f} -> at i=2, weights for prev_idx 1 and 0
+    // i=1: takes 0.25 from index 0 (temp[0]: 1.0->0.75, temp[1]: 1.0->1.25)
+    // i=2: reads prev_temp[1]=1.0, prev_temp[0]=1.0, spreads 0.25
+    //      temp[1] -= 0.25*2/3, temp[0] -= 0.25*1/3
+    // i=3: reads prev_temp[2]=0, prev_temp[1]=1.0, spreads 0.25
+    //      temp[2] -= 0.25*2/3, temp[1] -= 0.25*1/3
 
     state->spread(1.0, 0.0, 0, 0.5f, {2.0f, 1.0f});
 
+    // Verify energy conservation
     float total = 0;
     for (int i = 0; i < state->length(); i++) {
         total += state->get_temperature(i);
@@ -83,7 +86,7 @@ void test_spread_multiple_weights() {
 
     TEST_ASSERT_EQUAL_FLOAT(0.6666667f, state->get_temperature(0));
     TEST_ASSERT_EQUAL_FLOAT(1.0f, state->get_temperature(1));
-    TEST_ASSERT_EQUAL_FLOAT(0.01851851f, state->get_temperature(2));
+    TEST_ASSERT_EQUAL_FLOAT(0.0833333f, state->get_temperature(2));
 }
 
 void test_spark_amount() {

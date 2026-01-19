@@ -12,6 +12,7 @@ namespace Show {
         Strip::PixelIndex _length;
         std::function<float()> randomFloat;
         std::unique_ptr<float[]> temperature;
+        std::unique_ptr<float[]> prev_temperature;
 
     public:
         explicit FireState(std::function<float()> randomFloat,
