@@ -26,7 +26,7 @@ namespace Show {
 
         [[nodiscard]] Strip::PixelIndex length() const;
 
-        void cooldown(float value) const;
+        void cooldown(float value);
 
         void spread(float spread_rate, float ignition, Strip::PixelIndex spark_range, float spark_amount,
                     const std::vector<float> &weights = {1.0f});
@@ -46,10 +46,12 @@ namespace Show {
         float spark_amount;
         std::vector<float> weights;
         Strip::PixelIndex start_offset;
+        Strip::PixelIndex spark_range;
 
     public:
         Fire(float cooling = 1.0f, float spread = 1.0f, float ignition = 1.0f, float spark_amount = 0.5f,
-             std::vector<float> weights = {1.0f}, Strip::PixelIndex start_offset = 5);
+             std::vector<float> weights = {1.0f}, Strip::PixelIndex start_offset = 5,
+             Strip::PixelIndex spark_range = 5);
 
         void ensureState(Strip::Strip &strip);
 

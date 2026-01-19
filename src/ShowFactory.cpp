@@ -86,11 +86,12 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
         float ignition = doc["ignition"] | 1.0f;
         float spark_amount = doc["spark_amount"] | 0.5f;
         int start_offset = doc["start_offset"] | 5;
+        int spark_range = doc["spark_range"] | 5;
 #ifdef ARDUINO
-        Serial.printf("ShowFactory: Creating Fire cooling=%.2f, spread=%.2f, ignition=%.2f, spark_amount=%.2f, start_offset=%d\n",
-                      cooling, spread, ignition, spark_amount, start_offset);
+        Serial.printf("ShowFactory: Creating Fire cooling=%.2f, spread=%.2f, ignition=%.2f, spark_amount=%.2f, start_offset=%d, spark_range=%d\n",
+                      cooling, spread, ignition, spark_amount, start_offset, spark_range);
 #endif
-        return std::make_unique<Show::Fire>(cooling, spread, ignition, spark_amount, std::vector<float>{1.0f}, start_offset);
+        return std::make_unique<Show::Fire>(cooling, spread, ignition, spark_amount, std::vector<float>{1.0f}, start_offset, spark_range);
     });
 
     registerShow("Starlight", "Twinkling stars effect", [](const StaticJsonDocument<512> &doc) {

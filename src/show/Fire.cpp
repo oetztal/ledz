@@ -6,9 +6,6 @@
 
 #include "support/color.h"
 
-#ifdef ARDUINO
-#include <USBCDC.h>
-#endif
 
 namespace Show {
     // Maximum heat transfer per frame - limits how fast heat propagates upward
@@ -18,18 +15,15 @@ namespace Show {
         _length(length),
         temperature(std::make_unique<float[]>(length)),
         prev_temperature(std::make_unique<float[]>(length)) {
-#ifdef ARDUINO
-        Serial.printf("Fire::State::State %d\n", length);
-#endif
         std::fill(temperature.get(), temperature.get() + length, 0.0f);
         std::fill(prev_temperature.get(), prev_temperature.get() + length, 0.0f);
     }
 
     Strip::PixelIndex FireState::length() const {
-        return this->_length;
+        return _length;
     }
 
-    void FireState::cooldown(float value) const {
+    void FireState::cooldown(float value) {
         for (Strip::PixelIndex i = 0; i < length(); i++) {
             temperature[i] = std::max(0.0f, temperature[i] - value);
         }
@@ -101,31 +95,33 @@ namespace Show {
     }
 
 
-    Fire::Fire(float cooling, float spread, float ignition, float spark_amount, std::vector<float> weights, Strip::PixelIndex start_offset) :
+    Fire::Fire(float cooling, float spread, float ignition, float spark_amount, std::vector<float> weights,
+                Strip::PixelIndex start_offset, Strip::PixelIndex spark_range) :
         cooling(cooling),
         spread(spread), ignition(ignition), spark_amount(spark_amount),
         weights(std::move(weights)),
         start_offset(start_offset),
+        spark_range(spark_range),
         randomFloat(0.0f, 1.0f) {
         std::random_device rd;
-        this->gen = std::mt19937(rd());
+        gen = std::mt19937(rd());
     }
 
     void Fire::ensureState(Strip::Strip &strip) {
         if (!state || state->length() != strip.length() + start_offset) {
-            state = std::make_unique<FireState>([=] { return randomFloat(gen); }, strip.length() + start_offset);
+            state = std::make_unique<FireState>([this] { return randomFloat(gen); }, strip.length() + start_offset);
         }
     }
 
-    void Fire::execute(Strip::Strip &strip, Iteration iteration) {
+    void Fire::execute(Strip::Strip &strip, [[maybe_unused]] Iteration iteration) {
         ensureState(strip);
 
-        state->cooldown(this->cooling * randomFloat(gen));
+        state->cooldown(cooling * randomFloat(gen));
 
-        state->spread(this->spread, this->ignition, this->start_offset, this->spark_amount, this->weights);
+        state->spread(spread, ignition, spark_range, spark_amount, weights);
 
         for (Strip::PixelIndex i = 0; i < strip.length(); i++) {
-            // Mapping strip index i to state index i + visual_offset
+            // Mapping strip index i to state index i + start_offset
             strip.setPixelColor(i, Support::Color::black_body_color(state->get_temperature(i + start_offset)));
         }
     }
