@@ -1,9 +1,9 @@
 #include "Fire.h"
 
+#include <algorithm>
 #include <random>
 #include <utility>
 
-#include "color.h"
 #include "support/color.h"
 
 #ifdef ARDUINO
@@ -13,15 +13,12 @@
 namespace Show {
     FireState::FireState(std::function<float()> randomFloat, Strip::PixelIndex length) :
         randomFloat(std::move(randomFloat)),
-        _length(length) {
+        _length(length),
+        temperature(std::make_unique<float[]>(length)) {
 #ifdef ARDUINO
         Serial.printf("Fire::State::State %d\n", length);
 #endif
-        temperature = new float[length]{0.0f};
-    }
-
-    FireState::~FireState() {
-        delete[] temperature;
+        std::fill(temperature.get(), temperature.get() + length, 0.0f);
     }
 
     Strip::PixelIndex FireState::length() const {

@@ -2,6 +2,7 @@
 #define LEDZ_FIRE_H
 #include <random>
 #include <functional>
+#include <memory>
 
 #include <vector>
 #include "Show.h"
@@ -10,13 +11,17 @@ namespace Show {
     class FireState {
         Strip::PixelIndex _length;
         std::function<float()> randomFloat;
-        float *temperature;
+        std::unique_ptr<float[]> temperature;
 
     public:
         explicit FireState(std::function<float()> randomFloat,
                   Strip::PixelIndex length);
 
-        virtual ~FireState();
+        ~FireState() = default;
+        FireState(const FireState&) = delete;
+        FireState& operator=(const FireState&) = delete;
+        FireState(FireState&&) = default;
+        FireState& operator=(FireState&&) = default;
 
         [[nodiscard]] Strip::PixelIndex length() const;
 
