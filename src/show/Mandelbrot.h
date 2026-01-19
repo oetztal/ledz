@@ -2,8 +2,8 @@
 // Created by Andreas W. on 02.01.26.
 //
 
-#ifndef UNTITLED_MANDELBROT_H
-#define UNTITLED_MANDELBROT_H
+#ifndef LEDZ_MANDELBROT_H
+#define LEDZ_MANDELBROT_H
 #include "strip/Strip.h"
 #include "Show.h"
 
@@ -26,4 +26,4 @@ namespace Show {
     };
 }
 
-#endif //UNTITLED_MANDELBROT_H
+#endif //LEDZ_MANDELBROT_H

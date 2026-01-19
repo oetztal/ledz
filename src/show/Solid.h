@@ -5,8 +5,8 @@
 // Uses SmoothBlend for smooth color transitions
 //
 
-#ifndef UNTITLED_SOLID_H
-#define UNTITLED_SOLID_H
+#ifndef LEDZ_SOLID_H
+#define LEDZ_SOLID_H
 
 #include "Show.h"
 #include "../support/SmoothBlend.h"
@@ -65,4 +65,4 @@ namespace Show {
     };
 } // namespace Show
 
-#endif //UNTITLED_SOLID_H
+#endif //LEDZ_SOLID_H

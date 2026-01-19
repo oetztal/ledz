@@ -2,8 +2,8 @@
 // Created by Andreas W. on 02.01.26.
 //
 
-#ifndef UNTITLED_TIMER_H
-#define UNTITLED_TIMER_H
+#ifndef LEDZ_TIMER_H
+#define LEDZ_TIMER_H
 
 // Forward declare millis() for non-Arduino builds
 #ifndef ARDUINO
@@ -25,4 +25,4 @@ namespace Support {
     };
 } // Support
 
-#endif //UNTITLED_TIMER_H
+#endif //LEDZ_TIMER_H

@@ -2,8 +2,8 @@
 // Created by Andreas W. on 05.01.26.
 //
 
-#ifndef UNTITLED_LEDSHOW_H
-#define UNTITLED_LEDSHOW_H
+#ifndef LEDZ_LEDSHOW_H
+#define LEDZ_LEDSHOW_H
 #include "ShowController.h"
 
 namespace Task {
@@ -22,4 +22,4 @@ namespace Task {
 }
 
 
-#endif //UNTITLED_LEDSHOW_H
+#endif //LEDZ_LEDSHOW_H

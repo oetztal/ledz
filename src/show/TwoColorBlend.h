@@ -2,8 +2,8 @@
 // Created by Claude Code on 03.01.26.
 //
 
-#ifndef UNTITLED_TWOCOLORBLEND_H
-#define UNTITLED_TWOCOLORBLEND_H
+#ifndef LEDZ_TWOCOLORBLEND_H
+#define LEDZ_TWOCOLORBLEND_H
 
 #include "Show.h"
 #include "../support/SmoothBlend.h"
@@ -45,4 +45,4 @@ namespace Show {
     };
 } // namespace Show
 
-#endif //UNTITLED_TWOCOLORBLEND_H
+#endif //LEDZ_TWOCOLORBLEND_H

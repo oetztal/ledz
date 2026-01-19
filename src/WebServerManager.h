@@ -4,8 +4,8 @@
 // WebServer Manager - handles HTTP server and API endpoints
 //
 
-#ifndef UNTITLED_WEBSERVERMANAGER_H
-#define UNTITLED_WEBSERVERMANAGER_H
+#ifndef LEDZ_WEBSERVERMANAGER_H
+#define LEDZ_WEBSERVERMANAGER_H
 
 #ifdef ARDUINO
 #include <ESPAsyncWebServer.h>
@@ -113,4 +113,4 @@ public:
     OperationalWebServerManager(Config::ConfigManager &config, Network &network, ShowController &showController);
 };
 
-#endif //UNTITLED_WEBSERVERMANAGER_H
+#endif //LEDZ_WEBSERVERMANAGER_H

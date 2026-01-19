@@ -2,8 +2,8 @@
 // Created by Andreas W. on 02.01.26.
 //
 
-#ifndef UNTITLED_STRIP_H
-#define UNTITLED_STRIP_H
+#ifndef LEDZ_STRIP_H
+#define LEDZ_STRIP_H
 
 #include <memory>
 
@@ -31,4 +31,4 @@ namespace Strip {
     };
 }
 
-#endif //UNTITLED_STRIP_H
+#endif //LEDZ_STRIP_H

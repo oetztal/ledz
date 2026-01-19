@@ -2,8 +2,8 @@
 // Created by Claude Code on 03.01.26.
 //
 
-#ifndef UNTITLED_THEATERCHASE_H
-#define UNTITLED_THEATERCHASE_H
+#ifndef LEDZ_THEATERCHASE_H
+#define LEDZ_THEATERCHASE_H
 
 #include "Show.h"
 
@@ -35,4 +35,4 @@ namespace Show {
     };
 } // namespace Show
 
-#endif //UNTITLED_THEATERCHASE_H
+#endif //LEDZ_THEATERCHASE_H

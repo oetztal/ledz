@@ -4,8 +4,8 @@
 // ShowFactory - Manages show registration and creation
 //
 
-#ifndef UNTITLED_SHOWFACTORY_H
-#define UNTITLED_SHOWFACTORY_H
+#ifndef LEDZ_SHOWFACTORY_H
+#define LEDZ_SHOWFACTORY_H
 
 #include <map>
 #include <vector>
@@ -101,4 +101,4 @@ public:
     bool hasShow(const char *name) const;
 };
 
-#endif //UNTITLED_SHOWFACTORY_H
+#endif //LEDZ_SHOWFACTORY_H

@@ -2,8 +2,8 @@
 // Created by Andreas W. on 02.01.26.
 //
 
-#ifndef UNTITLED_JUMP_H
-#define UNTITLED_JUMP_H
+#ifndef LEDZ_JUMP_H
+#define LEDZ_JUMP_H
 #include <queue>
 #include <vector>
 
@@ -51,4 +51,4 @@ namespace Show {
     };
 } // Show
 
-#endif //UNTITLED_JUMP_H
+#endif //LEDZ_JUMP_H

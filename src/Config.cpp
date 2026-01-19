@@ -15,6 +15,7 @@ namespace Config {
     void ConfigManager::begin() {
 #ifdef ARDUINO
         // Preferences are initialized when needed in each method
+        prefs.begin(NAMESPACE, true); // Read-only mode
 #endif
     }
 

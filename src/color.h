@@ -2,8 +2,8 @@
 // Created by Andreas W. on 02.01.26.
 //
 
-#ifndef UNTITLED_COLOR_H
-#define UNTITLED_COLOR_H
+#ifndef LEDZ_COLOR_H
+#define LEDZ_COLOR_H
 
 #include "strip/Strip.h"
 
@@ -18,4 +18,4 @@ Strip::ColorComponent green(Strip::Color color);
 
 Strip::ColorComponent blue(Strip::Color color);
 
-#endif //UNTITLED_COLOR_H
+#endif //LEDZ_COLOR_H

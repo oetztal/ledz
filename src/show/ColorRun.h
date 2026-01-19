@@ -2,8 +2,8 @@
 // Created by Andreas W. on 02.01.26.
 //
 
-#ifndef UNTITLED_COLORRUN_H
-#define UNTITLED_COLORRUN_H
+#ifndef LEDZ_COLORRUN_H
+#define LEDZ_COLORRUN_H
 
 #include <vector>
 #include <random>
@@ -49,4 +49,4 @@ namespace Show {
     };
 } // Show
 
-#endif //UNTITLED_COLORRUN_H
+#endif //LEDZ_COLORRUN_H

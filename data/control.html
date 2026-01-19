@@ -128,6 +128,30 @@
                     <button class="apply-button" onclick="applyColorRangesParams()">Apply Pattern</button>
                 </div>
 
+                <div id="fireParams" class="params-section">
+                    <div class="param-row">
+                        <label class="param-label" for="cooling">Cooling</label>
+                        <input type="number" id="cooling" step="0.1" min="0.0" max="1.0" value="0.5">
+                        <small style="display:block; margin-top:4px; color:#666;">Cooling rate</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="spread">Spread</label>
+                        <input type="number" id="spread" step="0.1" min="0.0" max="1.0" value="0.5">
+                        <small style="display:block; margin-top:4px; color:#666;">Spread rate</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="ignition">Ignition</label>
+                        <input type="number" id="ignition" step="0.1" min="0.0" max="1.0" value="0.5">
+                        <small style="display:block; margin-top:4px; color:#666;">Ignition rate</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="sparkAmount">Spark Amount</label>
+                        <input type="number" id="sparkAmount" step="0.05" min="0.0" max="1.0" value="0.5">
+                        <small style="display:block; margin-top:4px; color:#666;">Brightness of new sparks</small>
+                    </div>
+                    <button class="apply-button" onclick="applyFireParams()">Apply Parameters</button>
+                </div>
+
                 <div id="starlightParams" class="params-section">
                     <div class="param-row">
                         <label class="param-label" for="starlightProbability">Spawn Probability (0.0-1.0)</label>
@@ -294,6 +318,7 @@
             document.getElementById('chaosParams').classList.remove('visible');
             document.getElementById('twoColorBlendParams').classList.remove('visible');
             document.getElementById('colorRangesParams').classList.remove('visible');
+            document.getElementById('fireParams').classList.remove('visible');
             document.getElementById('starlightParams').classList.remove('visible');
             document.getElementById('waveParams').classList.remove('visible');
             document.getElementById('morseCodeParams').classList.remove('visible');
@@ -308,6 +333,8 @@
                 document.getElementById('twoColorBlendParams').classList.add('visible');
             } else if (showName === 'Solid') {
                 document.getElementById('colorRangesParams').classList.add('visible');
+            } else if (showName === 'Fire') {
+                document.getElementById('fireParams').classList.add('visible');
             } else if (showName === 'Starlight') {
                 document.getElementById('starlightParams').classList.add('visible');
             } else if (showName === 'Wave') {
@@ -521,6 +548,27 @@
                 lastPopulatedShow = null;  // Allow repopulation with backend values
             } catch (error) {
                 console.error('Failed to apply Solid parameters:', error);
+            }
+        }
+
+        async function applyFireParams() {
+            const cooling = parseFloat(document.getElementById('cooling').value);
+            const spread = parseFloat(document.getElementById('spread').value);
+            const ignition = parseFloat(document.getElementById('ignition').value);
+            const spark_amount = parseFloat(document.getElementById('sparkAmount').value);
+
+            try {
+                await fetch('/api/show', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: 'Fire',
+                        params: { cooling, spread, ignition, spark_amount }
+                    })
+                });
+                pendingParameterConfig = false;  // Applied successfully
+            } catch (error) {
+                console.error('Failed to apply Fire parameters:', error);
             }
         }
 
@@ -759,6 +807,13 @@
                     }
                     break;
 
+                case 'Fire':
+                    if (params.cooling !== undefined) document.getElementById('cooling').value = params.cooling;
+                    if (params.spread !== undefined) document.getElementById('spread').value = params.spread;
+                    if (params.ignition !== undefined) document.getElementById('ignition').value = params.ignition;
+                    if (params.spark_amount !== undefined) document.getElementById('sparkAmount').value = params.spark_amount;
+                    break;
+
                 case 'Starlight':
                     if (params.probability !== undefined) document.getElementById('starlightProbability').value = params.probability;
                     if (params.length !== undefined) document.getElementById('starlightLength').value = params.length;
@@ -862,7 +917,7 @@
             const showName = e.target.value;
 
             // Don't auto-apply for shows with parameters - wait for user to click Apply button
-            const showsWithParams = ['Solid', 'Mandelbrot', 'Chaos', 'TwoColorBlend',
+            const showsWithParams = ['Solid', 'Mandelbrot', 'Chaos', 'TwoColorBlend', 'Fire',
                                      'Starlight', 'Wave', 'MorseCode', 'TheaterChase', 'Stroboscope'];
 
             if (showsWithParams.includes(showName)) {

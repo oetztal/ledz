@@ -29,15 +29,17 @@ void ShowController::begin() {
         return;
     }
 #endif
-
+    Serial.println("ShowController: loading show config");
     // Load configuration
     Config::ShowConfig showConfig = config.loadShowConfig();
+    Serial.println("ShowController: loading device config");
     Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
 
     // Apply loaded configuration
     brightness = deviceConfig.brightness;
     autoCycle = showConfig.auto_cycle;
 
+    Serial.println("ShowController: preparing show");
     // Create initial show
     const char *initialShowName = showConfig.current_show;
 
@@ -50,10 +52,13 @@ void ShowController::begin() {
 
     // Load parameters if available
     const char *params = (strlen(showConfig.params_json) > 0) ? showConfig.params_json : "{}";
+    Serial.printf("ShowController: Creating initial show %s with params %s\n", currentShowName, params);
     currentShow = factory.createShow(currentShowName, params);
 #ifdef ARDUINO
     Serial.printf("ShowController: Show %s created\n", currentShowName);
 #endif
+
+    Serial.printf("ShowController: Initial show %p\n", currentShow.get());
 
     if (currentShow) {
 #ifdef ARDUINO
