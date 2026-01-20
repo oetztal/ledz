@@ -82,13 +82,12 @@ namespace Config {
         char name[32];
         char show_name[32];
         char params_json[256];
-        uint8_t brightness;
         bool layout_reverse;
         bool layout_mirror;
         int16_t layout_dead_leds;
         bool valid;
 
-        Preset() : brightness(128), layout_reverse(false), layout_mirror(false),
+        Preset() : layout_reverse(false), layout_mirror(false),
                    layout_dead_leds(0), valid(false) {
             name[0] = '\0';
             show_name[0] = '\0';

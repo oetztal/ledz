@@ -255,9 +255,6 @@ namespace Config {
                 snprintf(key, sizeof(key), "preset_%u_params", i);
                 prefs.getString(key, presetsConfig.presets[i].params_json, sizeof(presetsConfig.presets[i].params_json));
 
-                snprintf(key, sizeof(key), "preset_%u_bri", i);
-                presetsConfig.presets[i].brightness = prefs.getUChar(key, 128);
-
                 snprintf(key, sizeof(key), "preset_%u_rev", i);
                 presetsConfig.presets[i].layout_reverse = prefs.getBool(key, false);
 
@@ -296,9 +293,6 @@ namespace Config {
 
         snprintf(key, sizeof(key), "preset_%u_params", index);
         prefs.putString(key, preset.params_json);
-
-        snprintf(key, sizeof(key), "preset_%u_bri", index);
-        prefs.putUChar(key, preset.brightness);
 
         snprintf(key, sizeof(key), "preset_%u_rev", index);
         prefs.putBool(key, preset.layout_reverse);

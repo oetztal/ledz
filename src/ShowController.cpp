@@ -236,8 +236,7 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
 
         case ShowCommandType::LOAD_PRESET: {
 #ifdef ARDUINO
-            Serial.printf("ShowController: Loading preset - show=%s, brightness=%u\n",
-                          cmd.show_name, cmd.brightness_value);
+            Serial.printf("ShowController: Loading preset - show=%s\n", cmd.show_name);
 
             // 1. Update layout if we have valid strip pointers
             if (layout != nullptr && baseStrip != nullptr) {
@@ -255,15 +254,7 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
                 config.saveLayoutConfig(layoutConfig);
             }
 
-            // 2. Set brightness
-            brightness = cmd.brightness_value;
-
-            // Save brightness to device config
-            Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
-            deviceConfig.brightness = brightness;
-            config.saveDeviceConfig(deviceConfig);
-
-            // 3. Create show with preset parameters
+            // 2. Create show with preset parameters
             std::unique_ptr<Show::Show> newShow = factory.createShow(cmd.show_name, cmd.params_json);
             if (newShow != nullptr) {
                 currentShow = std::move(newShow);
@@ -339,7 +330,6 @@ bool ShowController::queuePresetLoad(const Config::Preset &preset) {
     strncpy(cmd.params_json, preset.params_json, sizeof(cmd.params_json) - 1);
     cmd.params_json[sizeof(cmd.params_json) - 1] = '\0';
 
-    cmd.brightness_value = preset.brightness;
     cmd.layout_reverse = preset.layout_reverse;
     cmd.layout_mirror = preset.layout_mirror;
     cmd.layout_dead_leds = preset.layout_dead_leds;

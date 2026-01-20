@@ -329,7 +329,6 @@ void WebServerManager::setupAPIRoutes() {
                 preset["index"] = i;
                 preset["name"] = presetsConfig.presets[i].name;
                 preset["show_name"] = presetsConfig.presets[i].show_name;
-                preset["brightness"] = presetsConfig.presets[i].brightness;
                 preset["layout_reverse"] = presetsConfig.presets[i].layout_reverse;
                 preset["layout_mirror"] = presetsConfig.presets[i].layout_mirror;
                 preset["layout_dead_leds"] = presetsConfig.presets[i].layout_dead_leds;
@@ -389,7 +388,6 @@ void WebServerManager::setupAPIRoutes() {
 
                       // Load current state to save
                       Config::ShowConfig showConfig = config.loadShowConfig();
-                      Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
                       Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
 
                       // Create preset from current state
@@ -405,7 +403,6 @@ void WebServerManager::setupAPIRoutes() {
                       strncpy(preset.params_json, showConfig.params_json, sizeof(preset.params_json) - 1);
                       preset.params_json[sizeof(preset.params_json) - 1] = '\0';
 
-                      preset.brightness = deviceConfig.brightness;
                       preset.layout_reverse = layoutConfig.reverse;
                       preset.layout_mirror = layoutConfig.mirror;
                       preset.layout_dead_leds = layoutConfig.dead_leds;
