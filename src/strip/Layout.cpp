@@ -34,8 +34,9 @@ namespace Strip {
         return index;
     }
 
-    void Layout::fill(Color color) const {
+    void Layout::fill(Color color) {
         strip.fill(color);
+        turnOffDeadLeds();
     }
 
     void Layout::setPixelColor(PixelIndex pixel_index, Color color) {

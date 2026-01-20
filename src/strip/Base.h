@@ -21,7 +21,7 @@ namespace Strip {
     public:
         Base(Pin pin, unsigned short length);
 
-        void fill(Color c) const override;
+        void fill(Color c) override;
 
         void setPixelColor(PixelIndex pixel_index, Color color) override;
 

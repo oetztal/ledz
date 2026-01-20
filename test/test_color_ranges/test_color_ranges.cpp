@@ -14,8 +14,10 @@ public:
         pixels.resize(count, 0x000000);
     }
 
-    void fill(::Strip::Color c) const override {
-        // Mock implementation
+    void fill(::Strip::Color c) override {
+        for (::Strip::PixelIndex i = 0; i < pixel_count; i++) {
+            pixels[i] = c;
+        }
     }
 
     void setPixelColor(::Strip::PixelIndex pixel_index, ::Strip::Color col) override {

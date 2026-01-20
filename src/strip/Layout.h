@@ -35,7 +35,7 @@ namespace Strip {
     public:
         Layout(Strip &strip, bool reverse = false, bool mirror = false, PixelIndex dead_leds = 0);
 
-        void fill(Color color) const override;
+        void fill(Color color) override;
 
         void setPixelColor(PixelIndex pixel_index, Color color) override;
 

@@ -23,7 +23,7 @@ namespace Strip {
 #endif
     }
 
-    void Base::fill(Color c) const {
+    void Base::fill(Color c) {
 #ifdef ARDUINO
         for (int i=0; i<strip->numPixels(); i++) {
             colors[i]=c;
