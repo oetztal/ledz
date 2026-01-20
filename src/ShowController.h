@@ -28,7 +28,8 @@ enum class ShowCommandType {
     SET_SHOW, // Change current show
     SET_BRIGHTNESS, // Change brightness
     TOGGLE_AUTO_CYCLE, // Enable/disable auto-cycling
-    SET_LAYOUT // Change strip layout
+    SET_LAYOUT, // Change strip layout
+    LOAD_PRESET // Load a preset (show + params + brightness + layout)
 };
 
 /**
@@ -120,6 +121,13 @@ public:
      * @return true if queued successfully
      */
     bool queueLayoutChange(bool reverse, bool mirror, int16_t dead_leds);
+
+    /**
+     * Queue preset load command (called from Core 1 - webserver)
+     * @param preset Preset to load
+     * @return true if queued successfully
+     */
+    bool queuePresetLoad(const Config::Preset &preset);
 
     /**
      * Set layout and base strip pointers for runtime reconfiguration

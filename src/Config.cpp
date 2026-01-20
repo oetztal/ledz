@@ -233,4 +233,154 @@ namespace Config {
                       config.reverse, config.mirror, config.dead_leds);
 #endif
     }
+
+    PresetsConfig ConfigManager::loadPresetsConfig() {
+        PresetsConfig presetsConfig;
+
+#ifdef ARDUINO
+        prefs.begin(NAMESPACE, true); // Read-only mode
+
+        char key[20];
+        for (uint8_t i = 0; i < PresetsConfig::MAX_PRESETS; i++) {
+            snprintf(key, sizeof(key), "preset_%u_valid", i);
+            presetsConfig.presets[i].valid = prefs.getBool(key, false);
+
+            if (presetsConfig.presets[i].valid) {
+                snprintf(key, sizeof(key), "preset_%u_name", i);
+                prefs.getString(key, presetsConfig.presets[i].name, sizeof(presetsConfig.presets[i].name));
+
+                snprintf(key, sizeof(key), "preset_%u_show", i);
+                prefs.getString(key, presetsConfig.presets[i].show_name, sizeof(presetsConfig.presets[i].show_name));
+
+                snprintf(key, sizeof(key), "preset_%u_params", i);
+                prefs.getString(key, presetsConfig.presets[i].params_json, sizeof(presetsConfig.presets[i].params_json));
+
+                snprintf(key, sizeof(key), "preset_%u_bri", i);
+                presetsConfig.presets[i].brightness = prefs.getUChar(key, 128);
+
+                snprintf(key, sizeof(key), "preset_%u_rev", i);
+                presetsConfig.presets[i].layout_reverse = prefs.getBool(key, false);
+
+                snprintf(key, sizeof(key), "preset_%u_mir", i);
+                presetsConfig.presets[i].layout_mirror = prefs.getBool(key, false);
+
+                snprintf(key, sizeof(key), "preset_%u_dead", i);
+                presetsConfig.presets[i].layout_dead_leds = prefs.getShort(key, 0);
+            }
+        }
+
+        prefs.end();
+#endif
+
+        return presetsConfig;
+    }
+
+    bool ConfigManager::savePreset(uint8_t index, const Preset &preset) {
+        if (index >= PresetsConfig::MAX_PRESETS) {
+            return false;
+        }
+
+#ifdef ARDUINO
+        prefs.begin(NAMESPACE, false); // Read-write mode
+
+        char key[20];
+
+        snprintf(key, sizeof(key), "preset_%u_valid", index);
+        prefs.putBool(key, preset.valid);
+
+        snprintf(key, sizeof(key), "preset_%u_name", index);
+        prefs.putString(key, preset.name);
+
+        snprintf(key, sizeof(key), "preset_%u_show", index);
+        prefs.putString(key, preset.show_name);
+
+        snprintf(key, sizeof(key), "preset_%u_params", index);
+        prefs.putString(key, preset.params_json);
+
+        snprintf(key, sizeof(key), "preset_%u_bri", index);
+        prefs.putUChar(key, preset.brightness);
+
+        snprintf(key, sizeof(key), "preset_%u_rev", index);
+        prefs.putBool(key, preset.layout_reverse);
+
+        snprintf(key, sizeof(key), "preset_%u_mir", index);
+        prefs.putBool(key, preset.layout_mirror);
+
+        snprintf(key, sizeof(key), "preset_%u_dead", index);
+        prefs.putShort(key, preset.layout_dead_leds);
+
+        prefs.end();
+
+        Serial.printf("Config: Saved preset %u '%s'\n", index, preset.name);
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    bool ConfigManager::deletePreset(uint8_t index) {
+        if (index >= PresetsConfig::MAX_PRESETS) {
+            return false;
+        }
+
+#ifdef ARDUINO
+        prefs.begin(NAMESPACE, false); // Read-write mode
+
+        char key[20];
+
+        // Just mark as invalid - NVS keys remain but won't be loaded
+        snprintf(key, sizeof(key), "preset_%u_valid", index);
+        prefs.putBool(key, false);
+
+        prefs.end();
+
+        Serial.printf("Config: Deleted preset %u\n", index);
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    int ConfigManager::findPresetByName(const char *name) {
+#ifdef ARDUINO
+        prefs.begin(NAMESPACE, true); // Read-only mode
+
+        char key[20];
+        char storedName[32];
+
+        for (uint8_t i = 0; i < PresetsConfig::MAX_PRESETS; i++) {
+            snprintf(key, sizeof(key), "preset_%u_valid", i);
+            if (prefs.getBool(key, false)) {
+                snprintf(key, sizeof(key), "preset_%u_name", i);
+                prefs.getString(key, storedName, sizeof(storedName));
+                if (strcmp(storedName, name) == 0) {
+                    prefs.end();
+                    return i;
+                }
+            }
+        }
+
+        prefs.end();
+#endif
+        return -1;
+    }
+
+    int ConfigManager::getNextPresetSlot() {
+#ifdef ARDUINO
+        prefs.begin(NAMESPACE, true); // Read-only mode
+
+        char key[20];
+
+        for (uint8_t i = 0; i < PresetsConfig::MAX_PRESETS; i++) {
+            snprintf(key, sizeof(key), "preset_%u_valid", i);
+            if (!prefs.getBool(key, false)) {
+                prefs.end();
+                return i;
+            }
+        }
+
+        prefs.end();
+#endif
+        return -1;
+    }
 } // namespace Config

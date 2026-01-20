@@ -76,6 +76,35 @@ namespace Config {
     };
 
     /**
+     * Show preset structure
+     */
+    struct Preset {
+        char name[32];
+        char show_name[32];
+        char params_json[256];
+        uint8_t brightness;
+        bool layout_reverse;
+        bool layout_mirror;
+        int16_t layout_dead_leds;
+        bool valid;
+
+        Preset() : brightness(128), layout_reverse(false), layout_mirror(false),
+                   layout_dead_leds(0), valid(false) {
+            name[0] = '\0';
+            show_name[0] = '\0';
+            strcpy(params_json, "{}");
+        }
+    };
+
+    /**
+     * Presets configuration structure
+     */
+    struct PresetsConfig {
+        static constexpr uint8_t MAX_PRESETS = 8;
+        Preset presets[MAX_PRESETS];
+    };
+
+    /**
      * Configuration Manager
      * Handles persistent storage using ESP32 Preferences (NVS)
      */
@@ -181,6 +210,40 @@ namespace Config {
          * @param config Layout configuration to save
          */
         void saveLayoutConfig(const LayoutConfig &config);
+
+        /**
+         * Load all presets configuration from NVS
+         * @return PresetsConfig structure
+         */
+        PresetsConfig loadPresetsConfig();
+
+        /**
+         * Save a preset to NVS
+         * @param index Preset slot index (0-7)
+         * @param preset Preset to save
+         * @return true if saved successfully
+         */
+        bool savePreset(uint8_t index, const Preset &preset);
+
+        /**
+         * Delete a preset from NVS
+         * @param index Preset slot index (0-7)
+         * @return true if deleted successfully
+         */
+        bool deletePreset(uint8_t index);
+
+        /**
+         * Find a preset by name
+         * @param name Preset name to search for
+         * @return Preset index (0-7) or -1 if not found
+         */
+        int findPresetByName(const char *name);
+
+        /**
+         * Get next available preset slot
+         * @return Preset index (0-7) or -1 if all slots full
+         */
+        int getNextPresetSlot();
     };
 } // namespace Config
 

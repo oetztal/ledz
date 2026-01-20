@@ -233,6 +233,57 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
 #endif
             break;
         }
+
+        case ShowCommandType::LOAD_PRESET: {
+#ifdef ARDUINO
+            Serial.printf("ShowController: Loading preset - show=%s, brightness=%u\n",
+                          cmd.show_name, cmd.brightness_value);
+
+            // 1. Update layout if we have valid strip pointers
+            if (layout != nullptr && baseStrip != nullptr) {
+                layout = std::make_unique<Strip::Layout>(*baseStrip, cmd.layout_reverse,
+                                                         cmd.layout_mirror, cmd.layout_dead_leds);
+
+                Serial.printf("ShowController: Preset layout - reverse=%d, mirror=%d, dead_leds=%d\n",
+                              cmd.layout_reverse, cmd.layout_mirror, cmd.layout_dead_leds);
+
+                // Save layout config
+                Config::LayoutConfig layoutConfig;
+                layoutConfig.reverse = cmd.layout_reverse;
+                layoutConfig.mirror = cmd.layout_mirror;
+                layoutConfig.dead_leds = cmd.layout_dead_leds;
+                config.saveLayoutConfig(layoutConfig);
+            }
+
+            // 2. Set brightness
+            brightness = cmd.brightness_value;
+
+            // Save brightness to device config
+            Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
+            deviceConfig.brightness = brightness;
+            config.saveDeviceConfig(deviceConfig);
+
+            // 3. Create show with preset parameters
+            std::unique_ptr<Show::Show> newShow = factory.createShow(cmd.show_name, cmd.params_json);
+            if (newShow != nullptr) {
+                currentShow = std::move(newShow);
+                strncpy(currentShowName, cmd.show_name, sizeof(currentShowName) - 1);
+                currentShowName[sizeof(currentShowName) - 1] = '\0';
+
+                Serial.printf("ShowController: Preset show '%s' loaded with params: %s\n",
+                              currentShowName, cmd.params_json);
+
+                // Save show config
+                Config::ShowConfig showConfig = config.loadShowConfig();
+                strncpy(showConfig.current_show, currentShowName, sizeof(showConfig.current_show) - 1);
+                strncpy(showConfig.params_json, cmd.params_json, sizeof(showConfig.params_json) - 1);
+                config.saveShowConfig(showConfig);
+            } else {
+                Serial.printf("ERROR: Failed to create preset show: %s\n", cmd.show_name);
+            }
+#endif
+            break;
+        }
     }
 }
 
@@ -267,6 +318,38 @@ bool ShowController::queueLayoutChange(bool reverse, bool mirror, int16_t dead_l
     }
 
     Serial.println("WARNING: Layout command queue full!");
+    return false;
+#else
+    return false;
+#endif
+}
+
+bool ShowController::queuePresetLoad(const Config::Preset &preset) {
+#ifdef ARDUINO
+    if (commandQueue == nullptr) {
+        return false;
+    }
+
+    ShowCommand cmd;
+    cmd.type = ShowCommandType::LOAD_PRESET;
+
+    strncpy(cmd.show_name, preset.show_name, sizeof(cmd.show_name) - 1);
+    cmd.show_name[sizeof(cmd.show_name) - 1] = '\0';
+
+    strncpy(cmd.params_json, preset.params_json, sizeof(cmd.params_json) - 1);
+    cmd.params_json[sizeof(cmd.params_json) - 1] = '\0';
+
+    cmd.brightness_value = preset.brightness;
+    cmd.layout_reverse = preset.layout_reverse;
+    cmd.layout_mirror = preset.layout_mirror;
+    cmd.layout_dead_leds = preset.layout_dead_leds;
+
+    if (xQueueSend(commandQueue, &cmd, 0) == pdTRUE) {
+        Serial.printf("ShowController: Queued preset load '%s'\n", preset.name);
+        return true;
+    }
+
+    Serial.println("WARNING: Preset load command queue full!");
     return false;
 #else
     return false;

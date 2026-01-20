@@ -316,6 +316,236 @@ void WebServerManager::setupAPIRoutes() {
         request->send(200, "application/json", response);
     });
 
+    // GET /api/presets - List all presets
+    server.on("/api/presets", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        Config::PresetsConfig presetsConfig = config.loadPresetsConfig();
+
+        StaticJsonDocument<2048> doc;
+        JsonArray presets = doc.createNestedArray("presets");
+
+        for (uint8_t i = 0; i < Config::PresetsConfig::MAX_PRESETS; i++) {
+            if (presetsConfig.presets[i].valid) {
+                JsonObject preset = presets.createNestedObject();
+                preset["index"] = i;
+                preset["name"] = presetsConfig.presets[i].name;
+                preset["show_name"] = presetsConfig.presets[i].show_name;
+                preset["brightness"] = presetsConfig.presets[i].brightness;
+                preset["layout_reverse"] = presetsConfig.presets[i].layout_reverse;
+                preset["layout_mirror"] = presetsConfig.presets[i].layout_mirror;
+                preset["layout_dead_leds"] = presetsConfig.presets[i].layout_dead_leds;
+
+                // Parse and include params_json
+                StaticJsonDocument<512> paramsDoc;
+                if (!deserializeJson(paramsDoc, presetsConfig.presets[i].params_json)) {
+                    preset["params"] = paramsDoc.as<JsonObject>();
+                }
+            }
+        }
+
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+
+    // POST /api/presets - Save current state as preset
+    server.on("/api/presets", HTTP_POST,
+              []([[maybe_unused]] AsyncWebServerRequest *request) {
+              },
+              nullptr,
+              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
+                     [[maybe_unused]] size_t total) {
+                  if (index == 0) {
+                      StaticJsonDocument<256> doc;
+                      DeserializationError error = deserializeJson(doc, data, len);
+
+                      if (error) {
+                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          return;
+                      }
+
+                      const char *presetName = doc["name"];
+                      if (presetName == nullptr || strlen(presetName) == 0) {
+                          request->send(400, "application/json",
+                                        R"({"success":false,"error":"Preset name required"})");
+                          return;
+                      }
+
+                      // Check if preset with this name already exists
+                      int existingIndex = config.findPresetByName(presetName);
+                      int slotIndex;
+
+                      if (existingIndex >= 0) {
+                          // Overwrite existing preset
+                          slotIndex = existingIndex;
+                      } else {
+                          // Find next available slot
+                          slotIndex = config.getNextPresetSlot();
+                          if (slotIndex < 0) {
+                              request->send(400, "application/json",
+                                            R"({"success":false,"error":"All preset slots are full"})");
+                              return;
+                          }
+                      }
+
+                      // Load current state to save
+                      Config::ShowConfig showConfig = config.loadShowConfig();
+                      Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
+                      Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
+
+                      // Create preset from current state
+                      Config::Preset preset;
+                      preset.valid = true;
+
+                      strncpy(preset.name, presetName, sizeof(preset.name) - 1);
+                      preset.name[sizeof(preset.name) - 1] = '\0';
+
+                      strncpy(preset.show_name, showConfig.current_show, sizeof(preset.show_name) - 1);
+                      preset.show_name[sizeof(preset.show_name) - 1] = '\0';
+
+                      strncpy(preset.params_json, showConfig.params_json, sizeof(preset.params_json) - 1);
+                      preset.params_json[sizeof(preset.params_json) - 1] = '\0';
+
+                      preset.brightness = deviceConfig.brightness;
+                      preset.layout_reverse = layoutConfig.reverse;
+                      preset.layout_mirror = layoutConfig.mirror;
+                      preset.layout_dead_leds = layoutConfig.dead_leds;
+
+                      if (config.savePreset(slotIndex, preset)) {
+                          StaticJsonDocument<128> responseDoc;
+                          responseDoc["success"] = true;
+                          responseDoc["index"] = slotIndex;
+                          responseDoc["name"] = preset.name;
+
+                          String response;
+                          serializeJson(responseDoc, response);
+                          request->send(200, "application/json", response);
+                      } else {
+                          request->send(500, "application/json",
+                                        R"({"success":false,"error":"Failed to save preset"})");
+                      }
+                  }
+              }
+    );
+
+    // POST /api/presets/load - Load a preset by index or name
+    server.on("/api/presets/load", HTTP_POST,
+              []([[maybe_unused]] AsyncWebServerRequest *request) {
+              },
+              nullptr,
+              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
+                     [[maybe_unused]] size_t total) {
+                  if (index == 0) {
+                      StaticJsonDocument<256> doc;
+                      DeserializationError error = deserializeJson(doc, data, len);
+
+                      if (error) {
+                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          return;
+                      }
+
+                      int presetIndex = -1;
+
+                      // Find preset by index or name
+                      if (doc.containsKey("index")) {
+                          presetIndex = doc["index"];
+                          if (presetIndex < 0 || presetIndex >= Config::PresetsConfig::MAX_PRESETS) {
+                              request->send(400, "application/json",
+                                            R"({"success":false,"error":"Invalid preset index"})");
+                              return;
+                          }
+                      } else if (doc.containsKey("name")) {
+                          const char *presetName = doc["name"];
+                          presetIndex = config.findPresetByName(presetName);
+                          if (presetIndex < 0) {
+                              request->send(404, "application/json",
+                                            R"({"success":false,"error":"Preset not found"})");
+                              return;
+                          }
+                      } else {
+                          request->send(400, "application/json",
+                                        R"({"success":false,"error":"Index or name required"})");
+                          return;
+                      }
+
+                      // Load the preset
+                      Config::PresetsConfig presetsConfig = config.loadPresetsConfig();
+                      const Config::Preset &preset = presetsConfig.presets[presetIndex];
+
+                      if (!preset.valid) {
+                          request->send(404, "application/json",
+                                        R"({"success":false,"error":"Preset slot is empty"})");
+                          return;
+                      }
+
+                      // Queue preset load through ShowController for thread safety
+                      if (showController.queuePresetLoad(preset)) {
+                          StaticJsonDocument<128> responseDoc;
+                          responseDoc["success"] = true;
+                          responseDoc["name"] = preset.name;
+                          responseDoc["show_name"] = preset.show_name;
+
+                          String response;
+                          serializeJson(responseDoc, response);
+                          request->send(200, "application/json", response);
+                      } else {
+                          request->send(503, "application/json",
+                                        R"({"success":false,"error":"Queue full"})");
+                      }
+                  }
+              }
+    );
+
+    // DELETE /api/presets - Delete a preset by index or name
+    server.on("/api/presets", HTTP_DELETE,
+              []([[maybe_unused]] AsyncWebServerRequest *request) {
+              },
+              nullptr,
+              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
+                     [[maybe_unused]] size_t total) {
+                  if (index == 0) {
+                      StaticJsonDocument<256> doc;
+                      DeserializationError error = deserializeJson(doc, data, len);
+
+                      if (error) {
+                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          return;
+                      }
+
+                      int presetIndex = -1;
+
+                      // Find preset by index or name
+                      if (doc.containsKey("index")) {
+                          presetIndex = doc["index"];
+                          if (presetIndex < 0 || presetIndex >= Config::PresetsConfig::MAX_PRESETS) {
+                              request->send(400, "application/json",
+                                            R"({"success":false,"error":"Invalid preset index"})");
+                              return;
+                          }
+                      } else if (doc.containsKey("name")) {
+                          const char *presetName = doc["name"];
+                          presetIndex = config.findPresetByName(presetName);
+                          if (presetIndex < 0) {
+                              request->send(404, "application/json",
+                                            R"({"success":false,"error":"Preset not found"})");
+                              return;
+                          }
+                      } else {
+                          request->send(400, "application/json",
+                                        R"({"success":false,"error":"Index or name required"})");
+                          return;
+                      }
+
+                      // Delete the preset
+                      if (config.deletePreset(presetIndex)) {
+                          request->send(200, "application/json", R"({"success":true})");
+                      } else {
+                          request->send(500, "application/json",
+                                        R"({"success":false,"error":"Failed to delete preset"})");
+                      }
+                  }
+              }
+    );
+
     // POST /api/restart - Restart the device
     server.on("/api/restart", HTTP_POST, [](AsyncWebServerRequest *request) {
         request->send(200, "application/json", R"({"success":true,"message":"Restarting..."})");
