@@ -219,6 +219,14 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
                 layoutConfig.mirror = cmd.layout_mirror;
                 layoutConfig.dead_leds = cmd.layout_dead_leds;
                 config.saveLayoutConfig(layoutConfig);
+
+                // Restart current show to pick up new layout dimensions
+                Config::ShowConfig showConfig = config.loadShowConfig();
+                std::unique_ptr<Show::Show> newShow = factory.createShow(currentShowName, showConfig.params_json);
+                if (newShow != nullptr) {
+                    currentShow = std::move(newShow);
+                    Serial.printf("ShowController: Restarted show '%s' with updated layout\n", currentShowName);
+                }
             } else {
                 Serial.println("ERROR: Layout pointers not set!");
             }
