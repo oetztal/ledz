@@ -49,7 +49,7 @@ namespace Show {
         Strip::PixelIndex spark_range;
 
     public:
-        Fire(float cooling = 1.0f, float spread = 1.0f, float ignition = 1.0f, float spark_amount = 0.5f,
+        Fire(float cooling = 0.1f, float spread = 10.0f, float ignition = .5f, float spark_amount = 0.5f,
              std::vector<float> weights = {1.0f}, Strip::PixelIndex start_offset = 5,
              Strip::PixelIndex spark_range = 5);
 

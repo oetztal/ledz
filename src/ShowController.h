@@ -27,8 +27,8 @@
 enum class ShowCommandType {
     SET_SHOW, // Change current show
     SET_BRIGHTNESS, // Change brightness
-    TOGGLE_AUTO_CYCLE, // Enable/disable auto-cycling
-    SET_LAYOUT // Change strip layout
+    SET_LAYOUT, // Change strip layout
+    LOAD_PRESET // Load a preset (show + params + layout)
 };
 
 /**
@@ -39,7 +39,6 @@ struct ShowCommand {
     char show_name[32];
     char params_json[256]; // JSON parameters for show
     uint8_t brightness_value;
-    bool auto_cycle_enabled;
     bool layout_reverse;
     bool layout_mirror;
     int16_t layout_dead_leds;
@@ -63,7 +62,6 @@ private:
     std::unique_ptr<Show::Show> currentShow;
     char currentShowName[32];
     uint8_t brightness;
-    bool autoCycle;
 
     // base strip and strip layout
     std::unique_ptr<Strip::Strip> baseStrip;
@@ -106,13 +104,6 @@ public:
     bool queueBrightnessChange(uint8_t brightness);
 
     /**
-     * Queue auto-cycle toggle command (called from Core 1 - webserver)
-     * @param enabled Enable/disable auto-cycling
-     * @return true if queued successfully
-     */
-    bool queueAutoCycleToggle(bool enabled);
-
-    /**
      * Queue layout change command (called from Core 1 - webserver)
      * @param reverse Reverse LED order
      * @param mirror Mirror LED pattern
@@ -120,6 +111,13 @@ public:
      * @return true if queued successfully
      */
     bool queueLayoutChange(bool reverse, bool mirror, int16_t dead_leds);
+
+    /**
+     * Queue preset load command (called from Core 1 - webserver)
+     * @param preset Preset to load
+     * @return true if queued successfully
+     */
+    bool queuePresetLoad(const Config::Preset &preset);
 
     /**
      * Set layout and base strip pointers for runtime reconfiguration
@@ -144,12 +142,6 @@ public:
      * @return Show name
      */
     const char *getCurrentShowName() const { return currentShowName; }
-
-    /**
-     * Get auto-cycle status
-     * @return true if auto-cycling enabled
-     */
-    bool isAutoCycleEnabled() const { return autoCycle; }
 
     /**
      * Clear the LED strip (turn all LEDs off)
