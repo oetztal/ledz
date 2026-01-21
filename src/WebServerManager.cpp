@@ -727,6 +727,9 @@ void WebServerManager::setupAPIRoutes() {
         doc["chip_revision"] = ESP.getChipRevision();
         doc["chip_cores"] = ESP.getChipCores();
         doc["cpu_freq_mhz"] = ESP.getCpuFreqMHz();
+#ifdef ARDUINO
+        doc["cpu_temp"] = temperatureRead();
+#endif
 
         // Memory info
         doc["free_heap"] = ESP.getFreeHeap();

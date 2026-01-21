@@ -66,7 +66,8 @@
                     createRow('Chip Model', data.chip_model) +
                     createRow('Chip Revision', data.chip_revision) +
                     createRow('CPU Cores', data.chip_cores) +
-                    createRow('CPU Frequency', data.cpu_freq_mhz + ' MHz');
+                    createRow('CPU Frequency', data.cpu_freq_mhz + ' MHz') +
+                    (data.cpu_temp ? createRow('CPU Temp', data.cpu_temp.toFixed(1) + ' °C') : '');
 
                 const heapUsage = ((data.heap_size - data.free_heap) / data.heap_size * 100).toFixed(1);
                 document.getElementById('memoryInfo').innerHTML =
