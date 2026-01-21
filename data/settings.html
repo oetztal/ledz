@@ -29,7 +29,7 @@
                 <button class="btn btn-primary" onclick="updateDeviceName()">Update Name</button>
 
                 <div class="info-box">
-                    <strong>Current:</strong> <span id="currentDeviceName">Loading...</span>
+                    <strong>Current: </strong><span id="currentDeviceName">Loading...</span>
                 </div>
             </div>
 
@@ -51,8 +51,8 @@
                 <button class="btn btn-primary" onclick="updateHardwareSettings()">Update Hardware Settings</button>
 
                 <div class="info-box">
-                    <strong>Current:</strong> <span id="currentNumPixels">Loading...</span> LEDs on pin <span id="currentLedPin">Loading...</span><br>
-                    <strong>Note:</strong> The device will restart after updating these settings.
+                    <strong>Current: </strong><span id="currentNumPixels">Loading...</span> LEDs on pin <span id="currentLedPin">Loading...</span><br>
+                    <strong>Note: </strong>The device will restart after updating these settings.
                 </div>
             </div>
 
@@ -61,9 +61,9 @@
                 <p>Check for and install firmware updates from GitHub releases.</p>
 
                 <div class="info-box" id="otaCurrentVersion">
-                    <strong>Current Version:</strong> <span id="currentVersion">Loading...</span><br>
-                    <strong>Partition:</strong> <span id="currentPartition">Loading...</span><br>
-                    <strong>Build Date:</strong> <span id="buildDate">Loading...</span>
+                    <strong>Current Version: </strong><span id="currentVersion">Loading...</span><br>
+                    <strong>Partition: </strong><span id="currentPartition">Loading...</span><br>
+                    <strong>Build Date: </strong><span id="buildDate">Loading...</span>
                 </div>
 
                 <button class="btn btn-primary" onclick="checkForUpdates()" id="checkUpdateBtn">Check for Updates</button>
@@ -71,8 +71,8 @@
                 <div id="updateAvailable" style="display: none; margin-top: 15px;">
                     <div class="success-box">
                         <strong>Update Available!</strong><br>
-                        <strong>Version:</strong> <span id="latestVersion"></span><br>
-                        <strong>Size:</strong> <span id="updateSize"></span><br>
+                        <strong>Version: </strong><span id="latestVersion"></span><br>
+                        <strong>Size: </strong><span id="updateSize"></span><br>
                         <strong>Release Notes:</strong><br>
                         <div id="releaseNotes" style="margin-top: 5px; white-space: pre-wrap; font-size: 12px;"></div>
                     </div>
@@ -87,7 +87,7 @@
                 </div>
 
                 <div class="warning-box">
-                    <strong>Note:</strong> The device will restart after installing an update. Make sure you have a stable WiFi connection before updating.
+                    <strong>Note: </strong>The device will restart after installing an update. Make sure you have a stable WiFi connection before updating.
                 </div>
             </div>
 
@@ -108,7 +108,7 @@
                 <button class="btn btn-primary" onclick="updateWiFi()">Update WiFi</button>
 
                 <div class="info-box">
-                    <strong>Note:</strong> The device will restart after updating WiFi credentials. You will need to reconnect to the new network to access the device.
+                    <strong>Note: </strong>The device will restart after updating WiFi credentials. You will need to reconnect to the new network to access the device.
                 </div>
             </div>
 
@@ -119,7 +119,7 @@
                 <button class="btn btn-danger" onclick="factoryReset()">Factory Reset</button>
 
                 <div class="warning-box">
-                    <strong>Warning:</strong> This will permanently erase all settings including:
+                    <strong>Warning: </strong>This will permanently erase all settings including:
                     <ul style="margin-top: 8px; margin-left: 20px;">
                         <li>WiFi configuration</li>
                         <li>Show settings and parameters</li>
