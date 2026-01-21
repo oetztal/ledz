@@ -29,7 +29,7 @@
                 <button class="btn btn-primary" onclick="updateDeviceName()">Update Name</button>
 
                 <div class="info-box">
-                    <strong>Current:</strong>&nbsp;<span id="currentDeviceName">Loading...</span>
+                    <strong>Current: </strong><span id="currentDeviceName">Loading...</span>
                 </div>
             </div>
 
@@ -51,8 +51,8 @@
                 <button class="btn btn-primary" onclick="updateHardwareSettings()">Update Hardware Settings</button>
 
                 <div class="info-box">
-                    <strong>Current:</strong>&nbsp;<span id="currentNumPixels">Loading...</span> LEDs on pin <span id="currentLedPin">Loading...</span><br>
-                    <strong>Note:</strong>The device will restart after updating these settings.
+                    <strong>Current: </strong><span id="currentNumPixels">Loading...</span> LEDs on pin <span id="currentLedPin">Loading...</span><br>
+                    <strong>Note: </strong>The device will restart after updating these settings.
                 </div>
             </div>
 
@@ -61,9 +61,9 @@
                 <p>Check for and install firmware updates from GitHub releases.</p>
 
                 <div class="info-box" id="otaCurrentVersion">
-                    <strong>Current Version:</strong>&nbsp;<span id="currentVersion">Loading...</span><br>
-                    <strong>Partition:</strong>&nbsp;<span id="currentPartition">Loading...</span><br>
-                    <strong>Build Date:</strong>&nbsp;<span id="buildDate">Loading...</span>
+                    <strong>Current Version: </strong><span id="currentVersion">Loading...</span><br>
+                    <strong>Partition: </strong><span id="currentPartition">Loading...</span><br>
+                    <strong>Build Date: </strong><span id="buildDate">Loading...</span>
                 </div>
 
                 <button class="btn btn-primary" onclick="checkForUpdates()" id="checkUpdateBtn">Check for Updates</button>
@@ -71,8 +71,8 @@
                 <div id="updateAvailable" style="display: none; margin-top: 15px;">
                     <div class="success-box">
                         <strong>Update Available!</strong><br>
-                        <strong>Version:</strong>&nbsp;<span id="latestVersion"></span><br>
-                        <strong>Size:</strong>&nbsp;<span id="updateSize"></span><br>
+                        <strong>Version: </strong><span id="latestVersion"></span><br>
+                        <strong>Size: </strong><span id="updateSize"></span><br>
                         <strong>Release Notes:</strong><br>
                         <div id="releaseNotes" style="margin-top: 5px; white-space: pre-wrap; font-size: 12px;"></div>
                     </div>
