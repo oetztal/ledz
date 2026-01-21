@@ -102,6 +102,50 @@ namespace Config {
     };
 
     /**
+     * Timer action types
+     */
+    enum class TimerAction : uint8_t {
+        LOAD_PRESET = 0,  // Load a preset by index
+        TURN_OFF = 1      // Turn off LEDs (Solid show with black color)
+    };
+
+    /**
+     * Timer types
+     */
+    enum class TimerType : uint8_t {
+        COUNTDOWN = 0,    // One-shot countdown timer (duration-based)
+        ALARM_ONCE = 1,   // One-shot alarm at wall-clock time
+        ALARM_DAILY = 2   // Recurring daily alarm
+    };
+
+    /**
+     * Timer entry structure
+     */
+    struct TimerEntry {
+        bool enabled;
+        TimerType type;
+        TimerAction action;
+        uint8_t preset_index;
+        uint32_t target_time;      // epoch for COUNTDOWN/ALARM_ONCE, seconds-since-midnight for ALARM_DAILY
+        uint32_t duration_seconds; // original duration for countdown display
+
+        TimerEntry() : enabled(false), type(TimerType::COUNTDOWN),
+                       action(TimerAction::TURN_OFF), preset_index(0),
+                       target_time(0), duration_seconds(0) {}
+    };
+
+    /**
+     * Timers configuration structure
+     */
+    struct TimersConfig {
+        static constexpr uint8_t MAX_TIMERS = 4;
+        TimerEntry timers[MAX_TIMERS];
+        int8_t timezone_offset_hours;
+
+        TimersConfig() : timezone_offset_hours(0) {}
+    };
+
+    /**
      * Configuration Manager
      * Handles persistent storage using ESP32 Preferences (NVS)
      */
@@ -241,6 +285,18 @@ namespace Config {
          * @return Preset index (0-7) or -1 if all slots full
          */
         int getNextPresetSlot();
+
+        /**
+         * Load timers configuration from NVS
+         * @return TimersConfig structure
+         */
+        TimersConfig loadTimersConfig();
+
+        /**
+         * Save timers configuration to NVS
+         * @param config Timers configuration to save
+         */
+        void saveTimersConfig(const TimersConfig &config);
     };
 } // namespace Config
 

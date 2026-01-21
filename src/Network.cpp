@@ -187,6 +187,11 @@ void Network::startSTA(const char *ssid, const char *password) {
 
         Serial.print("NTP time: ");
         Serial.println(ntpClient.getFormattedTime());
+
+        // Initialize timer scheduler
+        timerScheduler = std::make_unique<TimerScheduler>(config, showController);
+        timerScheduler->begin();
+        timerScheduler->setNtpAvailable(true);
     } else {
         Serial.println("\nConnection failed");
     }
@@ -309,6 +314,11 @@ void Network::configureUsingAPMode() {
             Serial.print(" - ");
             Serial.println(result ? "success" : "failed");
             lastNtpUpdate = ntpClient.getEpochTime();
+        }
+
+        // Check timers
+        if (timerScheduler) {
+            timerScheduler->checkTimers(ntpClient.getEpochTime());
         }
     }
 #endif

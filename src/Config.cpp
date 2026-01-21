@@ -372,4 +372,76 @@ namespace Config {
 #endif
         return -1;
     }
+
+    TimersConfig ConfigManager::loadTimersConfig() {
+        TimersConfig timersConfig;
+
+#ifdef ARDUINO
+        prefs.begin(NAMESPACE, true); // Read-only mode
+
+        timersConfig.timezone_offset_hours = prefs.getChar("tz_offset", 0);
+
+        char key[20];
+        for (uint8_t i = 0; i < TimersConfig::MAX_TIMERS; i++) {
+            snprintf(key, sizeof(key), "timer_%u_enabled", i);
+            timersConfig.timers[i].enabled = prefs.getBool(key, false);
+
+            if (timersConfig.timers[i].enabled) {
+                snprintf(key, sizeof(key), "timer_%u_type", i);
+                timersConfig.timers[i].type = static_cast<TimerType>(prefs.getUChar(key, 0));
+
+                snprintf(key, sizeof(key), "timer_%u_action", i);
+                timersConfig.timers[i].action = static_cast<TimerAction>(prefs.getUChar(key, 0));
+
+                snprintf(key, sizeof(key), "timer_%u_preset", i);
+                timersConfig.timers[i].preset_index = prefs.getUChar(key, 0);
+
+                snprintf(key, sizeof(key), "timer_%u_target", i);
+                timersConfig.timers[i].target_time = prefs.getULong(key, 0);
+
+                snprintf(key, sizeof(key), "timer_%u_dur", i);
+                timersConfig.timers[i].duration_seconds = prefs.getULong(key, 0);
+            }
+        }
+
+        prefs.end();
+#endif
+
+        return timersConfig;
+    }
+
+    void ConfigManager::saveTimersConfig(const TimersConfig &config) {
+#ifdef ARDUINO
+        prefs.begin(NAMESPACE, false); // Read-write mode
+
+        prefs.putChar("tz_offset", config.timezone_offset_hours);
+
+        char key[20];
+        for (uint8_t i = 0; i < TimersConfig::MAX_TIMERS; i++) {
+            snprintf(key, sizeof(key), "timer_%u_enabled", i);
+            prefs.putBool(key, config.timers[i].enabled);
+
+            if (config.timers[i].enabled) {
+                snprintf(key, sizeof(key), "timer_%u_type", i);
+                prefs.putUChar(key, static_cast<uint8_t>(config.timers[i].type));
+
+                snprintf(key, sizeof(key), "timer_%u_action", i);
+                prefs.putUChar(key, static_cast<uint8_t>(config.timers[i].action));
+
+                snprintf(key, sizeof(key), "timer_%u_preset", i);
+                prefs.putUChar(key, config.timers[i].preset_index);
+
+                snprintf(key, sizeof(key), "timer_%u_target", i);
+                prefs.putULong(key, config.timers[i].target_time);
+
+                snprintf(key, sizeof(key), "timer_%u_dur", i);
+                prefs.putULong(key, config.timers[i].duration_seconds);
+            }
+        }
+
+        prefs.end();
+
+        Serial.println("Config: Saved timers configuration");
+#endif
+    }
 } // namespace Config

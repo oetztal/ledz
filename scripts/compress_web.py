@@ -87,7 +87,7 @@ def minify_html(html: str) -> str:
     return html
 
 
-def generate_header(name: str, data: bytes) -> str:
+def generate_header(name: str, data: bytes, original_size: int, minified_size: int) -> str:
     """Generate C++ header file with compressed data."""
     var_name = name.upper()
 
@@ -108,7 +108,7 @@ def generate_header(name: str, data: bytes) -> str:
 
 #include <Arduino.h>
 
-// Original size: {len(data)} bytes (gzipped)
+// Original size: {original_size}, minified: {minified_size}, minified + compressed: {len(data)} bytes
 const uint8_t {var_name}_GZ[] PROGMEM = {{
 {',\n'.join(hex_lines)}
 }};
@@ -143,7 +143,7 @@ def process_file(file_path: Path) -> tuple[str, int, int]:
 
     # Generate header file
     name = file_path.stem.replace('-', '_').replace('.', '_')
-    header = generate_header(name, compressed)
+    header = generate_header(name, compressed, original_size, minified_size)
 
     # Write header file
     header_path = GENERATED_DIR / f"{name}_gz.h"
