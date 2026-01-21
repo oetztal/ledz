@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ledz LED controller</title>
     <link rel="stylesheet" href="/common.css">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 </head>
 <body>
     <div class="container">
@@ -26,6 +27,10 @@
                 <div class="status-item">
                     <div class="status-label">Brightness</div>
                     <div class="status-value" id="currentBrightness">-</div>
+                </div>
+                <div class="status-item" id="timerStatusItem" style="display: none;">
+                    <div class="status-label">Timers</div>
+                    <div class="status-value" id="timerStatus">-</div>
                 </div>
             </div>
 
@@ -310,6 +315,7 @@
 
         <div style="display: flex; gap: 10px; margin-top: 20px;">
             <a href="/settings" class="about-link" style="flex: 1; text-align: center;">Settings</a>
+            <a href="/timers" class="about-link" style="flex: 1; text-align: center;">Timers</a>
             <a href="/about" class="about-link" style="flex: 1; text-align: center;">Device Info</a>
         </div>
     </div>
@@ -1138,6 +1144,83 @@
 
         // Update status periodically
         setInterval(updateStatus, 10000);
+
+        // Timer status display
+        let cachedTimers = [];
+        let timersFetchedAt = 0;
+
+        function formatTime(seconds) {
+            if (seconds <= 0) return '0s';
+            if (seconds < 60) {
+                return `${seconds}s`;
+            } else if (seconds < 3600) {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+            } else {
+                const hours = Math.floor(seconds / 3600);
+                const mins = Math.floor((seconds % 3600) / 60);
+                return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+            }
+        }
+
+        function formatTimeOfDay(secondsSinceMidnight) {
+            const hours = Math.floor(secondsSinceMidnight / 3600);
+            const mins = Math.floor((secondsSinceMidnight % 3600) / 60);
+            return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+        }
+
+        async function fetchTimers() {
+            try {
+                const response = await fetch('/api/timers');
+                const data = await response.json();
+                cachedTimers = (data.timers || []).filter(t => t.enabled);
+                timersFetchedAt = Date.now();
+                updateTimerDisplay();
+            } catch (error) {
+                console.error('Failed to load timers:', error);
+            }
+        }
+
+        function updateTimerDisplay() {
+            const timerStatusItem = document.getElementById('timerStatusItem');
+            const timerStatus = document.getElementById('timerStatus');
+            const elapsedSeconds = Math.floor((Date.now() - timersFetchedAt) / 1000);
+
+            // Filter out expired timers
+            const activeTimers = cachedTimers.filter(t => {
+                if (t.type_name === 'alarm_daily') return true;
+                return t.remaining_seconds - elapsedSeconds > 0;
+            });
+
+            if (activeTimers.length === 0) {
+                timerStatusItem.style.display = 'none';
+                if (cachedTimers.length > 0) {
+                    // A timer may have expired, refresh from backend
+                    cachedTimers = [];
+                    fetchTimers();
+                }
+            } else {
+                timerStatusItem.style.display = 'block';
+                const timer = activeTimers[0];
+                const actionText = timer.action === 0 ? 'Preset' : 'Off';
+                let timeInfo = '';
+                switch (timer.type_name) {
+                    case 'countdown':
+                        const remaining = Math.max(0, timer.remaining_seconds - elapsedSeconds);
+                        timeInfo = formatTime(remaining);
+                        break;
+                    case 'alarm_daily':
+                        timeInfo = formatTimeOfDay(timer.target_time);
+                        break;
+                }
+                const countSuffix = activeTimers.length > 1 ? ` (+${activeTimers.length - 1})` : '';
+                timerStatus.textContent = `${actionText} ${timeInfo}${countSuffix}`;
+            }
+        }
+
+        fetchTimers();
+        setInterval(updateTimerDisplay, 1000);
     </script>
 </body>
 </html>

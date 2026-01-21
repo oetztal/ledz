@@ -87,7 +87,7 @@ def minify_html(html: str) -> str:
     return html
 
 
-def generate_header(name: str, data: bytes) -> str:
+def generate_header(name: str, data: bytes, original_size: int, minified_size: int) -> str:
     """Generate C++ header file with compressed data."""
     var_name = name.upper()
 
@@ -108,7 +108,7 @@ def generate_header(name: str, data: bytes) -> str:
 
 #include <Arduino.h>
 
-// Original size: {len(data)} bytes (gzipped)
+// Original size: {original_size}, minified: {minified_size}, minified + compressed: {len(data)} bytes
 const uint8_t {var_name}_GZ[] PROGMEM = {{
 {',\n'.join(hex_lines)}
 }};
@@ -133,6 +133,9 @@ def process_file(file_path: Path) -> tuple[str, int, int]:
     # Minify based on file type
     if file_path.suffix == '.css':
         minified = minify_css(content)
+    elif file_path.suffix == '.svg':
+        # Simple SVG minification: collapse whitespace
+        minified = re.sub(r'\s+', ' ', content).strip()
     else:
         minified = minify_html(content)
     minified_size = len(minified.encode('utf-8'))
@@ -143,7 +146,7 @@ def process_file(file_path: Path) -> tuple[str, int, int]:
 
     # Generate header file
     name = file_path.stem.replace('-', '_').replace('.', '_')
-    header = generate_header(name, compressed)
+    header = generate_header(name, compressed, original_size, minified_size)
 
     # Write header file
     header_path = GENERATED_DIR / f"{name}_gz.h"
@@ -173,8 +176,8 @@ def main():
         print("Please create web files in the data/ directory.")
         sys.exit(1)
 
-    # Process all HTML and CSS files
-    web_files = list(DATA_DIR.glob("*.html")) + list(DATA_DIR.glob("*.css"))
+    # Process all HTML, CSS and SVG files
+    web_files = list(DATA_DIR.glob("*.html")) + list(DATA_DIR.glob("*.css")) + list(DATA_DIR.glob("*.svg"))
     if not web_files:
         print(f"Warning: No HTML/CSS files found in {DATA_DIR}")
         sys.exit(0)

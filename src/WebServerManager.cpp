@@ -9,6 +9,7 @@
 #include "DeviceId.h"
 #include "OTAUpdater.h"
 #include "OTAConfig.h"
+#include "TimerScheduler.h"
 
 #ifdef ARDUINO
 #include <ArduinoJson.h>
@@ -18,7 +19,9 @@
 #include "generated/control_gz.h"
 #include "generated/about_gz.h"
 #include "generated/settings_gz.h"
+#include "generated/timers_gz.h"
 #include "generated/common_gz.h"
+#include "generated/favicon_gz.h"
 #endif
 
 // Helper functions to send gzipped responses
@@ -32,6 +35,13 @@ static void sendGzippedHtml(AsyncWebServerRequest *request, const uint8_t *data,
 
 static void sendGzippedCss(AsyncWebServerRequest *request, const uint8_t *data, size_t len) {
     AsyncWebServerResponse *response = request->beginResponse(200, "text/css", data, len);
+    response->addHeader("Content-Encoding", "gzip");
+    response->addHeader("Cache-Control", "max-age=86400");
+    request->send(response);
+}
+
+static void sendGzippedSvg(AsyncWebServerRequest *request, const uint8_t *data, size_t len) {
+    AsyncWebServerResponse *response = request->beginResponse(200, "image/svg+xml", data, len);
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Cache-Control", "max-age=86400");
     request->send(response);
@@ -74,6 +84,11 @@ void WebServerManager::setupConfigRoutes() {
         sendGzippedCss(request, COMMON_GZ, COMMON_GZ_LEN);
     });
 
+    // Serve favicon (gzip compressed)
+    server.on("/favicon.svg", HTTP_GET, [](AsyncWebServerRequest *request) {
+        sendGzippedSvg(request, FAVICON_GZ, FAVICON_GZ_LEN);
+    });
+
     // Handle WiFi configuration POST
     server.on("/api/wifi", HTTP_POST,
               []([[maybe_unused]] AsyncWebServerRequest *request) {
@@ -99,6 +114,11 @@ void WebServerManager::setupAPIRoutes() {
     // Serve common CSS (gzip compressed)
     server.on("/common.css", HTTP_GET, [](AsyncWebServerRequest *request) {
         sendGzippedCss(request, COMMON_GZ, COMMON_GZ_LEN);
+    });
+
+    // Serve favicon (gzip compressed)
+    server.on("/favicon.svg", HTTP_GET, [](AsyncWebServerRequest *request) {
+        sendGzippedSvg(request, FAVICON_GZ, FAVICON_GZ_LEN);
     });
 
     // GET /api/status - Get device status
@@ -738,6 +758,316 @@ void WebServerManager::setupAPIRoutes() {
         request->send(200, "application/json", response);
     });
 
+    // GET /api/timers - List all timers with remaining time
+    server.on("/api/timers", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        TimerScheduler *scheduler = network.getTimerScheduler();
+        if (!scheduler) {
+            request->send(503, "application/json", R"({"success":false,"error":"Timer scheduler not available"})");
+            return;
+        }
+
+        uint32_t currentEpoch = network.getCurrentEpoch();
+        const Config::TimersConfig &timersConfig = scheduler->getTimersConfig();
+
+        StaticJsonDocument<1024> doc;
+        doc["timezone_offset_hours"] = timersConfig.timezone_offset_hours;
+        doc["current_epoch"] = currentEpoch;
+        
+        // Include local time as seconds since midnight for UI convenience
+        if (currentEpoch != 0) {
+            doc["local_seconds_since_midnight"] = scheduler->getSecondsSinceMidnight(currentEpoch);
+        } else {
+            doc["local_seconds_since_midnight"] = 0;
+        }
+
+        JsonArray timers = doc.createNestedArray("timers");
+        for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
+            const Config::TimerEntry &timer = timersConfig.timers[i];
+            JsonObject timerObj = timers.createNestedObject();
+            timerObj["index"] = i;
+            timerObj["enabled"] = timer.enabled;
+
+            if (timer.enabled) {
+                timerObj["type"] = static_cast<int>(timer.type);
+                timerObj["action"] = static_cast<int>(timer.action);
+                timerObj["preset_index"] = timer.preset_index;
+                timerObj["target_time"] = timer.target_time;
+                timerObj["duration_seconds"] = timer.duration_seconds;
+                timerObj["remaining_seconds"] = scheduler->getRemainingSeconds(i, currentEpoch);
+
+                // Add type name for UI convenience
+                switch (timer.type) {
+                    case Config::TimerType::COUNTDOWN:
+                        timerObj["type_name"] = "countdown";
+                        break;
+                    case Config::TimerType::ALARM_DAILY:
+                        timerObj["type_name"] = "alarm_daily";
+                        break;
+                }
+            }
+        }
+
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+
+    // POST /api/timers/countdown - Set a countdown timer
+    server.on("/api/timers/countdown", HTTP_POST,
+              []([[maybe_unused]] AsyncWebServerRequest *request) {
+              },
+              nullptr,
+              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
+                     [[maybe_unused]] size_t total) {
+                  if (index == 0) {
+                      TimerScheduler *scheduler = network.getTimerScheduler();
+                      if (!scheduler) {
+                          request->send(503, "application/json",
+                                        R"({"success":false,"error":"Timer scheduler not available"})");
+                          return;
+                      }
+
+                      StaticJsonDocument<256> doc;
+                      DeserializationError error = deserializeJson(doc, data, len);
+
+                      if (error) {
+                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          return;
+                      }
+
+                      // Required: duration in seconds
+                      if (!doc.containsKey("duration")) {
+                          request->send(400, "application/json",
+                                        R"({"success":false,"error":"Duration required"})");
+                          return;
+                      }
+
+                      uint32_t duration = doc["duration"];
+                      if (duration == 0 || duration > 86400 * 7) { // Max 7 days
+                          request->send(400, "application/json",
+                                        R"({"success":false,"error":"Invalid duration"})");
+                          return;
+                      }
+
+                      // Optional: index (defaults to first available slot)
+                      int timerIndex = doc["index"] | -1;
+                      if (timerIndex == -1) {
+                          // Find first available slot
+                          const Config::TimersConfig &timersConfig = scheduler->getTimersConfig();
+                          for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
+                              if (!timersConfig.timers[i].enabled) {
+                                  timerIndex = i;
+                                  break;
+                              }
+                          }
+                          if (timerIndex == -1) {
+                              request->send(400, "application/json",
+                                            R"({"success":false,"error":"All timer slots are full"})");
+                              return;
+                          }
+                      }
+
+                      // Optional: action (defaults to TURN_OFF)
+                      Config::TimerAction action = Config::TimerAction::TURN_OFF;
+                      if (doc.containsKey("action")) {
+                          int actionInt = doc["action"];
+                          if (actionInt == 0) action = Config::TimerAction::LOAD_PRESET;
+                          else action = Config::TimerAction::TURN_OFF;
+                      }
+
+                      // Optional: preset_index (only used if action is LOAD_PRESET)
+                      uint8_t presetIndex = doc["preset_index"] | 0;
+
+                      uint32_t currentEpoch = network.getCurrentEpoch();
+                      if (scheduler->setCountdown(timerIndex, duration, action, presetIndex, currentEpoch)) {
+                          StaticJsonDocument<128> responseDoc;
+                          responseDoc["success"] = true;
+                          responseDoc["index"] = timerIndex;
+                          responseDoc["remaining_seconds"] = duration;
+
+                          String response;
+                          serializeJson(responseDoc, response);
+                          request->send(200, "application/json", response);
+                      } else {
+                          request->send(500, "application/json",
+                                        R"({"success":false,"error":"Failed to set timer"})");
+                      }
+                  }
+              }
+    );
+
+    // POST /api/timers/alarm - Set a daily recurring alarm
+    server.on("/api/timers/alarm", HTTP_POST,
+              []([[maybe_unused]] AsyncWebServerRequest *request) {
+              },
+              nullptr,
+              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
+                     [[maybe_unused]] size_t total) {
+                  if (index == 0) {
+                      TimerScheduler *scheduler = network.getTimerScheduler();
+                      if (!scheduler) {
+                          request->send(503, "application/json",
+                                        R"({"success":false,"error":"Timer scheduler not available"})");
+                          return;
+                      }
+
+                      StaticJsonDocument<256> doc;
+                      DeserializationError error = deserializeJson(doc, data, len);
+
+                      if (error) {
+                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          return;
+                      }
+
+                      // Required: hour and minute for the alarm time
+                      if (!doc.containsKey("hour") || !doc.containsKey("minute")) {
+                          request->send(400, "application/json",
+                                        R"({"success":false,"error":"Hour and minute required"})");
+                          return;
+                      }
+
+                      uint8_t hour = doc["hour"];
+                      uint8_t minute = doc["minute"];
+                      if (hour > 23 || minute > 59) {
+                          request->send(400, "application/json",
+                                        R"({"success":false,"error":"Invalid time"})");
+                          return;
+                      }
+
+                      // Optional: index (defaults to first available slot)
+                      int timerIndex = doc["index"] | -1;
+                      if (timerIndex == -1) {
+                          const Config::TimersConfig &timersConfig = scheduler->getTimersConfig();
+                          for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
+                              if (!timersConfig.timers[i].enabled) {
+                                  timerIndex = i;
+                                  break;
+                              }
+                          }
+                          if (timerIndex == -1) {
+                              request->send(400, "application/json",
+                                            R"({"success":false,"error":"All timer slots are full"})");
+                              return;
+                          }
+                      }
+
+                      // Optional: action (defaults to TURN_OFF)
+                      Config::TimerAction action = Config::TimerAction::TURN_OFF;
+                      if (doc.containsKey("action")) {
+                          int actionInt = doc["action"];
+                          if (actionInt == 0) action = Config::TimerAction::LOAD_PRESET;
+                          else action = Config::TimerAction::TURN_OFF;
+                      }
+
+                      uint8_t presetIndex = doc["preset_index"] | 0;
+
+                      uint32_t secondsSinceMidnight = hour * 3600 + minute * 60;
+                      bool success = scheduler->setDailyAlarm(timerIndex, secondsSinceMidnight, action, presetIndex);
+
+                      if (success) {
+                          StaticJsonDocument<128> responseDoc;
+                          responseDoc["success"] = true;
+                          responseDoc["index"] = timerIndex;
+
+                          String response;
+                          serializeJson(responseDoc, response);
+                          request->send(200, "application/json", response);
+                      } else {
+                          request->send(500, "application/json",
+                                        R"({"success":false,"error":"Failed to set alarm"})");
+                      }
+                  }
+              }
+    );
+
+    // DELETE /api/timers - Cancel a timer by index
+    server.on("/api/timers", HTTP_DELETE,
+              []([[maybe_unused]] AsyncWebServerRequest *request) {
+              },
+              nullptr,
+              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
+                     [[maybe_unused]] size_t total) {
+                  if (index == 0) {
+                      TimerScheduler *scheduler = network.getTimerScheduler();
+                      if (!scheduler) {
+                          request->send(503, "application/json",
+                                        R"({"success":false,"error":"Timer scheduler not available"})");
+                          return;
+                      }
+
+                      StaticJsonDocument<128> doc;
+                      DeserializationError error = deserializeJson(doc, data, len);
+
+                      if (error) {
+                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          return;
+                      }
+
+                      if (!doc.containsKey("index")) {
+                          request->send(400, "application/json",
+                                        R"({"success":false,"error":"Timer index required"})");
+                          return;
+                      }
+
+                      int timerIndex = doc["index"];
+                      if (timerIndex < 0 || timerIndex >= Config::TimersConfig::MAX_TIMERS) {
+                          request->send(400, "application/json",
+                                        R"({"success":false,"error":"Invalid timer index"})");
+                          return;
+                      }
+
+                      if (scheduler->cancelTimer(timerIndex)) {
+                          request->send(200, "application/json", R"({"success":true})");
+                      } else {
+                          request->send(500, "application/json",
+                                        R"({"success":false,"error":"Failed to cancel timer"})");
+                      }
+                  }
+              }
+    );
+
+    // POST /api/timers/timezone - Set timezone offset
+    server.on("/api/timers/timezone", HTTP_POST,
+              []([[maybe_unused]] AsyncWebServerRequest *request) {
+              },
+              nullptr,
+              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
+                     [[maybe_unused]] size_t total) {
+                  if (index == 0) {
+                      TimerScheduler *scheduler = network.getTimerScheduler();
+                      if (!scheduler) {
+                          request->send(503, "application/json",
+                                        R"({"success":false,"error":"Timer scheduler not available"})");
+                          return;
+                      }
+
+                      StaticJsonDocument<128> doc;
+                      DeserializationError error = deserializeJson(doc, data, len);
+
+                      if (error) {
+                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          return;
+                      }
+
+                      if (!doc.containsKey("offset")) {
+                          request->send(400, "application/json",
+                                        R"({"success":false,"error":"Timezone offset required"})");
+                          return;
+                      }
+
+                      int8_t offset = doc["offset"];
+                      if (offset < -12 || offset > 14) {
+                          request->send(400, "application/json",
+                                        R"({"success":false,"error":"Invalid timezone offset"})");
+                          return;
+                      }
+
+                      scheduler->setTimezoneOffset(offset);
+                      request->send(200, "application/json", R"({"success":true})");
+                  }
+              }
+    );
+
     // GET /api/ota/check - Check for firmware updates
     server.on("/api/ota/check", HTTP_GET, [](AsyncWebServerRequest *request) {
         StaticJsonDocument<1024> doc;
@@ -862,6 +1192,11 @@ void WebServerManager::setupAPIRoutes() {
     // GET /settings - Settings page
     server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request) {
         sendGzippedHtml(request, SETTINGS_GZ, SETTINGS_GZ_LEN);
+    });
+
+    // GET /timers - Timers page
+    server.on("/timers", HTTP_GET, [](AsyncWebServerRequest *request) {
+        sendGzippedHtml(request, TIMERS_GZ, TIMERS_GZ_LEN);
     });
 #endif
 }

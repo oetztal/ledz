@@ -17,6 +17,7 @@
 
 #include "strip/Strip.h"
 #include "CaptivePortal.h"
+#include "TimerScheduler.h"
 
 // Forward declarations
 namespace Config {
@@ -47,6 +48,7 @@ private:
     Config::ConfigManager &config;
     ShowController &showController;
     std::unique_ptr<WebServerManager> webServer;
+    std::unique_ptr<TimerScheduler> timerScheduler;
     CaptivePortal captivePortal;
     TaskHandle_t taskHandle = nullptr;
 
@@ -97,6 +99,22 @@ public:
      * Get current network mode
      */
     [[nodiscard]] NetworkMode getMode() const { return mode; }
+
+    /**
+     * Get timer scheduler (for API access)
+     * @return Pointer to timer scheduler, or nullptr if not initialized
+     */
+    TimerScheduler* getTimerScheduler() { return timerScheduler.get(); }
+
+    /**
+     * Get current NTP epoch time
+     * @return Current epoch time, or 0 if NTP not available
+     */
+#ifdef ARDUINO
+    uint32_t getCurrentEpoch() const { return ntpClient.getEpochTime(); }
+#else
+    uint32_t getCurrentEpoch() const { return 0; }
+#endif
 };
 
 
