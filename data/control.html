@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ledz LED controller</title>
     <link rel="stylesheet" href="/common.css">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 </head>
 <body>
     <div class="container">
@@ -26,6 +27,10 @@
                 <div class="status-item">
                     <div class="status-label">Brightness</div>
                     <div class="status-value" id="currentBrightness">-</div>
+                </div>
+                <div class="status-item" id="timerStatusItem" style="display: none;">
+                    <div class="status-label">Timers</div>
+                    <div class="status-value" id="timerStatus">-</div>
                 </div>
             </div>
 
@@ -290,65 +295,6 @@
             </div>
 
             <div class="control-group">
-                <label class="control-label">Timers & Schedules</label>
-                <div id="timersSection">
-                    <div id="activeTimers" style="margin-bottom: 15px;">
-                        <div class="timer-list" id="timerList">
-                            <small style="color: #666;">No active timers</small>
-                        </div>
-                    </div>
-                    <div style="border-top: 1px solid #e9ecef; padding-top: 15px; margin-bottom: 15px;">
-                        <label class="control-label" style="font-size: 14px;">Quick Off Timer</label>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            <button class="small-button" onclick="setQuickTimer(15*60)">15 min</button>
-                            <button class="small-button" onclick="setQuickTimer(30*60)">30 min</button>
-                            <button class="small-button" onclick="setQuickTimer(60*60)">1 hour</button>
-                            <button class="small-button" onclick="setQuickTimer(120*60)">2 hours</button>
-                        </div>
-                    </div>
-                    <div style="border-top: 1px solid #e9ecef; padding-top: 15px; margin-bottom: 15px;">
-                        <label class="control-label" style="font-size: 14px;">Custom Countdown</label>
-                        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px;">
-                            <input type="number" id="countdownMinutes" min="1" max="10080" value="30" style="width: 80px; padding: 8px; border: 2px solid #e9ecef; border-radius: 8px;">
-                            <span>minutes</span>
-                        </div>
-                        <div style="margin-bottom: 10px;">
-                            <label style="font-size: 13px; color: #666;">Action:</label>
-                            <select id="countdownAction" style="padding: 8px; border: 2px solid #e9ecef; border-radius: 8px; width: 100%;">
-                                <option value="off">Turn Off LEDs</option>
-                                <option value="preset">Load Preset</option>
-                            </select>
-                        </div>
-                        <div id="countdownPresetSelect" style="display: none; margin-bottom: 10px;">
-                            <select id="countdownPreset" style="padding: 8px; border: 2px solid #e9ecef; border-radius: 8px; width: 100%;">
-                                <option value="">Select preset...</option>
-                            </select>
-                        </div>
-                        <button class="apply-button" onclick="setCustomCountdown()">Set Timer</button>
-                    </div>
-                    <div style="border-top: 1px solid #e9ecef; padding-top: 15px;">
-                        <label class="control-label" style="font-size: 14px;">Daily Alarm</label>
-                        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px;">
-                            <input type="time" id="dailyAlarmTime" value="07:00" style="padding: 8px; border: 2px solid #e9ecef; border-radius: 8px;">
-                        </div>
-                        <div style="margin-bottom: 10px;">
-                            <label style="font-size: 13px; color: #666;">Action:</label>
-                            <select id="dailyAlarmAction" style="padding: 8px; border: 2px solid #e9ecef; border-radius: 8px; width: 100%;">
-                                <option value="off">Turn Off LEDs</option>
-                                <option value="preset">Load Preset</option>
-                            </select>
-                        </div>
-                        <div id="dailyAlarmPresetSelect" style="display: none; margin-bottom: 10px;">
-                            <select id="dailyAlarmPreset" style="padding: 8px; border: 2px solid #e9ecef; border-radius: 8px; width: 100%;">
-                                <option value="">Select preset...</option>
-                            </select>
-                        </div>
-                        <button class="apply-button" onclick="setDailyAlarm()">Set Daily Alarm</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="control-group">
                 <label class="control-label">Presets</label>
                 <div id="presetsSection">
                     <select id="presetSelect" style="margin-bottom: 10px;">
@@ -369,6 +315,7 @@
 
         <div style="display: flex; gap: 10px; margin-top: 20px;">
             <a href="/settings" class="about-link" style="flex: 1; text-align: center;">Settings</a>
+            <a href="/timers" class="about-link" style="flex: 1; text-align: center;">Timers</a>
             <a href="/about" class="about-link" style="flex: 1; text-align: center;">Device Info</a>
         </div>
     </div>
@@ -1198,11 +1145,12 @@
         // Update status periodically
         setInterval(updateStatus, 10000);
 
-        // Timer management
-        let timersData = [];
+        // Timer status display
+        let cachedTimers = [];
+        let timersFetchedAt = 0;
 
-        // Format seconds as human-readable time
         function formatTime(seconds) {
+            if (seconds <= 0) return '0s';
             if (seconds < 60) {
                 return `${seconds}s`;
             } else if (seconds < 3600) {
@@ -1216,237 +1164,64 @@
             }
         }
 
-        // Format seconds since midnight as HH:MM
         function formatTimeOfDay(secondsSinceMidnight) {
             const hours = Math.floor(secondsSinceMidnight / 3600);
             const mins = Math.floor((secondsSinceMidnight % 3600) / 60);
             return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
         }
 
-        // Load and display timers
-        async function loadTimers() {
+        async function fetchTimers() {
             try {
                 const response = await fetch('/api/timers');
                 const data = await response.json();
-                timersData = data.timers || [];
-
-                const timerList = document.getElementById('timerList');
-                const activeTimers = timersData.filter(t => t.enabled);
-
-                if (activeTimers.length === 0) {
-                    timerList.innerHTML = '<small style="color: #666;">No active timers</small>';
-                } else {
-                    timerList.innerHTML = activeTimers.map(timer => {
-                        let description = '';
-                        let timeInfo = '';
-
-                        // Describe the action
-                        const actionText = timer.action === 0 ?
-                            `Load preset #${timer.preset_index}` : 'Turn off';
-
-                        // Describe the timer type
-                        switch (timer.type_name) {
-                            case 'countdown':
-                                timeInfo = `in ${formatTime(timer.remaining_seconds)}`;
-                                description = `${actionText} ${timeInfo}`;
-                                break;
-                            case 'alarm_once':
-                                timeInfo = `in ${formatTime(timer.remaining_seconds)}`;
-                                description = `${actionText} ${timeInfo}`;
-                                break;
-                            case 'alarm_daily':
-                                const alarmTime = formatTimeOfDay(timer.target_time);
-                                timeInfo = `daily at ${alarmTime}`;
-                                description = `${actionText} ${timeInfo}`;
-                                break;
-                        }
-
-                        return `
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #f8f9fa; border-radius: 6px; margin-bottom: 6px;">
-                                <span style="font-size: 14px;">${description}</span>
-                                <button onclick="cancelTimer(${timer.index})" style="background: #d9534f; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">Cancel</button>
-                            </div>
-                        `;
-                    }).join('');
-                }
+                cachedTimers = (data.timers || []).filter(t => t.enabled);
+                timersFetchedAt = Date.now();
+                updateTimerDisplay();
             } catch (error) {
                 console.error('Failed to load timers:', error);
             }
         }
 
-        // Set a quick off timer
-        async function setQuickTimer(seconds) {
-            try {
-                const response = await fetch('/api/timers/countdown', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        duration: seconds,
-                        action: 1 // TURN_OFF
-                    })
-                });
+        function updateTimerDisplay() {
+            const timerStatusItem = document.getElementById('timerStatusItem');
+            const timerStatus = document.getElementById('timerStatus');
+            const elapsedSeconds = Math.floor((Date.now() - timersFetchedAt) / 1000);
 
-                const result = await response.json();
-                if (result.success) {
-                    await loadTimers();
-                } else {
-                    alert('Failed to set timer: ' + (result.error || 'Unknown error'));
+            // Filter out expired timers
+            const activeTimers = cachedTimers.filter(t => {
+                if (t.type_name === 'alarm_daily') return true;
+                return t.remaining_seconds - elapsedSeconds > 0;
+            });
+
+            if (activeTimers.length === 0) {
+                timerStatusItem.style.display = 'none';
+                if (cachedTimers.length > 0) {
+                    // A timer may have expired, refresh from backend
+                    cachedTimers = [];
+                    fetchTimers();
                 }
-            } catch (error) {
-                console.error('Failed to set timer:', error);
-                alert('Failed to set timer');
-            }
-        }
-
-        // Set a custom countdown timer
-        async function setCustomCountdown() {
-            const minutes = parseInt(document.getElementById('countdownMinutes').value);
-            const actionSelect = document.getElementById('countdownAction').value;
-
-            if (!minutes || minutes < 1) {
-                alert('Please enter a valid duration');
-                return;
-            }
-
-            const requestBody = {
-                duration: minutes * 60
-            };
-
-            if (actionSelect === 'preset') {
-                const presetIndex = parseInt(document.getElementById('countdownPreset').value);
-                if (isNaN(presetIndex)) {
-                    alert('Please select a preset');
-                    return;
-                }
-                requestBody.action = 0; // LOAD_PRESET
-                requestBody.preset_index = presetIndex;
             } else {
-                requestBody.action = 1; // TURN_OFF
-            }
-
-            try {
-                const response = await fetch('/api/timers/countdown', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody)
-                });
-
-                const result = await response.json();
-                if (result.success) {
-                    await loadTimers();
-                } else {
-                    alert('Failed to set timer: ' + (result.error || 'Unknown error'));
+                timerStatusItem.style.display = 'block';
+                const timer = activeTimers[0];
+                const actionText = timer.action === 0 ? 'Preset' : 'Off';
+                let timeInfo = '';
+                switch (timer.type_name) {
+                    case 'countdown':
+                    case 'alarm_once':
+                        const remaining = Math.max(0, timer.remaining_seconds - elapsedSeconds);
+                        timeInfo = formatTime(remaining);
+                        break;
+                    case 'alarm_daily':
+                        timeInfo = formatTimeOfDay(timer.target_time);
+                        break;
                 }
-            } catch (error) {
-                console.error('Failed to set timer:', error);
-                alert('Failed to set timer');
+                const countSuffix = activeTimers.length > 1 ? ` (+${activeTimers.length - 1})` : '';
+                timerStatus.textContent = `${actionText} ${timeInfo}${countSuffix}`;
             }
         }
 
-        // Set a daily alarm
-        async function setDailyAlarm() {
-            const timeValue = document.getElementById('dailyAlarmTime').value;
-            const actionSelect = document.getElementById('dailyAlarmAction').value;
-
-            if (!timeValue) {
-                alert('Please enter a time');
-                return;
-            }
-
-            const [hours, mins] = timeValue.split(':').map(Number);
-
-            const requestBody = {
-                daily: true,
-                hour: hours,
-                minute: mins
-            };
-
-            if (actionSelect === 'preset') {
-                const presetIndex = parseInt(document.getElementById('dailyAlarmPreset').value);
-                if (isNaN(presetIndex)) {
-                    alert('Please select a preset');
-                    return;
-                }
-                requestBody.action = 0; // LOAD_PRESET
-                requestBody.preset_index = presetIndex;
-            } else {
-                requestBody.action = 1; // TURN_OFF
-            }
-
-            try {
-                const response = await fetch('/api/timers/alarm', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody)
-                });
-
-                const result = await response.json();
-                if (result.success) {
-                    await loadTimers();
-                } else {
-                    alert('Failed to set alarm: ' + (result.error || 'Unknown error'));
-                }
-            } catch (error) {
-                console.error('Failed to set alarm:', error);
-                alert('Failed to set alarm');
-            }
-        }
-
-        // Cancel a timer
-        async function cancelTimer(index) {
-            try {
-                const response = await fetch('/api/timers', {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ index })
-                });
-
-                const result = await response.json();
-                if (result.success) {
-                    await loadTimers();
-                } else {
-                    alert('Failed to cancel timer: ' + (result.error || 'Unknown error'));
-                }
-            } catch (error) {
-                console.error('Failed to cancel timer:', error);
-                alert('Failed to cancel timer');
-            }
-        }
-
-        // Populate preset selects in timer section
-        function populateTimerPresetSelects() {
-            const countdownPreset = document.getElementById('countdownPreset');
-            const dailyAlarmPreset = document.getElementById('dailyAlarmPreset');
-
-            const options = presets.map(p =>
-                `<option value="${p.index}">${p.name}</option>`
-            ).join('');
-
-            countdownPreset.innerHTML = '<option value="">Select preset...</option>' + options;
-            dailyAlarmPreset.innerHTML = '<option value="">Select preset...</option>' + options;
-        }
-
-        // Show/hide preset select based on action selection
-        document.getElementById('countdownAction').addEventListener('change', (e) => {
-            document.getElementById('countdownPresetSelect').style.display =
-                e.target.value === 'preset' ? 'block' : 'none';
-        });
-
-        document.getElementById('dailyAlarmAction').addEventListener('change', (e) => {
-            document.getElementById('dailyAlarmPresetSelect').style.display =
-                e.target.value === 'preset' ? 'block' : 'none';
-        });
-
-        // Load timers on init and periodically
-        loadTimers();
-        setInterval(loadTimers, 5000);
-
-        // Update preset selects when presets are loaded
-        const originalLoadPresets = loadPresets;
-        loadPresets = async function() {
-            await originalLoadPresets();
-            populateTimerPresetSelects();
-        };
+        fetchTimers();
+        setInterval(updateTimerDisplay, 1000);
     </script>
 </body>
 </html>

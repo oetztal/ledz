@@ -31,9 +31,15 @@ void TimerScheduler::begin() {
 }
 
 uint32_t TimerScheduler::getSecondsSinceMidnight(uint32_t epochTime) const {
+    if (epochTime == 0) return 0;
+
     // Apply timezone offset
     int32_t localEpoch = static_cast<int32_t>(epochTime) + (timersConfig.timezone_offset_hours * 3600);
-    if (localEpoch < 0) localEpoch = 0;
+    
+    // Ensure we handle negative localEpoch (though unlikely with epoch times)
+    if (localEpoch < 0) {
+        return (86400 + (localEpoch % 86400)) % 86400;
+    }
 
     // Calculate seconds since midnight in local time
     return static_cast<uint32_t>(localEpoch) % 86400;
@@ -71,12 +77,15 @@ void TimerScheduler::checkTimers(uint32_t currentEpoch) {
                 // Check if current time matches target time (within 1 second window)
                 // target_time stores seconds since midnight for daily alarms
                 if (currentSecondsSinceMidnight >= timer.target_time &&
-                    currentSecondsSinceMidnight < timer.target_time + 2) {
+                    currentSecondsSinceMidnight < timer.target_time + 5) {
                     shouldTrigger = true;
                     // Daily alarms remain enabled but we need to prevent multiple triggers
-                    // Use duration_seconds as a "last triggered epoch" marker
-                    if (timer.duration_seconds != currentEpoch / 60) { // Check by minute
-                        timer.duration_seconds = currentEpoch / 60; // Mark as triggered this minute
+                    // Use duration_seconds as a "last triggered minute" marker
+                    // We need to store seconds since midnight of the trigger time to be robust
+                    // but currentEpoch / 60 is also okay as long as it's consistent.
+                    uint32_t triggerMinute = currentEpoch / 60;
+                    if (timer.duration_seconds != triggerMinute) {
+                        timer.duration_seconds = triggerMinute;
                         configChanged = true;
                     } else {
                         shouldTrigger = false; // Already triggered this minute

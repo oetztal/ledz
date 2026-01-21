@@ -133,6 +133,9 @@ def process_file(file_path: Path) -> tuple[str, int, int]:
     # Minify based on file type
     if file_path.suffix == '.css':
         minified = minify_css(content)
+    elif file_path.suffix == '.svg':
+        # Simple SVG minification: collapse whitespace
+        minified = re.sub(r'\s+', ' ', content).strip()
     else:
         minified = minify_html(content)
     minified_size = len(minified.encode('utf-8'))
@@ -173,8 +176,8 @@ def main():
         print("Please create web files in the data/ directory.")
         sys.exit(1)
 
-    # Process all HTML and CSS files
-    web_files = list(DATA_DIR.glob("*.html")) + list(DATA_DIR.glob("*.css"))
+    # Process all HTML, CSS and SVG files
+    web_files = list(DATA_DIR.glob("*.html")) + list(DATA_DIR.glob("*.css")) + list(DATA_DIR.glob("*.svg"))
     if not web_files:
         print(f"Warning: No HTML/CSS files found in {DATA_DIR}")
         sys.exit(0)

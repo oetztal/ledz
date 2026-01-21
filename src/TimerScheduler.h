@@ -23,12 +23,12 @@ private:
      */
     void executeTimer(uint8_t index);
 
+public:
     /**
      * Get seconds since midnight for the given epoch time
      */
     uint32_t getSecondsSinceMidnight(uint32_t epochTime) const;
 
-public:
     /**
      * Constructor
      * @param config Configuration manager reference

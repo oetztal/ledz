@@ -19,7 +19,9 @@
 #include "generated/control_gz.h"
 #include "generated/about_gz.h"
 #include "generated/settings_gz.h"
+#include "generated/timers_gz.h"
 #include "generated/common_gz.h"
+#include "generated/favicon_gz.h"
 #endif
 
 // Helper functions to send gzipped responses
@@ -33,6 +35,13 @@ static void sendGzippedHtml(AsyncWebServerRequest *request, const uint8_t *data,
 
 static void sendGzippedCss(AsyncWebServerRequest *request, const uint8_t *data, size_t len) {
     AsyncWebServerResponse *response = request->beginResponse(200, "text/css", data, len);
+    response->addHeader("Content-Encoding", "gzip");
+    response->addHeader("Cache-Control", "max-age=86400");
+    request->send(response);
+}
+
+static void sendGzippedSvg(AsyncWebServerRequest *request, const uint8_t *data, size_t len) {
+    AsyncWebServerResponse *response = request->beginResponse(200, "image/svg+xml", data, len);
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Cache-Control", "max-age=86400");
     request->send(response);
@@ -75,6 +84,11 @@ void WebServerManager::setupConfigRoutes() {
         sendGzippedCss(request, COMMON_GZ, COMMON_GZ_LEN);
     });
 
+    // Serve favicon (gzip compressed)
+    server.on("/favicon.svg", HTTP_GET, [](AsyncWebServerRequest *request) {
+        sendGzippedSvg(request, FAVICON_GZ, FAVICON_GZ_LEN);
+    });
+
     // Handle WiFi configuration POST
     server.on("/api/wifi", HTTP_POST,
               []([[maybe_unused]] AsyncWebServerRequest *request) {
@@ -100,6 +114,11 @@ void WebServerManager::setupAPIRoutes() {
     // Serve common CSS (gzip compressed)
     server.on("/common.css", HTTP_GET, [](AsyncWebServerRequest *request) {
         sendGzippedCss(request, COMMON_GZ, COMMON_GZ_LEN);
+    });
+
+    // Serve favicon (gzip compressed)
+    server.on("/favicon.svg", HTTP_GET, [](AsyncWebServerRequest *request) {
+        sendGzippedSvg(request, FAVICON_GZ, FAVICON_GZ_LEN);
     });
 
     // GET /api/status - Get device status
@@ -753,6 +772,13 @@ void WebServerManager::setupAPIRoutes() {
         StaticJsonDocument<1024> doc;
         doc["timezone_offset_hours"] = timersConfig.timezone_offset_hours;
         doc["current_epoch"] = currentEpoch;
+        
+        // Include local time as seconds since midnight for UI convenience
+        if (currentEpoch != 0) {
+            doc["local_seconds_since_midnight"] = scheduler->getSecondsSinceMidnight(currentEpoch);
+        } else {
+            doc["local_seconds_since_midnight"] = 0;
+        }
 
         JsonArray timers = doc.createNestedArray("timers");
         for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
@@ -1183,6 +1209,11 @@ void WebServerManager::setupAPIRoutes() {
     // GET /settings - Settings page
     server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request) {
         sendGzippedHtml(request, SETTINGS_GZ, SETTINGS_GZ_LEN);
+    });
+
+    // GET /timers - Timers page
+    server.on("/timers", HTTP_GET, [](AsyncWebServerRequest *request) {
+        sendGzippedHtml(request, TIMERS_GZ, TIMERS_GZ_LEN);
     });
 #endif
 }
