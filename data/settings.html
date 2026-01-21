@@ -123,6 +123,30 @@
             </div>
 
             <div class="section">
+                <h2>Touch Control</h2>
+                <p>Configure capacitive touch pins to load presets. Touch pins GPIO 5, 6, 7, 8 can each trigger a preset.</p>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="touchEnabled" onchange="updateTouchEnabled()">
+                        Enable touch control
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label for="touchThreshold">Touch Threshold</label>
+                    <input type="number" id="touchThreshold" placeholder="40000" min="1000" max="100000" style="width: 120px;">
+                    <button class="btn btn-primary" onclick="updateTouchThreshold()" style="width: auto; margin-top: 0; margin-left: 8px; padding: 12px 16px;">Update</button>
+                    <small style="display:block; margin-top:4px; color:#666;">Lower value = more sensitive. Default: 40000</small>
+                </div>
+
+                <div class="info-box" id="touchStatus">
+                    <strong>Current Values: </strong><span id="touchValues">Loading...</span><br>
+                    <small style="color: #666;">Values below threshold trigger touch. Refresh page to update.</small>
+                </div>
+            </div>
+
+            <div class="section">
                 <h2>Factory Reset</h2>
                 <p>Erase all settings and return the device to factory defaults.</p>
 
@@ -425,10 +449,74 @@
             return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
         }
 
+        // Touch Control Functions
+        async function loadTouchConfig() {
+            try {
+                const response = await fetch('/api/touch');
+                const data = await response.json();
+
+                document.getElementById('touchEnabled').checked = data.enabled;
+                document.getElementById('touchThreshold').value = data.threshold;
+
+                // Display current touch values
+                const valuesStr = data.pins.map((pin, i) =>
+                    `GPIO ${pin.gpio}: ${data.values[i]}`
+                ).join(', ');
+                document.getElementById('touchValues').textContent = valuesStr;
+            } catch (error) {
+                console.error('Failed to load touch config:', error);
+                document.getElementById('touchValues').textContent = 'Error loading';
+            }
+        }
+
+        async function updateTouchEnabled() {
+            const enabled = document.getElementById('touchEnabled').checked;
+            try {
+                const response = await fetch('/api/touch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled })
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to update');
+                }
+            } catch (error) {
+                console.error('Failed to update touch enabled:', error);
+                alert('Failed to update touch setting');
+                // Revert checkbox
+                document.getElementById('touchEnabled').checked = !enabled;
+            }
+        }
+
+        async function updateTouchThreshold() {
+            const threshold = parseInt(document.getElementById('touchThreshold').value);
+            if (isNaN(threshold) || threshold < 1000 || threshold > 100000) {
+                alert('Please enter a valid threshold between 1000 and 100000');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/touch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ threshold })
+                });
+                if (response.ok) {
+                    alert('Touch threshold updated to ' + threshold);
+                } else {
+                    throw new Error('Failed to update');
+                }
+            } catch (error) {
+                console.error('Failed to update touch threshold:', error);
+                alert('Failed to update touch threshold');
+            }
+        }
+
         // Load device info on page load
         loadDeviceName();
         loadHardwareSettings();
         loadOTAStatus();
+        loadTouchConfig();
     </script>
 </body>
 </html>

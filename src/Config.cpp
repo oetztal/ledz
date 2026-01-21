@@ -457,4 +457,36 @@ namespace Config {
         Serial.println("Config: Saved timers configuration");
 #endif
     }
+
+    TouchConfig ConfigManager::loadTouchConfig() {
+        TouchConfig touchConfig;
+
+#ifdef ARDUINO
+        prefs.begin(NAMESPACE, true); // Read-only mode
+
+        touchConfig.enabled = prefs.getBool("touch_enabled", true);
+        touchConfig.threshold = prefs.getUShort("touch_thresh", 45000);
+
+        prefs.end();
+
+        Serial.printf("TouchConfig: Loaded - enabled=%d, threshold=%u\n",
+                      touchConfig.enabled, touchConfig.threshold);
+#endif
+
+        return touchConfig;
+    }
+
+    void ConfigManager::saveTouchConfig(const TouchConfig &config) {
+#ifdef ARDUINO
+        prefs.begin(NAMESPACE, false); // Read-write mode
+
+        prefs.putBool("touch_enabled", config.enabled);
+        prefs.putUShort("touch_thresh", config.threshold);
+
+        prefs.end();
+
+        Serial.printf("TouchConfig: Saved - enabled=%d, threshold=%u\n",
+                      config.enabled, config.threshold);
+#endif
+    }
 } // namespace Config
