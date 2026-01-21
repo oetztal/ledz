@@ -800,9 +800,6 @@ void WebServerManager::setupAPIRoutes() {
                     case Config::TimerType::COUNTDOWN:
                         timerObj["type_name"] = "countdown";
                         break;
-                    case Config::TimerType::ALARM_ONCE:
-                        timerObj["type_name"] = "alarm_once";
-                        break;
                     case Config::TimerType::ALARM_DAILY:
                         timerObj["type_name"] = "alarm_daily";
                         break;
@@ -899,7 +896,7 @@ void WebServerManager::setupAPIRoutes() {
               }
     );
 
-    // POST /api/timers/alarm - Set a one-shot or daily alarm
+    // POST /api/timers/alarm - Set a daily recurring alarm
     server.on("/api/timers/alarm", HTTP_POST,
               []([[maybe_unused]] AsyncWebServerRequest *request) {
               },
@@ -922,8 +919,20 @@ void WebServerManager::setupAPIRoutes() {
                           return;
                       }
 
-                      // Required: time (either epoch for one-shot or HH:MM for daily)
-                      bool isDaily = doc["daily"] | false;
+                      // Required: hour and minute for the alarm time
+                      if (!doc.containsKey("hour") || !doc.containsKey("minute")) {
+                          request->send(400, "application/json",
+                                        R"({"success":false,"error":"Hour and minute required"})");
+                          return;
+                      }
+
+                      uint8_t hour = doc["hour"];
+                      uint8_t minute = doc["minute"];
+                      if (hour > 23 || minute > 59) {
+                          request->send(400, "application/json",
+                                        R"({"success":false,"error":"Invalid time"})");
+                          return;
+                      }
 
                       // Optional: index (defaults to first available slot)
                       int timerIndex = doc["index"] | -1;
@@ -952,39 +961,13 @@ void WebServerManager::setupAPIRoutes() {
 
                       uint8_t presetIndex = doc["preset_index"] | 0;
 
-                      bool success = false;
-                      if (isDaily) {
-                          // Daily alarm - need hour and minute
-                          if (!doc.containsKey("hour") || !doc.containsKey("minute")) {
-                              request->send(400, "application/json",
-                                            R"({"success":false,"error":"Hour and minute required for daily alarm"})");
-                              return;
-                          }
-                          uint8_t hour = doc["hour"];
-                          uint8_t minute = doc["minute"];
-                          if (hour > 23 || minute > 59) {
-                              request->send(400, "application/json",
-                                            R"({"success":false,"error":"Invalid time"})");
-                              return;
-                          }
-                          uint32_t secondsSinceMidnight = hour * 3600 + minute * 60;
-                          success = scheduler->setDailyAlarm(timerIndex, secondsSinceMidnight, action, presetIndex);
-                      } else {
-                          // One-shot alarm - need epoch time
-                          if (!doc.containsKey("epoch")) {
-                              request->send(400, "application/json",
-                                            R"({"success":false,"error":"Epoch time required for one-shot alarm"})");
-                              return;
-                          }
-                          uint32_t epochTime = doc["epoch"];
-                          success = scheduler->setAlarmOnce(timerIndex, epochTime, action, presetIndex);
-                      }
+                      uint32_t secondsSinceMidnight = hour * 3600 + minute * 60;
+                      bool success = scheduler->setDailyAlarm(timerIndex, secondsSinceMidnight, action, presetIndex);
 
                       if (success) {
                           StaticJsonDocument<128> responseDoc;
                           responseDoc["success"] = true;
                           responseDoc["index"] = timerIndex;
-                          responseDoc["daily"] = isDaily;
 
                           String response;
                           serializeJson(responseDoc, response);

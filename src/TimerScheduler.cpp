@@ -64,7 +64,6 @@ void TimerScheduler::checkTimers(uint32_t currentEpoch) {
 
         switch (timer.type) {
             case Config::TimerType::COUNTDOWN:
-            case Config::TimerType::ALARM_ONCE:
                 // Check if current epoch >= target epoch
                 if (currentEpoch >= timer.target_time) {
                     shouldTrigger = true;
@@ -161,29 +160,6 @@ bool TimerScheduler::setCountdown(uint8_t index, uint32_t durationSeconds,
     return true;
 }
 
-bool TimerScheduler::setAlarmOnce(uint8_t index, uint32_t epochTime,
-                                   Config::TimerAction action, uint8_t presetIndex) {
-    if (index >= Config::TimersConfig::MAX_TIMERS) {
-        return false;
-    }
-
-    Config::TimerEntry &timer = timersConfig.timers[index];
-    timer.enabled = true;
-    timer.type = Config::TimerType::ALARM_ONCE;
-    timer.action = action;
-    timer.preset_index = presetIndex;
-    timer.target_time = epochTime;
-    timer.duration_seconds = 0;
-
-    config.saveTimersConfig(timersConfig);
-
-#ifdef ARDUINO
-    Serial.printf("TimerScheduler: Set one-shot alarm %d for epoch %lu\n", index, epochTime);
-#endif
-
-    return true;
-}
-
 bool TimerScheduler::setDailyAlarm(uint8_t index, uint32_t secondsSinceMidnight,
                                     Config::TimerAction action, uint8_t presetIndex) {
     if (index >= Config::TimersConfig::MAX_TIMERS) {
@@ -241,7 +217,6 @@ uint32_t TimerScheduler::getRemainingSeconds(uint8_t index, uint32_t currentEpoc
 
     switch (timer.type) {
         case Config::TimerType::COUNTDOWN:
-        case Config::TimerType::ALARM_ONCE:
             if (currentEpoch >= timer.target_time) {
                 return 0;
             }

@@ -114,8 +114,7 @@ namespace Config {
      */
     enum class TimerType : uint8_t {
         COUNTDOWN = 0,    // One-shot countdown timer (duration-based)
-        ALARM_ONCE = 1,   // One-shot alarm at wall-clock time
-        ALARM_DAILY = 2   // Recurring daily alarm
+        ALARM_DAILY = 1   // Recurring daily alarm
     };
 
     /**
@@ -126,7 +125,7 @@ namespace Config {
         TimerType type;
         TimerAction action;
         uint8_t preset_index;
-        uint32_t target_time;      // epoch for COUNTDOWN/ALARM_ONCE, seconds-since-midnight for ALARM_DAILY
+        uint32_t target_time;      // epoch for COUNTDOWN, seconds-since-midnight for ALARM_DAILY
         uint32_t duration_seconds; // original duration for countdown display
 
         TimerEntry() : enabled(false), type(TimerType::COUNTDOWN),

@@ -67,17 +67,6 @@ public:
                       uint8_t presetIndex, uint32_t currentEpoch);
 
     /**
-     * Set a one-shot alarm
-     * @param index Timer slot index (0-3)
-     * @param epochTime Target epoch time for the alarm
-     * @param action Action to perform when alarm triggers
-     * @param presetIndex Preset index (only used if action is LOAD_PRESET)
-     * @return true if alarm was set successfully
-     */
-    bool setAlarmOnce(uint8_t index, uint32_t epochTime, Config::TimerAction action,
-                      uint8_t presetIndex);
-
-    /**
      * Set a daily recurring alarm
      * @param index Timer slot index (0-3)
      * @param secondsSinceMidnight Time of day as seconds since midnight

@@ -1207,7 +1207,6 @@
                 let timeInfo = '';
                 switch (timer.type_name) {
                     case 'countdown':
-                    case 'alarm_once':
                         const remaining = Math.max(0, timer.remaining_seconds - elapsedSeconds);
                         timeInfo = formatTime(remaining);
                         break;
