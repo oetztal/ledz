@@ -30,6 +30,14 @@
             </div>
 
             <div class="control-group">
+                <label class="control-label" for="brightnessSlider">Brightness</label>
+                <input type="range" id="brightnessSlider" min="0" max="255" value="128">
+                <div class="brightness-value">
+                    <span id="brightnessValue">128</span> / 255
+                </div>
+            </div>
+
+            <div class="control-group">
                 <label class="control-label" for="showSelect">Select Show</label>
                 <select id="showSelect">
                     <option value="">Loading shows...</option>
@@ -269,24 +277,6 @@
             </div>
 
             <div class="control-group">
-                <label class="control-label" for="brightnessSlider">Brightness</label>
-                <input type="range" id="brightnessSlider" min="0" max="255" value="128">
-                <div class="brightness-value">
-                    <span id="brightnessValue">128</span> / 255
-                </div>
-            </div>
-
-            <div class="control-group">
-                <div class="auto-cycle-row">
-                    <label class="control-label">Auto-Cycle Shows</label>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="autoCycleToggle">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="control-group">
                 <label class="control-label">Strip Layout</label>
                 <select id="layoutMode" style="margin-bottom: 10px;">
                     <option value="normal">Normal</option>
@@ -297,6 +287,24 @@
                 <label class="control-label" for="deadLeds" style="margin-top: 15px;">Dead LEDs</label>
                 <input type="number" id="deadLeds" min="0" max="100" value="0" style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 16px;">
                 <button class="apply-button" onclick="applyLayout()" style="margin-top: 15px;">Apply Layout</button>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">Presets</label>
+                <div id="presetsSection">
+                    <select id="presetSelect" style="margin-bottom: 10px;">
+                        <option value="">No presets saved</option>
+                    </select>
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <button class="small-button" style="flex: 1;" onclick="loadSelectedPreset()">Load</button>
+                        <button class="small-button" style="flex: 1; color: #d9534f;" onclick="deleteSelectedPreset()">Delete</button>
+                    </div>
+                    <div style="border-top: 1px solid #e9ecef; padding-top: 15px;">
+                        <label class="control-label" for="presetName">Save Current as Preset</label>
+                        <input type="text" id="presetName" placeholder="Enter preset name" style="margin-bottom: 10px;">
+                        <button class="apply-button" onclick="savePreset()">Save Preset</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -904,9 +912,6 @@
                     brightnessSlider.value = currentStatus.brightness;
                     document.getElementById('brightnessValue').textContent = currentStatus.brightness;
                 }
-
-                const autoCycleToggle = document.getElementById('autoCycleToggle');
-                autoCycleToggle.checked = currentStatus.auto_cycle;
             } catch (error) {
                 console.error('Failed to update status:', error);
             }
@@ -952,19 +957,6 @@
                 });
             } catch (error) {
                 console.error('Failed to change brightness:', error);
-            }
-        });
-
-        // Auto-cycle toggle handler
-        document.getElementById('autoCycleToggle').addEventListener('change', async (e) => {
-            try {
-                await fetch('/api/auto-cycle', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ enabled: e.target.checked })
-                });
-            } catch (error) {
-                console.error('Failed to toggle auto-cycle:', error);
             }
         });
 
@@ -1014,6 +1006,124 @@
             }
         }
 
+        // Presets management
+        let presets = [];
+
+        async function loadPresets() {
+            try {
+                const response = await fetch('/api/presets');
+                const data = await response.json();
+                presets = data.presets || [];
+
+                const select = document.getElementById('presetSelect');
+                if (presets.length === 0) {
+                    select.innerHTML = '<option value="">No presets saved</option>';
+                } else {
+                    select.innerHTML = presets.map(p =>
+                        `<option value="${p.index}">${p.name} (${p.show_name})</option>`
+                    ).join('');
+                }
+            } catch (error) {
+                console.error('Failed to load presets:', error);
+            }
+        }
+
+        async function savePreset() {
+            const nameInput = document.getElementById('presetName');
+            const name = nameInput.value.trim();
+
+            if (!name) {
+                alert('Please enter a preset name');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/presets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    nameInput.value = '';
+                    await loadPresets();
+                    // Select the newly saved preset
+                    document.getElementById('presetSelect').value = result.index;
+                } else {
+                    alert('Failed to save preset: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Failed to save preset:', error);
+                alert('Failed to save preset');
+            }
+        }
+
+        async function loadSelectedPreset() {
+            const select = document.getElementById('presetSelect');
+            const index = select.value;
+
+            if (index === '') {
+                alert('Please select a preset to load');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/presets/load', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ index: parseInt(index) })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    // Refresh UI to show new state
+                    pendingParameterConfig = false;
+                    lastPopulatedShow = null;
+                    await updateStatus();
+                    await loadLayout();
+                } else {
+                    alert('Failed to load preset: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Failed to load preset:', error);
+                alert('Failed to load preset');
+            }
+        }
+
+        async function deleteSelectedPreset() {
+            const select = document.getElementById('presetSelect');
+            const index = select.value;
+
+            if (index === '') {
+                alert('Please select a preset to delete');
+                return;
+            }
+
+            const presetName = select.options[select.selectedIndex].text;
+            if (!confirm(`Delete preset "${presetName}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/presets', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ index: parseInt(index) })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    await loadPresets();
+                } else {
+                    alert('Failed to delete preset: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Failed to delete preset:', error);
+                alert('Failed to delete preset');
+            }
+        }
+
         // Initialize (loadShows must complete before updateStatus to avoid race condition)
         async function init() {
             await loadShows();
@@ -1022,6 +1132,7 @@
             // if dropdown value already matches current show)
             updateParameterVisibility(document.getElementById('showSelect').value);
             loadLayout();
+            loadPresets();
         }
         init();
 

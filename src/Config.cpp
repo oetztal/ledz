@@ -88,9 +88,6 @@ namespace Config {
             strcpy(config.params_json, "{}");
         }
 
-        config.auto_cycle = prefs.getBool("auto_cycle", true);
-        config.cycle_interval_ms = prefs.getUShort("cycle_ms", 60000);
-
         prefs.end();
 #endif
 
@@ -103,8 +100,6 @@ namespace Config {
 
         prefs.putString("show_name", config.current_show);
         prefs.putString("show_params", config.params_json);
-        prefs.putBool("auto_cycle", config.auto_cycle);
-        prefs.putUShort("cycle_ms", config.cycle_interval_ms);
 
         prefs.end();
 #endif

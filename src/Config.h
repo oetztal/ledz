@@ -32,10 +32,8 @@ namespace Config {
     struct ShowConfig {
         char current_show[32]; // e.g., "Rainbow", "Mandelbrot"
         char params_json[256]; // JSON string for show parameters
-        bool auto_cycle;
-        uint16_t cycle_interval_ms; // milliseconds between shows
 
-        ShowConfig() : auto_cycle(true), cycle_interval_ms(60000) {
+        ShowConfig() {
             strcpy(current_show, "Rainbow");
             strcpy(params_json, "{}");
         }

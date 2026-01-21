@@ -7,8 +7,8 @@ Can be run standalone or as a PlatformIO pre-build script.
 """
 
 import gzip
-import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -136,7 +136,6 @@ def process_file(file_path: Path) -> tuple[str, int, int]:
     else:
         minified = minify_html(content)
     minified_size = len(minified.encode('utf-8'))
-
 
     # Gzip compress
     compressed = gzip.compress(minified.encode('utf-8'), compresslevel=9)

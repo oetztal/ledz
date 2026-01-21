@@ -10,7 +10,7 @@
 #endif
 
 ShowController::ShowController(ShowFactory &factory, Config::ConfigManager &config)
-    : factory(factory), config(config), brightness(128), autoCycle(true),
+    : factory(factory), config(config), brightness(128),
       layout(), baseStrip()
 #ifdef ARDUINO
       , commandQueue(nullptr)
@@ -37,7 +37,6 @@ void ShowController::begin() {
 
     // Apply loaded configuration
     brightness = deviceConfig.brightness;
-    autoCycle = showConfig.auto_cycle;
 
     Serial.println("ShowController: preparing show");
     // Create initial show
@@ -121,27 +120,6 @@ bool ShowController::queueBrightnessChange(uint8_t brightness) {
 #endif
 }
 
-bool ShowController::queueAutoCycleToggle(bool enabled) {
-#ifdef ARDUINO
-    if (commandQueue == nullptr) {
-        return false;
-    }
-
-    ShowCommand cmd;
-    cmd.type = ShowCommandType::TOGGLE_AUTO_CYCLE;
-    cmd.auto_cycle_enabled = enabled;
-
-    if (xQueueSend(commandQueue, &cmd, 0) == pdTRUE) {
-        return true;
-    }
-
-    Serial.println("WARNING: Auto-cycle command queue full!");
-    return false;
-#else
-    return false;
-#endif
-}
-
 void ShowController::applyCommand(const ShowCommand &cmd) {
     switch (cmd.type) {
         case ShowCommandType::SET_SHOW: {
@@ -185,21 +163,6 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
             Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
             deviceConfig.brightness = brightness;
             config.saveDeviceConfig(deviceConfig);
-            break;
-        }
-
-        case ShowCommandType::TOGGLE_AUTO_CYCLE: {
-            autoCycle = cmd.auto_cycle_enabled;
-
-#ifdef ARDUINO
-            Serial.print("ShowController: Auto-cycle ");
-            Serial.println(autoCycle ? "enabled" : "disabled");
-#endif
-
-            // Save to configuration
-            Config::ShowConfig showConfig = config.loadShowConfig();
-            showConfig.auto_cycle = autoCycle;
-            config.saveShowConfig(showConfig);
             break;
         }
 

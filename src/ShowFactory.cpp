@@ -81,9 +81,9 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
     });
 
     registerShow("Fire", "Burning flames", [](const StaticJsonDocument<512> &doc) {
-        float cooling = doc["cooling"] | 1.0f;
-        float spread = doc["spread"] | 1.0f;
-        float ignition = doc["ignition"] | 1.0f;
+        float cooling = doc["cooling"] | 0.1f;
+        float spread = doc["spread"] | 10.0f;
+        float ignition = doc["ignition"] | 0.5f;
         float spark_amount = doc["spark_amount"] | 0.5f;
         int start_offset = doc["start_offset"] | 5;
         int spark_range = doc["spark_range"] | 5;

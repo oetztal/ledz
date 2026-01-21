@@ -120,7 +120,6 @@ void WebServerManager::setupAPIRoutes() {
 
         // Show info
         doc["current_show"] = showController.getCurrentShowName();
-        doc["auto_cycle"] = showController.isAutoCycleEnabled();
 
         // Current show configuration
         Config::ShowConfig showConfig = config.loadShowConfig();
@@ -231,37 +230,6 @@ void WebServerManager::setupAPIRoutes() {
               }
     );
 
-    // POST /api/auto-cycle - Toggle auto-cycle
-    server.on("/api/auto-cycle", HTTP_POST,
-              []([[maybe_unused]] AsyncWebServerRequest *request) {
-              },
-              nullptr,
-              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, [[maybe_unused]] size_t total) {
-                  if (index == 0) {
-                      StaticJsonDocument<256> doc;
-                      DeserializationError error = deserializeJson(doc, data, len);
-
-                      if (error) {
-                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
-                          return;
-                      }
-
-                      if (!doc.containsKey("enabled")) {
-                          request->send(400, "application/json",
-                                        R"({"success":false,"error":"Enabled field required"})");
-                          return;
-                      }
-
-                      bool enabled = doc["enabled"];
-                      if (showController.queueAutoCycleToggle(enabled)) {
-                          request->send(200, "application/json", "{\"success\":true}");
-                      } else {
-                          request->send(503, "application/json", R"({"success":false,"error":"Queue full"})");
-                      }
-                  }
-              }
-    );
-
     // POST /api/layout - Change strip layout configuration
     server.on("/api/layout", HTTP_POST,
               []([[maybe_unused]] AsyncWebServerRequest *request) {
@@ -346,6 +314,75 @@ void WebServerManager::setupAPIRoutes() {
         request->send(200, "application/json", response);
     });
 
+    // POST /api/presets/load - Load a preset by index or name
+    // NOTE: Must be registered BEFORE /api/presets POST to avoid route conflict
+    server.on("/api/presets/load", HTTP_POST,
+              []([[maybe_unused]] AsyncWebServerRequest *request) {
+              },
+              nullptr,
+              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
+                     [[maybe_unused]] size_t total) {
+                  if (index == 0) {
+                      StaticJsonDocument<256> doc;
+                      DeserializationError error = deserializeJson(doc, data, len);
+
+                      if (error) {
+                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          return;
+                      }
+
+                      int presetIndex = -1;
+
+                      // Find preset by index or name
+                      if (doc.containsKey("index")) {
+                          presetIndex = doc["index"];
+                          if (presetIndex < 0 || presetIndex >= Config::PresetsConfig::MAX_PRESETS) {
+                              request->send(400, "application/json",
+                                            R"({"success":false,"error":"Invalid preset index"})");
+                              return;
+                          }
+                      } else if (doc.containsKey("name")) {
+                          const char *presetName = doc["name"];
+                          presetIndex = config.findPresetByName(presetName);
+                          if (presetIndex < 0) {
+                              request->send(404, "application/json",
+                                            R"({"success":false,"error":"Preset not found"})");
+                              return;
+                          }
+                      } else {
+                          request->send(400, "application/json",
+                                        R"({"success":false,"error":"Index or name required"})");
+                          return;
+                      }
+
+                      // Load the preset
+                      Config::PresetsConfig presetsConfig = config.loadPresetsConfig();
+                      const Config::Preset &preset = presetsConfig.presets[presetIndex];
+
+                      if (!preset.valid) {
+                          request->send(404, "application/json",
+                                        R"({"success":false,"error":"Preset slot is empty"})");
+                          return;
+                      }
+
+                      // Queue preset load through ShowController for thread safety
+                      if (showController.queuePresetLoad(preset)) {
+                          StaticJsonDocument<128> responseDoc;
+                          responseDoc["success"] = true;
+                          responseDoc["name"] = preset.name;
+                          responseDoc["show_name"] = preset.show_name;
+
+                          String response;
+                          serializeJson(responseDoc, response);
+                          request->send(200, "application/json", response);
+                      } else {
+                          request->send(503, "application/json",
+                                        R"({"success":false,"error":"Queue full"})");
+                      }
+                  }
+              }
+    );
+
     // POST /api/presets - Save current state as preset
     server.on("/api/presets", HTTP_POST,
               []([[maybe_unused]] AsyncWebServerRequest *request) {
@@ -419,74 +456,6 @@ void WebServerManager::setupAPIRoutes() {
                       } else {
                           request->send(500, "application/json",
                                         R"({"success":false,"error":"Failed to save preset"})");
-                      }
-                  }
-              }
-    );
-
-    // POST /api/presets/load - Load a preset by index or name
-    server.on("/api/presets/load", HTTP_POST,
-              []([[maybe_unused]] AsyncWebServerRequest *request) {
-              },
-              nullptr,
-              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
-                     [[maybe_unused]] size_t total) {
-                  if (index == 0) {
-                      StaticJsonDocument<256> doc;
-                      DeserializationError error = deserializeJson(doc, data, len);
-
-                      if (error) {
-                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
-                          return;
-                      }
-
-                      int presetIndex = -1;
-
-                      // Find preset by index or name
-                      if (doc.containsKey("index")) {
-                          presetIndex = doc["index"];
-                          if (presetIndex < 0 || presetIndex >= Config::PresetsConfig::MAX_PRESETS) {
-                              request->send(400, "application/json",
-                                            R"({"success":false,"error":"Invalid preset index"})");
-                              return;
-                          }
-                      } else if (doc.containsKey("name")) {
-                          const char *presetName = doc["name"];
-                          presetIndex = config.findPresetByName(presetName);
-                          if (presetIndex < 0) {
-                              request->send(404, "application/json",
-                                            R"({"success":false,"error":"Preset not found"})");
-                              return;
-                          }
-                      } else {
-                          request->send(400, "application/json",
-                                        R"({"success":false,"error":"Index or name required"})");
-                          return;
-                      }
-
-                      // Load the preset
-                      Config::PresetsConfig presetsConfig = config.loadPresetsConfig();
-                      const Config::Preset &preset = presetsConfig.presets[presetIndex];
-
-                      if (!preset.valid) {
-                          request->send(404, "application/json",
-                                        R"({"success":false,"error":"Preset slot is empty"})");
-                          return;
-                      }
-
-                      // Queue preset load through ShowController for thread safety
-                      if (showController.queuePresetLoad(preset)) {
-                          StaticJsonDocument<128> responseDoc;
-                          responseDoc["success"] = true;
-                          responseDoc["name"] = preset.name;
-                          responseDoc["show_name"] = preset.show_name;
-
-                          String response;
-                          serializeJson(responseDoc, response);
-                          request->send(200, "application/json", response);
-                      } else {
-                          request->send(503, "application/json",
-                                        R"({"success":false,"error":"Queue full"})");
                       }
                   }
               }
