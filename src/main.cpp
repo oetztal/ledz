@@ -74,8 +74,7 @@ void setup() {
 
 void loop() {
 #ifdef ARDUINO
-    // Auto-cycling is now handled by ShowController and webserver
-    // This loop is just for Arduino framework compatibility
-    vTaskDelay(60000 / portTICK_PERIOD_MS);
+    config.checkRestart();
+    vTaskDelay(250 / portTICK_PERIOD_MS);
 #endif
 }

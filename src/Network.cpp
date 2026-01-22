@@ -218,9 +218,13 @@ void Network::configureUsingAPMode() {
     Serial.println("Stopping captive portal");
     captivePortal.end();
 
-    Serial.println("Restarting");
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-    ESP.restart();
+    Serial.println("Scheduling restart");
+    config.requestRestart(1000);
+
+    // Stay in loop until main loop restarts us
+    while (true) {
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
 }
 
 [[noreturn]] void Network::task() {

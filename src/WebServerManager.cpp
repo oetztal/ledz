@@ -701,11 +701,10 @@ void WebServerManager::setupAPIRoutes() {
                       // Save config
                       config.saveDeviceConfig(deviceConfig);
 
-                      // Send success response and restart
+                      // Send success response and request deferred restart
                       request->send(200, "application/json",
                                     R"({"success":true,"message":"Device settings updated, restarting..."})");
-                      delay(1000); // Give time for response to send
-                      ESP.restart();
+                      config.requestRestart(1000);
                   }
               }
     );
@@ -718,16 +717,13 @@ void WebServerManager::setupAPIRoutes() {
         request->send(200, "application/json",
                       R"({"success":true,"message":"Factory reset complete, restarting..."})");
 
-        // Give time for response to send
-        delay(500);
-
         // Clear all configuration
         config.reset();
 
         Serial.println("All settings cleared");
 
-        // Restart
-        ESP.restart();
+        // Request deferred restart
+        config.requestRestart(1000);
     });
 
     // GET /api/about - Device information
@@ -1136,7 +1132,7 @@ void WebServerManager::setupAPIRoutes() {
                                 R"({"status":"starting","message":"OTA update started"})");
               },
               nullptr,
-              []([[maybe_unused]] AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+              [this]([[maybe_unused]] AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
                   if (index == 0) {
                       Serial.println("[WebServer] OTA update requested");
                   }
@@ -1160,9 +1156,8 @@ void WebServerManager::setupAPIRoutes() {
                       });
 
                       if (success) {
-                          Serial.println("[WebServer] OTA update successful, restarting...");
-                          delay(1000);
-                          ESP.restart();
+                          Serial.println("[WebServer] OTA update successful, scheduling restart...");
+                          this->config.requestRestart(1000);
                       } else {
                           Serial.println("[WebServer] OTA update failed!");
                       }

@@ -157,6 +157,9 @@ namespace Config {
 #endif
         static constexpr const char *NAMESPACE = "ledz";
 
+        bool restartRequested = false;
+        uint32_t restartAt = 0;
+
     public:
         ConfigManager();
 
@@ -165,6 +168,24 @@ namespace Config {
          * Must be called before using other methods
          */
         void begin();
+
+        /**
+         * Check if a deferred restart is pending
+         * @return true if restart is pending
+         */
+        bool isRestartPending() const { return restartRequested; }
+
+        /**
+         * Request a deferred restart
+         * @param delayMs Delay in milliseconds before restarting
+         */
+        void requestRestart(uint32_t delayMs = 1000);
+
+        /**
+         * Check and perform restart if scheduled and time has passed
+         * Called from main loop
+         */
+        void checkRestart();
 
         /**
          * Check if WiFi has been configured

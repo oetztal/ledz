@@ -9,7 +9,22 @@
 #endif
 
 namespace Config {
-    ConfigManager::ConfigManager() {
+    ConfigManager::ConfigManager() : restartRequested(false), restartAt(0) {
+    }
+
+    void ConfigManager::requestRestart(uint32_t delayMs) {
+        restartAt = millis() + delayMs;
+        restartRequested = true;
+        Serial.printf("Config: Restart requested in %u ms\n", delayMs);
+    }
+
+    void ConfigManager::checkRestart() {
+        if (restartRequested && millis() >= restartAt) {
+            Serial.println("Config: Performing scheduled restart...");
+#ifdef ARDUINO
+            ESP.restart();
+#endif
+        }
     }
 
     void ConfigManager::begin() {
