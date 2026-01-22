@@ -45,6 +45,20 @@ struct ShowCommand {
 };
 
 /**
+ * Show statistics for monitoring performance
+ */
+struct ShowStats {
+    uint32_t avg_execution_time; // ms
+    uint32_t avg_show_time;      // ms
+    uint32_t avg_cycle_time;     // ms
+    uint32_t last_execution_time; // ms
+    uint32_t last_show_time;      // ms
+
+    ShowStats() : avg_execution_time(0), avg_show_time(0), avg_cycle_time(0),
+                  last_execution_time(0), last_show_time(0) {}
+};
+
+/**
  * ShowController
  * Thread-safe controller for managing LED shows across cores
  * - Core 1 (webserver) queues commands
@@ -66,6 +80,8 @@ private:
     // base strip and strip layout
     std::unique_ptr<Strip::Strip> baseStrip;
     std::unique_ptr<Strip::Strip> layout;
+
+    ShowStats stats;
 
     /**
      * Apply a command (called from LED task)
@@ -144,6 +160,12 @@ public:
     const char *getCurrentShowName() const { return currentShowName; }
 
     /**
+     * Get current cycle time
+     * @return Cycle time in ms
+     */
+    uint16_t getCycleTime() const;
+
+    /**
      * Clear the LED strip (turn all LEDs off)
      * Used before factory reset or shutdown
      */
@@ -159,6 +181,18 @@ public:
     void executeShow(unsigned int iteration) const;
 
     void show() const;
+
+    /**
+     * Update show statistics
+     * @param stats New statistics
+     */
+    void updateStats(const ShowStats &stats);
+
+    /**
+     * Get current show statistics
+     * @return Current statistics
+     */
+    ShowStats getStats() const;
 };
 
 #endif //LEDZ_SHOWCONTROLLER_H

@@ -31,6 +31,7 @@ namespace Task {
 
         unsigned long start_time = millis();
         unsigned long last_show_stats = millis();
+        unsigned long show_cycle_time = controller.getCycleTime();
 
         while (true) {
             // Process any pending show change commands from webserver
@@ -46,7 +47,19 @@ namespace Task {
 
             total_execution_time += execution_time;
             total_show_time += show_time;
-            auto delay = 10ul - std::min(10ul, timer.elapsed());
+            auto delay = show_cycle_time - std::min(show_cycle_time, timer.elapsed());
+
+            // Update stats in controller every second (roughly)
+            if (iteration % (1000 / std::max(1u, (unsigned int)show_cycle_time)) == 0) {
+                ShowStats stats;
+                stats.last_execution_time = execution_time;
+                stats.last_show_time = show_time;
+                stats.avg_execution_time = total_execution_time / iteration;
+                stats.avg_show_time = total_show_time / iteration;
+                stats.avg_cycle_time = (timer.start_time - start_time) / iteration;
+                controller.updateStats(stats);
+            }
+
             // Log stats every 60 seconds to reduce Serial blocking
             if (timer.start_time - last_show_stats > 60000) {
                 Serial.printf(

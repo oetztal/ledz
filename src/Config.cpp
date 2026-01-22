@@ -114,6 +114,7 @@ namespace Config {
         config.brightness = prefs.getUChar("brightness", 128);
         config.num_pixels = prefs.getUShort("num_pixels", 1);
         config.led_pin = prefs.getUChar("led_pin", PIN_NEOPIXEL);
+        config.cycle_time = prefs.getUShort("cycle_time", 10);
         prefs.getString("device_name", config.device_name, sizeof(config.device_name));
 
         prefs.end();
@@ -140,6 +141,7 @@ namespace Config {
         prefs.putUChar("brightness", config.brightness);
         prefs.putUShort("num_pixels", config.num_pixels);
         prefs.putUChar("led_pin", config.led_pin);
+        prefs.putUShort("cycle_time", config.cycle_time);
         prefs.putString("device_name", config.device_name);
         // Note: device_id is derived from MAC, not stored
 

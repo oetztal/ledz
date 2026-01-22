@@ -352,6 +352,10 @@ const std::vector<ShowFactory::ShowInfo> &ShowController::listShows() const {
     return factory.listShows();
 }
 
+uint16_t ShowController::getCycleTime() const {
+    return config.loadDeviceConfig().cycle_time;
+}
+
 void ShowController::executeShow(unsigned int iteration) const {
     if (layout) {
         layout->setBrightness(brightness);
@@ -363,4 +367,12 @@ void ShowController::show() const {
     if (layout) {
         layout->show();
     }
+}
+
+void ShowController::updateStats(const ShowStats &newStats) {
+    stats = newStats;
+}
+
+ShowStats ShowController::getStats() const {
+    return stats;
 }

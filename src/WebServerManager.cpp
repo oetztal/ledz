@@ -129,7 +129,10 @@ void WebServerManager::setupAPIRoutes() {
         Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
         doc["device_id"] = deviceConfig.device_id;
         doc["device_name"] = deviceConfig.device_name;
+        doc["num_pixels"] = deviceConfig.num_pixels;
+        doc["led_pin"] = deviceConfig.led_pin;
         doc["brightness"] = showController.getBrightness();
+        doc["cycle_time"] = deviceConfig.cycle_time;
         doc["firmware_version"] = FIRMWARE_VERSION;
 
         // OTA partition info
@@ -674,6 +677,21 @@ void WebServerManager::setupAPIRoutes() {
                           changed = true;
                       }
 
+                      // Update cycle_time if provided
+                      if (doc.containsKey("cycle_time")) {
+                          uint16_t cycle_time = doc["cycle_time"];
+
+                          if (cycle_time < 1 || cycle_time > 1000) {
+                              request->send(400, "application/json",
+                                            R"({"success":false,"error":"Cycle time must be between 1 and 1000"})");
+                              return;
+                          }
+
+                          deviceConfig.cycle_time = cycle_time;
+                          Serial.printf("Cycle time updated: %u ms\n", cycle_time);
+                          changed = true;
+                      }
+
                       if (!changed) {
                           request->send(400, "application/json",
                                         R"({"success":false,"error":"No valid parameters provided"})");
@@ -721,6 +739,16 @@ void WebServerManager::setupAPIRoutes() {
         doc["device_id"] = deviceConfig.device_id;
         doc["num_pixels"] = deviceConfig.num_pixels;
         doc["led_pin"] = deviceConfig.led_pin;
+        doc["cycle_time"] = deviceConfig.cycle_time;
+
+        // Show statistics
+        ShowStats stats = showController.getStats();
+        JsonObject statsJson = doc.createNestedObject("stats");
+        statsJson["avg_execution_time"] = stats.avg_execution_time;
+        statsJson["avg_show_time"] = stats.avg_show_time;
+        statsJson["avg_cycle_time"] = stats.avg_cycle_time;
+        statsJson["last_execution_time"] = stats.last_execution_time;
+        statsJson["last_show_time"] = stats.last_show_time;
 
         // Chip info
         doc["chip_model"] = ESP.getChipModel();

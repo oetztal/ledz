@@ -48,10 +48,20 @@
                     <small style="display:block; margin-top:4px; color:#666;">Default: 39 (PIN_NEOPIXEL for onboard LED), or 35 (MOSI for external strips)</small>
                 </div>
 
+                <div class="form-group">
+                    <label for="cycleTime">Show Cycle Time (ms)</label>
+                    <select id="cycleTime">
+                        <option value="10">10 ms (Default)</option>
+                        <option value="20">20 ms</option>
+                        <option value="25">25 ms</option>
+                        <option value="50">50 ms</option>
+                    </select>
+                </div>
+
                 <button class="btn btn-primary" onclick="updateHardwareSettings()">Update Hardware Settings</button>
 
                 <div class="info-box">
-                    <strong>Current: </strong><span id="currentNumPixels">Loading...</span> LEDs on pin <span id="currentLedPin">Loading...</span><br>
+                    <strong>Current: </strong><span id="currentNumPixels">Loading...</span> LEDs on pin <span id="currentLedPin">Loading...</span> with cycle time <span id="currentCycleTime">Loading...</span> ms<br>
                     <strong>Note: </strong>The device will restart after updating these settings.
                 </div>
             </div>
@@ -145,19 +155,28 @@
             }
         }
 
-        // Load current hardware settings from /api/about endpoint
+        // Load current hardware settings from /api/status endpoint
         async function loadHardwareSettings() {
             try {
-                const response = await fetch('/api/about');
+                const response = await fetch('/api/status');
                 const data = await response.json();
                 const numPixels = data.num_pixels || 300;
                 const ledPin = data.led_pin || 35;
+                const cycleTime = data.cycle_time || 10;
                 document.getElementById('currentNumPixels').textContent = numPixels;
                 document.getElementById('currentLedPin').textContent = ledPin;
+                document.getElementById('currentCycleTime').textContent = cycleTime;
+                
+                // Set the select value
+                const cycleTimeSelect = document.getElementById('cycleTime');
+                if (cycleTimeSelect) {
+                    cycleTimeSelect.value = cycleTime.toString();
+                }
             } catch (error) {
                 console.error('Failed to load hardware settings:', error);
                 document.getElementById('currentNumPixels').textContent = 'Error';
                 document.getElementById('currentLedPin').textContent = 'Error';
+                document.getElementById('currentCycleTime').textContent = 'Error';
             }
         }
 
@@ -195,6 +214,7 @@
         async function updateHardwareSettings() {
             const numPixels = parseInt(document.getElementById('numPixels').value);
             const ledPin = parseInt(document.getElementById('ledPin').value);
+            const cycleTime = parseInt(document.getElementById('cycleTime').value);
 
             const updates = {};
             let changes = [];
@@ -215,6 +235,11 @@
                 }
                 updates.led_pin = ledPin;
                 changes.push(`pin ${ledPin}`);
+            }
+
+            if (!isNaN(cycleTime)) {
+                updates.cycle_time = cycleTime;
+                changes.push(`${cycleTime}ms cycle time`);
             }
 
             if (changes.length === 0) {

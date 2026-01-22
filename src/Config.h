@@ -46,15 +46,17 @@ namespace Config {
         uint8_t brightness; // 0-255
         uint16_t num_pixels;
         uint8_t led_pin; // GPIO pin for LED strip (default: PIN_NEOPIXEL=39 for onboard, or 35=MOSI for external)
+        uint16_t cycle_time; // Cycle time in ms (e.g., 10, 20, 25, 50)
         char device_id[16]; // e.g., "AABBCC"
         char device_name[32]; // Custom device name
 
         DeviceConfig() : brightness(128), num_pixels(300),
 #ifdef PIN_NEOPIXEL
-            led_pin(PIN_NEOPIXEL)
+            led_pin(PIN_NEOPIXEL),
 #else
-            led_pin(39)
+            led_pin(39),
 #endif
+            cycle_time(10)
         {
             device_id[0] = '\0';
             device_name[0] = '\0';
