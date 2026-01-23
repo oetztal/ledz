@@ -1,6 +1,3 @@
-//
-// Created by Claude Code on 03.01.26.
-//
 // Device ID generation helper
 // Generates unique device identifier from ESP32 MAC address
 //

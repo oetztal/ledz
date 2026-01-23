@@ -2,7 +2,6 @@
 // OTA Configuration Template
 // Customize these settings for your project
 //
-// Created by Claude Code on 2026-01-05
 //
 
 #pragma once

@@ -1,7 +1,3 @@
-//
-// Created by Andreas W. on 02.01.26.
-//
-
 #ifndef LEDZ_CHAOS_H
 #define LEDZ_CHAOS_H
 #include "Show.h"

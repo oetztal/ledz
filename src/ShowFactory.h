@@ -1,6 +1,3 @@
-//
-// Created by Claude Code on 03.01.26.
-//
 // ShowFactory - Manages show registration and creation
 //
 

@@ -1,7 +1,3 @@
-//
-// Created by Andreas W. on 03.01.26.
-//
-
 #include "SmoothBlend.h"
 #include "../color.h"
 #include "../Timer.h"

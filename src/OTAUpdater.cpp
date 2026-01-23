@@ -1,6 +1,5 @@
 //
 // OTA Firmware Update Manager Implementation
-// Created by Claude Code on 2026-01-05
 //
 
 #include "OTAUpdater.h"

@@ -1,7 +1,3 @@
-//
-// Created by Andreas W. on 02.01.26.
-//
-
 #include "Layout.h"
 #include "../color.h"
 #include <cmath>

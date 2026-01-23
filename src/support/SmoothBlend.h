@@ -1,7 +1,3 @@
-//
-// Created by Andreas W. on 03.01.26.
-//
-
 #ifndef LEDZ_SMOOTHBLEND_H
 #define LEDZ_SMOOTHBLEND_H
 

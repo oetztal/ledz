@@ -1,7 +1,3 @@
-//
-// Created by Andreas W. on 05.01.26.
-//
-
 #ifndef LEDZ_LEDSHOW_H
 #define LEDZ_LEDSHOW_H
 #include "ShowController.h"

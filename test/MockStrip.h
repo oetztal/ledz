@@ -1,7 +1,3 @@
-//
-// Created by Andreas W. on 08.01.26.
-//
-
 #ifndef UNTITLED_MOCKSTRIP_H
 #define UNTITLED_MOCKSTRIP_H
 

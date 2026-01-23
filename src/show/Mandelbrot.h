@@ -1,7 +1,3 @@
-//
-// Created by Andreas W. on 02.01.26.
-//
-
 #ifndef LEDZ_MANDELBROT_H
 #define LEDZ_MANDELBROT_H
 #include "strip/Strip.h"

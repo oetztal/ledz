@@ -1,6 +1,3 @@
-//
-// Created by Andreas W. on 02.01.26.
-//
 #include <sstream>
 
 #ifdef ARDUINO

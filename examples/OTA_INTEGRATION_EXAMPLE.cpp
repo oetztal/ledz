@@ -2,7 +2,6 @@
 // OTA Integration Example
 // Shows how to integrate OTAUpdater into your project
 //
-// Created by Claude Code on 2026-01-05
 //
 
 #include <Arduino.h>

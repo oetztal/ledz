@@ -1,7 +1,3 @@
-//
-// Created by Claude Code on 04.01.26.
-//
-
 #include "Stroboscope.h"
 #include "../color.h"
 

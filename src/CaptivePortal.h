@@ -1,6 +1,3 @@
-//
-// Created by Claude Code on 03.01.26.
-//
 // CaptivePortal - DNS server for captive portal functionality
 // Redirects all DNS queries to the device IP in AP mode
 //

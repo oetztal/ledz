@@ -1,6 +1,5 @@
 //
 // OTA Firmware Update Manager for ESP32-S3
-// Created by Claude Code on 2026-01-05
 //
 // Handles GitHub release checking, firmware download, and safe OTA updates
 // with rollback support

@@ -1,7 +1,3 @@
-//
-// Created by Andreas W. on 02.01.26.
-//
-
 #ifndef LEDZ_WS2812_H
 #define LEDZ_WS2812_H
 #include <cstdint>

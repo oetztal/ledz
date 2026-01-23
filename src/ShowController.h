@@ -1,6 +1,3 @@
-//
-// Created by Claude Code on 03.01.26.
-//
 // ShowController - Thread-safe show management using FreeRTOS queue
 //
 

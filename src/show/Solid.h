@@ -1,6 +1,3 @@
-//
-// Created by Claude Code on 03.01.26.
-//
 // Solid - Display a single solid color across all LEDs
 // Uses SmoothBlend for smooth color transitions
 //

@@ -1,7 +1,3 @@
-//
-// Created by Claude Code on 03.01.26.
-//
-
 #ifndef LEDZ_COLORRANGES_H
 #define LEDZ_COLORRANGES_H
 

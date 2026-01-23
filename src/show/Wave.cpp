@@ -1,7 +1,3 @@
-//
-// Created by Claude Code on 03.01.26.
-//
-
 #include "Wave.h"
 #include "../color.h"
 #include <cmath>

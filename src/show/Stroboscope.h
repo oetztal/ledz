@@ -1,7 +1,3 @@
-//
-// Created by Claude Code on 04.01.26.
-//
-
 #ifndef LEDZ_STROBOSCOPE_H
 #define LEDZ_STROBOSCOPE_H
 
