@@ -8,6 +8,16 @@
 
 namespace Config {
     /**
+     * JSON Document size constants
+     */
+    constexpr size_t JSON_DOC_TINY   = 128;
+    constexpr size_t JSON_DOC_SMALL  = 256;
+    constexpr size_t JSON_DOC_MEDIUM = 512;
+    constexpr size_t JSON_DOC_LARGE  = 1024;
+    constexpr size_t JSON_DOC_XLARGE = 2048;
+    constexpr size_t JSON_DOC_OTA    = 8192;
+
+    /**
      * WiFi configuration structure
      */
     struct WiFiConfig {

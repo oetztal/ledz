@@ -21,7 +21,7 @@ ShowFactory::ShowFactory() {
     // Register all available shows (in display order)
     // Each lambda receives a StaticJsonDocument and uses defaults via | operator
 
-    registerShow("Solid", "Solid color or color sections (flags, patterns, gradients)", [](const StaticJsonDocument<512> &doc) {
+    registerShow("Solid", "Solid color or color sections (flags, patterns, gradients)", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
         std::vector<Strip::Color> colors;
         std::vector<float> ranges;
 
@@ -63,7 +63,7 @@ ShowFactory::ShowFactory() {
         return std::make_unique<Show::ColorRanges>(colors, ranges, gradient);
     });
 
-    registerShow("Fire", "Burning flames", [](const StaticJsonDocument<512> &doc) {
+    registerShow("Fire", "Burning flames", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
         float cooling = doc["cooling"] | 0.1f;
         float spread = doc["spread"] | 10.0f;
         float ignition = doc["ignition"] | 0.5f;
@@ -77,7 +77,7 @@ ShowFactory::ShowFactory() {
         return std::make_unique<Show::Fire>(cooling, spread, ignition, spark_amount, std::vector<float>{1.0f}, start_offset, spark_range);
     });
 
-    registerShow("Starlight", "Twinkling stars effect", [](const StaticJsonDocument<512> &doc) {
+    registerShow("Starlight", "Twinkling stars effect", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
         float probability = doc["probability"] | 0.1f;
         unsigned long length_ms = doc["length"] | 5000;
         unsigned long fade_ms = doc["fade"] | 1000;
@@ -91,7 +91,7 @@ ShowFactory::ShowFactory() {
         return std::make_unique<Show::Starlight>(probability, length_ms, fade_ms, r, g, b);
     });
 
-    registerShow("Stroboscope", "Flashing strobe effect", [](const StaticJsonDocument<512> &doc) {
+    registerShow("Stroboscope", "Flashing strobe effect", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
         uint8_t r = doc["r"] | 255;
         uint8_t g = doc["g"] | 255;
         uint8_t b = doc["b"] | 255;
@@ -104,24 +104,24 @@ ShowFactory::ShowFactory() {
         return std::make_unique<Show::Stroboscope>(r, g, b, on_cycles, off_cycles);
     });
 
-    registerShow("ColorRun", "Running colors", [](const StaticJsonDocument<512> &doc) {
+    registerShow("ColorRun", "Running colors", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
         // ColorRun has no parameters yet
         return std::make_unique<Show::ColorRun>();
     });
 
-    registerShow("Jump", "Jumping lights", [](const StaticJsonDocument<512> &doc) {
+    registerShow("Jump", "Jumping lights", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
         // Jump has no parameters yet
         return std::make_unique<Show::Jump>();
     });
 
-    registerShow("Rainbow", "Rainbow color cycle", [](const StaticJsonDocument<512> &doc) {
+    registerShow("Rainbow", "Rainbow color cycle", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
         // Rainbow has no parameters yet
         Serial.println("ShowFactory: Creating Rainbow");
 
         return std::make_unique<Show::Rainbow>();
     });
 
-    registerShow("Wave", "Propagating wave with rainbow colors", [](const StaticJsonDocument<512> &doc) {
+    registerShow("Wave", "Propagating wave with rainbow colors", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
         float wave_speed = doc["wave_speed"] | 1.0f;
         float decay_rate = doc["decay_rate"] | 2.0f;
         float brightness_frequency = doc["brightness_frequency"] | 0.1f;
@@ -133,7 +133,7 @@ ShowFactory::ShowFactory() {
         return std::make_unique<Show::Wave>(wave_speed, decay_rate, brightness_frequency, wavelength);
     });
 
-    registerShow("TheaterChase", "Marquee-style chase with rainbow colors", [](const StaticJsonDocument<512> &doc) {
+    registerShow("TheaterChase", "Marquee-style chase with rainbow colors", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
         unsigned int num_steps_per_cycle = doc["num_steps_per_cycle"] | 21;
 #ifdef ARDUINO
         Serial.printf("ShowFactory: Creating TheaterChase num_steps_per_cycle=%u\n",
@@ -142,7 +142,7 @@ ShowFactory::ShowFactory() {
         return std::make_unique<Show::TheaterChase>(num_steps_per_cycle);
     });
 
-    registerShow("MorseCode", "Scrolling Morse code text display", [](const StaticJsonDocument<512> &doc) {
+    registerShow("MorseCode", "Scrolling Morse code text display", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
 #ifdef ARDUINO
         String message = doc["message"] | "HELLO";
 #else
@@ -162,7 +162,7 @@ ShowFactory::ShowFactory() {
                                                  symbol_space, letter_space, word_space);
     });
 
-    registerShow("Chaos", "Chaotic pattern", [](const StaticJsonDocument<512> &doc) {
+    registerShow("Chaos", "Chaotic pattern", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
         float Rmin = doc["Rmin"] | 2.95f;
         float Rmax = doc["Rmax"] | 4.0f;
         float Rdelta = doc["Rdelta"] | 0.0002f;
@@ -173,7 +173,7 @@ ShowFactory::ShowFactory() {
         return std::make_unique<Show::Chaos>(Rmin, Rmax, Rdelta);
     });
 
-    registerShow("Mandelbrot", "Mandelbrot fractal zoom", [](const StaticJsonDocument<512> &doc) {
+    registerShow("Mandelbrot", "Mandelbrot fractal zoom", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
         float Cre0 = doc["Cre0"] | -1.05f;
         float Cim0 = doc["Cim0"] | -0.3616f;
         float Cim1 = doc["Cim1"] | -0.3156f;
@@ -210,7 +210,7 @@ std::unique_ptr<Show::Show> ShowFactory::createShow(const char *name, const char
 
 #ifdef ARDUINO
     // Parse JSON parameters (increased buffer for ColorRanges with many colors and nested arrays)
-    StaticJsonDocument<1024> doc;
+    StaticJsonDocument<Config::JSON_DOC_LARGE> doc;
     DeserializationError error = deserializeJson(doc, paramsJson);
 
     // If JSON parsing fails, log warning and use empty document (will use defaults)
@@ -227,7 +227,7 @@ std::unique_ptr<Show::Show> ShowFactory::createShow(const char *name, const char
     return it->second(doc);
 #else
     // Non-Arduino builds: use empty document (defaults)
-    StaticJsonDocument<512> doc;
+    StaticJsonDocument<Config::JSON_DOC_MEDIUM> doc;
     return std::move(it->second(doc));
 #endif
 }

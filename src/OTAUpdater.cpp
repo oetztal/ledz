@@ -3,6 +3,7 @@
 //
 
 #include "OTAUpdater.h"
+#include "Config.h"
 
 #ifdef ARDUINO
 #include <esp_task_wdt.h>  // For watchdog timer control
@@ -45,7 +46,7 @@ bool OTAUpdater::checkForUpdate(const char *owner, const char *repo, FirmwareInf
     Serial.printf("[OTA] Free heap before JSON parse: %u bytes\n", freeBefore);
 
     // Use JSON filter to only parse fields we need (saves memory)
-    StaticJsonDocument < 200 > filter;
+    StaticJsonDocument < Config::JSON_DOC_SMALL > filter;
     filter["tag_name"] = true;
     filter["name"] = true;
     filter["body"] = true;
@@ -53,7 +54,7 @@ bool OTAUpdater::checkForUpdate(const char *owner, const char *repo, FirmwareInf
     filter["assets"] = true;
 
     // Parse JSON response with filter
-    DynamicJsonDocument doc(8192); // Increased from 4096 to 8192
+    DynamicJsonDocument doc(Config::JSON_DOC_OTA);
     DeserializationError error = deserializeJson(doc, http.getStream(), DeserializationOption::Filter(filter));
 
     uint32_t freeAfter = ESP.getFreeHeap();

@@ -16,6 +16,7 @@
 #endif
 
 #include "show/Show.h"
+#include "Config.h"
 
 /**
  * ShowFactory
@@ -27,7 +28,7 @@ public:
     /**
      * Show constructor function type that takes JSON parameters
      */
-    using ShowConstructor = std::function<std::unique_ptr<Show::Show>(const StaticJsonDocument<512> &)>;
+    using ShowConstructor = std::function<std::unique_ptr<Show::Show>(const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &)>;
 
     /**
      * Show metadata for listing available shows
@@ -48,7 +49,7 @@ private:
      * @param defaultColor Default color if none provided
      * @return Vector with exactly n colors
      */
-    static std::vector<uint32_t> parseColors(const StaticJsonDocument<512> &doc,
+    static std::vector<uint32_t> parseColors(const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc,
                                               size_t count,
                                               uint32_t defaultColor);
 

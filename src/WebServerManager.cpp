@@ -1,6 +1,6 @@
 #include "WebServerManager.h"
 
-#include <sstream>
+#include <cstdio>
 
 #include "Config.h"
 #include "Network.h"
@@ -46,9 +46,10 @@ static void sendGzippedResponse(AsyncWebServerRequest *request, const char *cont
 
 void AccessLogger::run(AsyncWebServerRequest *request, ArMiddlewareNext next) {
     Print *_out = &Serial;
-    std::stringstream ss;
-    ss << "[HTTP] " << request->client()->remoteIP().toString().c_str() << " " << request->url().c_str() << " " <<
-            request->methodToString();
+    char logBuf[128];
+    const char* ip = request->client()->remoteIP().toString().c_str();
+    const char* url = request->url().c_str();
+    const char* method = request->methodToString();
 
     uint32_t elapsed = millis();
     next();
@@ -56,11 +57,13 @@ void AccessLogger::run(AsyncWebServerRequest *request, ArMiddlewareNext next) {
 
     AsyncWebServerResponse *response = request->getResponse();
     if (response) {
-        ss << " (" << elapsed << " ms) " << response->code();
+        snprintf(logBuf, sizeof(logBuf), "[HTTP] %s %s %s (%u ms) %u", 
+                 ip, url, method, elapsed, response->code());
     } else {
-        ss << " (no response)";
+        snprintf(logBuf, sizeof(logBuf), "[HTTP] %s %s %s (%u ms) (no response)", 
+                 ip, url, method, elapsed);
     }
-    _out->println(ss.str().c_str());
+    _out->println(logBuf);
 }
 
 void WebServerManager::setupConfigRoutes() {
@@ -116,7 +119,7 @@ void WebServerManager::setupAPIRoutes() {
 
     // GET /api/status - Get device status
     server.on("/api/status", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        StaticJsonDocument<1024> doc;
+        StaticJsonDocument<Config::JSON_DOC_LARGE> doc;
 
         // Device info
         Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
@@ -141,7 +144,7 @@ void WebServerManager::setupAPIRoutes() {
         Config::ShowConfig showConfig = config.loadShowConfig();
         if (strlen(showConfig.params_json) > 0) {
             // Parse the params_json and include it
-            StaticJsonDocument<512> paramsDoc;
+            StaticJsonDocument<Config::JSON_DOC_MEDIUM> paramsDoc;
             if (DeserializationError error = deserializeJson(paramsDoc, showConfig.params_json); !error) {
                 doc["show_params"] = paramsDoc.as<JsonObject>();
             }
@@ -161,7 +164,7 @@ void WebServerManager::setupAPIRoutes() {
 
     // GET /api/shows - List available shows
     server.on("/api/shows", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        StaticJsonDocument<1024> doc;
+        StaticJsonDocument<Config::JSON_DOC_LARGE> doc;
         JsonArray shows = doc.createNestedArray("shows");
 
         const std::vector<ShowFactory::ShowInfo> &showList = showController.listShows();
@@ -183,7 +186,7 @@ void WebServerManager::setupAPIRoutes() {
               nullptr,
               [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, [[maybe_unused]] size_t total) {
                   if (index == 0) {
-                      StaticJsonDocument<512> doc;
+                      StaticJsonDocument<Config::JSON_DOC_MEDIUM> doc;
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
@@ -223,7 +226,7 @@ void WebServerManager::setupAPIRoutes() {
               nullptr,
               [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, [[maybe_unused]] size_t total) {
                   if (index == 0) {
-                      StaticJsonDocument<256> doc;
+                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
 
                       if (deserializeJson(doc, data, len)) {
                           request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
@@ -254,7 +257,7 @@ void WebServerManager::setupAPIRoutes() {
               [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
                      [[maybe_unused]] size_t total) {
                   if (index == 0) {
-                      StaticJsonDocument<256> doc;
+                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
@@ -290,7 +293,7 @@ void WebServerManager::setupAPIRoutes() {
     server.on("/api/layout", HTTP_GET, [this](AsyncWebServerRequest *request) {
         Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
 
-        StaticJsonDocument<256> doc;
+        StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
         doc["reverse"] = layoutConfig.reverse;
         doc["mirror"] = layoutConfig.mirror;
         doc["dead_leds"] = layoutConfig.dead_leds;
@@ -304,7 +307,7 @@ void WebServerManager::setupAPIRoutes() {
     server.on("/api/presets", HTTP_GET, [this](AsyncWebServerRequest *request) {
         Config::PresetsConfig presetsConfig = config.loadPresetsConfig();
 
-        StaticJsonDocument<2048> doc;
+        StaticJsonDocument<Config::JSON_DOC_XLARGE> doc;
         JsonArray presets = doc.createNestedArray("presets");
 
         for (uint8_t i = 0; i < Config::PresetsConfig::MAX_PRESETS; i++) {
@@ -318,7 +321,7 @@ void WebServerManager::setupAPIRoutes() {
                 preset["layout_dead_leds"] = presetsConfig.presets[i].layout_dead_leds;
 
                 // Parse and include params_json
-                StaticJsonDocument<512> paramsDoc;
+                StaticJsonDocument<Config::JSON_DOC_MEDIUM> paramsDoc;
                 if (!deserializeJson(paramsDoc, presetsConfig.presets[i].params_json)) {
                     preset["params"] = paramsDoc.as<JsonObject>();
                 }
@@ -339,7 +342,7 @@ void WebServerManager::setupAPIRoutes() {
               [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
                      [[maybe_unused]] size_t total) {
                   if (index == 0) {
-                      StaticJsonDocument<256> doc;
+                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
@@ -383,7 +386,7 @@ void WebServerManager::setupAPIRoutes() {
 
                       // Queue preset load through ShowController for thread safety
                       if (showController.queuePresetLoad(preset)) {
-                          StaticJsonDocument<128> responseDoc;
+                          StaticJsonDocument<Config::JSON_DOC_TINY> responseDoc;
                           responseDoc["success"] = true;
                           responseDoc["name"] = preset.name;
                           responseDoc["show_name"] = preset.show_name;
@@ -407,7 +410,7 @@ void WebServerManager::setupAPIRoutes() {
               [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
                      [[maybe_unused]] size_t total) {
                   if (index == 0) {
-                      StaticJsonDocument<256> doc;
+                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
@@ -461,7 +464,7 @@ void WebServerManager::setupAPIRoutes() {
                       preset.layout_dead_leds = layoutConfig.dead_leds;
 
                       if (config.savePreset(slotIndex, preset)) {
-                          StaticJsonDocument<128> responseDoc;
+                          StaticJsonDocument<Config::JSON_DOC_TINY> responseDoc;
                           responseDoc["success"] = true;
                           responseDoc["index"] = slotIndex;
                           responseDoc["name"] = preset.name;
@@ -485,7 +488,7 @@ void WebServerManager::setupAPIRoutes() {
               [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
                      [[maybe_unused]] size_t total) {
                   if (index == 0) {
-                      StaticJsonDocument<256> doc;
+                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
@@ -542,7 +545,7 @@ void WebServerManager::setupAPIRoutes() {
               nullptr,
               [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, [[maybe_unused]] size_t total) {
                   if (index == 0) {
-                      StaticJsonDocument<256> doc;
+                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
 
                       if (deserializeJson(doc, data, len)) {
                           request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
@@ -590,7 +593,7 @@ void WebServerManager::setupAPIRoutes() {
               nullptr,
               [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, [[maybe_unused]] size_t total) {
                   if (index == 0) {
-                      StaticJsonDocument<256> doc;
+                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
@@ -628,7 +631,7 @@ void WebServerManager::setupAPIRoutes() {
               [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
                      [[maybe_unused]] size_t total) {
                   if (index == 0) {
-                      StaticJsonDocument<256> doc;
+                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
@@ -721,7 +724,7 @@ void WebServerManager::setupAPIRoutes() {
 
     // GET /api/about - Device information
     server.on("/api/about", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        StaticJsonDocument<1024> doc;
+        StaticJsonDocument<Config::JSON_DOC_LARGE> doc;
 
         // Device info
         Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
@@ -789,7 +792,7 @@ void WebServerManager::setupAPIRoutes() {
         uint32_t currentEpoch = network.getCurrentEpoch();
         const Config::TimersConfig &timersConfig = scheduler->getTimersConfig();
 
-        StaticJsonDocument<1024> doc;
+        StaticJsonDocument<Config::JSON_DOC_LARGE> doc;
         doc["timezone_offset_hours"] = timersConfig.timezone_offset_hours;
         doc["current_epoch"] = currentEpoch;
         
@@ -847,7 +850,7 @@ void WebServerManager::setupAPIRoutes() {
                           return;
                       }
 
-                      StaticJsonDocument<256> doc;
+                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
@@ -900,7 +903,7 @@ void WebServerManager::setupAPIRoutes() {
 
                       uint32_t currentEpoch = network.getCurrentEpoch();
                       if (scheduler->setCountdown(timerIndex, duration, action, presetIndex, currentEpoch)) {
-                          StaticJsonDocument<128> responseDoc;
+                          StaticJsonDocument<Config::JSON_DOC_TINY> responseDoc;
                           responseDoc["success"] = true;
                           responseDoc["index"] = timerIndex;
                           responseDoc["remaining_seconds"] = duration;
@@ -931,7 +934,7 @@ void WebServerManager::setupAPIRoutes() {
                           return;
                       }
 
-                      StaticJsonDocument<256> doc;
+                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
@@ -985,7 +988,7 @@ void WebServerManager::setupAPIRoutes() {
                       bool success = scheduler->setDailyAlarm(timerIndex, secondsSinceMidnight, action, presetIndex);
 
                       if (success) {
-                          StaticJsonDocument<128> responseDoc;
+                          StaticJsonDocument<Config::JSON_DOC_TINY> responseDoc;
                           responseDoc["success"] = true;
                           responseDoc["index"] = timerIndex;
 
@@ -1015,7 +1018,7 @@ void WebServerManager::setupAPIRoutes() {
                           return;
                       }
 
-                      StaticJsonDocument<128> doc;
+                      StaticJsonDocument<Config::JSON_DOC_TINY> doc;
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
@@ -1061,7 +1064,7 @@ void WebServerManager::setupAPIRoutes() {
                           return;
                       }
 
-                      StaticJsonDocument<128> doc;
+                      StaticJsonDocument<Config::JSON_DOC_TINY> doc;
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
@@ -1097,7 +1100,7 @@ void WebServerManager::setupAPIRoutes() {
             return;
         }
 
-        StaticJsonDocument<512> doc;
+        StaticJsonDocument<Config::JSON_DOC_MEDIUM> doc;
         const Config::TouchConfig &touchConfig = touch->getTouchConfig();
 
         doc["enabled"] = touchConfig.enabled;
@@ -1140,7 +1143,7 @@ void WebServerManager::setupAPIRoutes() {
                           return;
                       }
 
-                      StaticJsonDocument<256> doc;
+                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
@@ -1168,7 +1171,7 @@ void WebServerManager::setupAPIRoutes() {
 
     // GET /api/ota/check - Check for firmware updates
     server.on("/api/ota/check", HTTP_GET, [](AsyncWebServerRequest *request) {
-        StaticJsonDocument<1024> doc;
+        StaticJsonDocument<Config::JSON_DOC_LARGE> doc;
 
         FirmwareInfo info;
         bool releaseFound = OTAUpdater::checkForUpdate(OTA_GITHUB_OWNER, OTA_GITHUB_REPO, info);
@@ -1209,7 +1212,7 @@ void WebServerManager::setupAPIRoutes() {
                   }
 
                   if (index + len == total) {
-                      StaticJsonDocument<512> doc;
+                      StaticJsonDocument<Config::JSON_DOC_MEDIUM> doc;
                       deserializeJson(doc, data, len);
 
                       String downloadUrl = doc["download_url"] | "";
@@ -1238,7 +1241,7 @@ void WebServerManager::setupAPIRoutes() {
 
     // GET /api/ota/status - Get OTA status
     server.on("/api/ota/status", HTTP_GET, [](AsyncWebServerRequest *request) {
-        StaticJsonDocument<512> doc;
+        StaticJsonDocument<Config::JSON_DOC_MEDIUM> doc;
 
         doc["firmware_version"] = FIRMWARE_VERSION;
         doc["build_date"] = FIRMWARE_BUILD_DATE;
@@ -1272,7 +1275,7 @@ void WebServerManager::setupAPIRoutes() {
     server.on("/api/ota/confirm", HTTP_POST, [](AsyncWebServerRequest *request) {
         bool success = OTAUpdater::confirmBoot();
 
-        StaticJsonDocument<256> doc;
+        StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
         doc["success"] = success;
         doc["message"] = success ? "Boot confirmed, rollback disabled" : "Failed to confirm boot";
 
@@ -1312,7 +1315,7 @@ void WebServerManager::handleWiFiConfig(AsyncWebServerRequest *request, uint8_t 
     // Only process the first chunk (index == 0)
     if (index == 0) {
         // Parse JSON body
-        StaticJsonDocument<256> doc;
+        StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
         DeserializationError error = deserializeJson(doc, data, len);
 
         if (error) {
@@ -1355,7 +1358,7 @@ void WebServerManager::handleWiFiConfig(AsyncWebServerRequest *request, uint8_t 
         hostname.toLowerCase();
 
         // Send success response with hostname
-        StaticJsonDocument<128> responseDoc;
+        StaticJsonDocument<Config::JSON_DOC_TINY> responseDoc;
         responseDoc["success"] = true;
         responseDoc["hostname"] = hostname + ".local";
 
