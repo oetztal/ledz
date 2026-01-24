@@ -1,3 +1,8 @@
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=oetztal_ledz&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=oetztal_ledz)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=oetztal_ledz&metric=bugs)](https://sonarcloud.io/summary/new_code?id=oetztal_ledz)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=oetztal_ledz&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=oetztal_ledz)
+[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=oetztal_ledz&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=oetztal_ledz)
+
 # ledz
 
 ESP32-based LED controller with web interface for WS2812B/NeoPixel LED strips.
