@@ -6,8 +6,10 @@
 #endif
 
 namespace Show {
-    ColorRanges::ColorRanges(const std::vector<Strip::Color> &colors, const std::vector<float> &ranges)
-        : colors(colors), ranges(ranges), initialized(false) {
+    ColorRanges::ColorRanges(const std::vector<Strip::Color> &colors,
+                             const std::vector<float> &ranges,
+                             bool gradient)
+        : colors(colors), ranges(ranges), gradient(gradient), initialized(false) {
     }
 
     void ColorRanges::execute(Strip::Strip &strip, Iteration iteration) {
@@ -15,14 +17,14 @@ namespace Show {
         if (!initialized) {
 #ifdef ARDUINO
             Serial.print("ColorRanges: colors=[");
-            for (auto color: colors) {
-                    Serial.printf("RGB(%d,%d,%d)), ", red(color), green(color), blue(color));
+            for (auto c: colors) {
+                Serial.printf("RGB(%d,%d,%d), ", red(c), green(c), blue(c));
             }
             Serial.print("], ranges=[");
             for (auto range: ranges) {
                 Serial.printf("%.1f%%, ", range);
             }
-            Serial.println("]");
+            Serial.printf("], gradient=%s\n", gradient ? "true" : "false");
 #endif
 
             uint16_t num_leds = strip.length();
@@ -43,6 +45,7 @@ namespace Show {
 #endif
                 use_custom_ranges = false;
             }
+
 
             if (!use_custom_ranges) {
                 // Equal distribution
@@ -69,34 +72,53 @@ namespace Show {
             }
             boundaries.push_back(num_leds); // Always end at num_leds
 
-            bool new_color = true;
-            size_t color_index = -1;
-            // Assign colors to each LED based on boundaries
-            for (uint16_t led = 0; led < num_leds; led++) {
-                // Find which color range this LED belongs to
-                for (size_t i = 0; i < boundaries.size() - 1; i++) {
-                    if (led >= boundaries[i] && led < boundaries[i + 1]) {
-                        if (color_index != i) {
+            if (gradient && colors.size() > 1) {
+                // Gradient mode: colors are waypoints, interpolate between them
+                // Waypoints are evenly distributed: 0%, 1/(N-1), 2/(N-1), ..., 100%
+                for (uint16_t led = 0; led < num_leds; led++) {
+                    float position = (num_leds > 1)
+                        ? (float)led / (float)(num_leds - 1)
+                        : 0.0f;
+
+                    // Find which segment this LED is in
+                    float segment_size = 1.0f / (float)(colors.size() - 1);
+                    size_t segment = (size_t)(position / segment_size);
+                    if (segment >= colors.size() - 1) segment = colors.size() - 2;
+
+                    // Calculate position within segment (0.0 to 1.0)
+                    float segment_start = (float)segment * segment_size;
+                    float ratio = (position - segment_start) / segment_size;
+                    if (ratio > 1.0f) ratio = 1.0f;
+
+                    // Interpolate between adjacent waypoint colors
+                    Strip::Color colorA = colors[segment];
+                    Strip::Color colorB = colors[segment + 1];
+
+                    uint8_t r = (uint8_t)(red(colorA) * (1.0f - ratio) + red(colorB) * ratio);
+                    uint8_t g = (uint8_t)(green(colorA) * (1.0f - ratio) + green(colorB) * ratio);
+                    uint8_t b = (uint8_t)(blue(colorA) * (1.0f - ratio) + blue(colorB) * ratio);
+
+                    target_colors.push_back(color(r, g, b));
+                }
+            } else {
+                // Solid mode: colors fill sections with sharp boundaries
+                for (uint16_t led = 0; led < num_leds; led++) {
+                    // Find which color range this LED belongs to
+                    size_t color_index = 0;
+                    for (size_t i = 0; i < boundaries.size() - 1; i++) {
+                        if (led >= boundaries[i] && led < boundaries[i + 1]) {
                             color_index = i;
-                            new_color = true;
+                            break;
                         }
-                        break;
                     }
-                }
 
-                // Make sure we don't go out of bounds
-                if (color_index >= colors.size()) {
-                    color_index = colors.size() - 1;
-                }
+                    // Make sure we don't go out of bounds
+                    if (color_index >= colors.size()) {
+                        color_index = colors.size() - 1;
+                    }
 
-                size_t color = colors[color_index];
-                target_colors.push_back(color);
-#ifdef ARDUINO
-                if (new_color) {
-                    Serial.printf("ColorRanges: LED %u: Color %zu (RGB(%d,%d,%d))\n", led, color_index, red(color), green(color), blue(color));
-                    new_color = false;
+                    target_colors.push_back(colors[color_index]);
                 }
-#endif
             }
 
             // Create SmoothBlend with the color range pattern

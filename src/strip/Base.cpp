@@ -62,6 +62,9 @@ namespace Strip {
 #ifdef ARDUINO
         auto currentBrightness = strip->getBrightness();
         if (currentBrightness != brightness) {
+            for (int i=0; i<strip->numPixels(); i++) {
+                strip->setPixelColor(i, Adafruit_NeoPixel::gamma32(colors[i]));
+            }
             strip->setBrightness(brightness);
         }
 #endif

@@ -10,6 +10,7 @@
 #include "OTAUpdater.h"
 #include "OTAConfig.h"
 #include "TimerScheduler.h"
+#include "TouchController.h"
 
 #ifdef ARDUINO
 #include <ArduinoJson.h>
@@ -1090,6 +1091,84 @@ void WebServerManager::setupAPIRoutes() {
                       }
 
                       scheduler->setTimezoneOffset(offset);
+                      request->send(200, "application/json", R"({"success":true})");
+                  }
+              }
+    );
+
+    // GET /api/touch - Get touch configuration and current values
+    server.on("/api/touch", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        TouchController *touch = network.getTouchController();
+        if (!touch) {
+            request->send(503, "application/json",
+                          R"({"success":false,"error":"Touch controller not available"})");
+            return;
+        }
+
+        StaticJsonDocument<512> doc;
+        const Config::TouchConfig &touchConfig = touch->getTouchConfig();
+
+        doc["enabled"] = touchConfig.enabled;
+        doc["threshold"] = touchConfig.threshold;
+
+        // Pin mappings
+        JsonArray pins = doc.createNestedArray("pins");
+        for (uint8_t i = 0; i < Config::TouchConfig::MAX_TOUCH_PINS; i++) {
+            JsonObject pin = pins.createNestedObject();
+            pin["index"] = i;
+            pin["gpio"] = TouchController::getGpioPin(i);
+            pin["action"] = (i == 0) ? "Switch Show" : (i == 1) ? "Switch Variant" : "Switch Layout";
+        }
+
+        // Current touch values for debugging/calibration
+        uint32_t touchValues[Config::TouchConfig::MAX_TOUCH_PINS];
+        touch->getTouchValues(touchValues);
+        JsonArray values = doc.createNestedArray("values");
+        for (uint8_t i = 0; i < Config::TouchConfig::MAX_TOUCH_PINS; i++) {
+            values.add(touchValues[i]);
+        }
+
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+
+    // POST /api/touch - Update touch configuration
+    server.on("/api/touch", HTTP_POST,
+              []([[maybe_unused]] AsyncWebServerRequest *request) {
+              },
+              nullptr,
+              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
+                     [[maybe_unused]] size_t total) {
+                  if (index == 0) {
+                      TouchController *touch = network.getTouchController();
+                      if (!touch) {
+                          request->send(503, "application/json",
+                                        R"({"success":false,"error":"Touch controller not available"})");
+                          return;
+                      }
+
+                      StaticJsonDocument<256> doc;
+                      DeserializationError error = deserializeJson(doc, data, len);
+
+                      if (error) {
+                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          return;
+                      }
+
+                      Config::TouchConfig touchConfig = touch->getTouchConfig();
+
+                      // Update enabled state if provided
+                      if (doc.containsKey("enabled")) {
+                          touchConfig.enabled = doc["enabled"];
+                      }
+
+                      // Update threshold if provided
+                      if (doc.containsKey("threshold")) {
+                          touchConfig.threshold = doc["threshold"];
+                      }
+
+                      touch->setTouchConfig(touchConfig);
                       request->send(200, "application/json", R"({"success":true})");
                   }
               }

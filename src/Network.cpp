@@ -228,6 +228,10 @@ void Network::configureUsingAPMode() {
 #ifdef ARDUINO
     Serial.println("Network task started");
 
+    // Initialize touch controller early (works without WiFi)
+    touchController = std::make_unique<TouchController>(config, showController);
+    touchController->begin();
+
     // Check if WiFi is configured
     if (!config.isConfigured()) {
         Serial.println("No WiFi configuration found - starting AP mode");
@@ -278,48 +282,61 @@ void Network::configureUsingAPMode() {
     Serial.println("Webserver started - system ready");
     Serial.printf("Free heap: %u bytes\n", ESP.getFreeHeap());
 
-    // Main loop - NTP updates
+    // Main loop - NTP updates and touch control
     auto lastNtpUpdate = ntpClient.getEpochTime();
 
     unsigned long lastCheck = millis();
+    unsigned long lastSecond = millis();
     while (true) {
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        // Short delay for responsive touch control
+        vTaskDelay(50 / portTICK_PERIOD_MS);
 
-        auto wl_status = WiFi.status();
         unsigned long now = millis();
-        if (now - lastCheck > 1100) {
-            Serial.printf("WiFi status: %d delayed %lu\n", wl_status, now - lastCheck);
+
+        // Check touch controller frequently (every 50ms)
+        if (touchController) {
+            touchController->update();
         }
-        lastCheck = now;
 
-        // Check WiFi connection
-        if (wl_status != WL_CONNECTED) {
-            Serial.println("WiFi disconnected - reconnecting ...");
-            WiFi.reconnect();
+        // Check WiFi and timers every second
+        if (now - lastSecond >= 1000) {
+            lastSecond = now;
 
-            int attempts = 0;
-            while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-                vTaskDelay(500 / portTICK_PERIOD_MS);
-                attempts++;
+            auto wl_status = WiFi.status();
+            if (now - lastCheck > 1100) {
+                Serial.printf("WiFi status: %d delayed %lu\n", wl_status, now - lastCheck);
+            }
+            lastCheck = now;
+
+            // Check WiFi connection
+            if (wl_status != WL_CONNECTED) {
+                Serial.println("WiFi disconnected - reconnecting ...");
+                WiFi.reconnect();
+
+                int attempts = 0;
+                while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+                    vTaskDelay(500 / portTICK_PERIOD_MS);
+                    attempts++;
+                }
+
+                if (WiFi.status() == WL_CONNECTED) {
+                    Serial.printf("WiFi reconnected (%d attempts)\n", attempts);
+                }
             }
 
-            if (WiFi.status() == WL_CONNECTED) {
-                Serial.printf("WiFi reconnected (%d attempts)\n", attempts);
+            if (ntpClient.getEpochTime() - lastNtpUpdate > 600) {
+                bool result = ntpClient.update();
+                Serial.print("NTP update: ");
+                Serial.print(ntpClient.getFormattedTime());
+                Serial.print(" - ");
+                Serial.println(result ? "success" : "failed");
+                lastNtpUpdate = ntpClient.getEpochTime();
             }
-        }
 
-        if (ntpClient.getEpochTime() - lastNtpUpdate > 600) {
-            bool result = ntpClient.update();
-            Serial.print("NTP update: ");
-            Serial.print(ntpClient.getFormattedTime());
-            Serial.print(" - ");
-            Serial.println(result ? "success" : "failed");
-            lastNtpUpdate = ntpClient.getEpochTime();
-        }
-
-        // Check timers
-        if (timerScheduler) {
-            timerScheduler->checkTimers(ntpClient.getEpochTime());
+            // Check timers
+            if (timerScheduler) {
+                timerScheduler->checkTimers(ntpClient.getEpochTime());
+            }
         }
     }
 #endif

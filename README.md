@@ -7,6 +7,7 @@ ESP32-based LED controller with web interface for WS2812B/NeoPixel LED strips.
 - **15 LED shows** - Rainbow, Fire, Wave, Starlight, Mandelbrot, and more
 - **Web interface** - Control from any device on your network
 - **Presets** - Save and recall up to 8 complete configurations
+- **Touch control** - Capacitive touch pins to load presets without WiFi
 - **Timers & Alarms** - Schedule shows with countdown timers or daily alarms
 - **OTA updates** - Update firmware over WiFi from GitHub releases
 - **Easy setup** - Captive portal for WiFi configuration
@@ -85,6 +86,8 @@ pio run -e adafruit_qtpy_esp32s3_nopsram -t upload
 | `/api/timers` | GET | List active timers |
 | `/api/timers/countdown` | POST | Set countdown timer |
 | `/api/timers/alarm` | POST | Set daily alarm |
+| `/api/touch` | GET | Touch config and current values |
+| `/api/touch` | POST | Update touch settings |
 | `/api/ota/check` | GET | Check for firmware updates |
 | `/api/ota/update` | POST | Install firmware update |
 
@@ -99,6 +102,7 @@ src/
   ShowController.cpp    # Show management
   ShowFactory.cpp       # Show creation
   TimerScheduler.cpp    # Timer system
+  TouchController.cpp   # Capacitive touch input
   OTAUpdater.cpp        # Firmware updates
   show/                 # LED show implementations
   strip/                # LED hardware abstraction
@@ -126,13 +130,9 @@ docs/
 pio test -e native
 ```
 
-### Compress Web Assets
+### Web Assets
 
-```bash
-python3 scripts/compress_web.py
-```
-
-Web files in `data/` are minified and gzip-compressed into C++ header files for embedding in firmware.
+Web files in `data/` are automatically minified and gzip-compressed into C++ header files during the build process. No manual steps required.
 
 ## License
 

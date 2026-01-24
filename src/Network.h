@@ -14,6 +14,7 @@
 #include "strip/Strip.h"
 #include "CaptivePortal.h"
 #include "TimerScheduler.h"
+#include "TouchController.h"
 
 // Forward declarations
 namespace Config {
@@ -45,6 +46,7 @@ private:
     ShowController &showController;
     std::unique_ptr<WebServerManager> webServer;
     std::unique_ptr<TimerScheduler> timerScheduler;
+    std::unique_ptr<TouchController> touchController;
     CaptivePortal captivePortal;
     TaskHandle_t taskHandle = nullptr;
 
@@ -101,6 +103,12 @@ public:
      * @return Pointer to timer scheduler, or nullptr if not initialized
      */
     TimerScheduler* getTimerScheduler() { return timerScheduler.get(); }
+
+    /**
+     * Get touch controller (for API access)
+     * @return Pointer to touch controller, or nullptr if not initialized
+     */
+    TouchController* getTouchController() { return touchController.get(); }
 
     /**
      * Get current NTP epoch time

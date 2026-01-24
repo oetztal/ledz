@@ -143,6 +143,19 @@ namespace Config {
     };
 
     /**
+     * Touch control configuration structure
+     * Maps touch pins to preset indices for physical control
+     */
+    struct TouchConfig {
+        static constexpr uint8_t MAX_TOUCH_PINS = 3;
+        bool enabled;                              // Touch control enabled
+        uint16_t threshold;                        // Touch detection threshold (lower = more sensitive)
+
+        TouchConfig() : enabled(true), threshold(45000) {
+        }
+    };
+
+    /**
      * Configuration Manager
      * Handles persistent storage using ESP32 Preferences (NVS)
      */
@@ -315,6 +328,18 @@ namespace Config {
          * @param config Timers configuration to save
          */
         void saveTimersConfig(const TimersConfig &config);
+
+        /**
+         * Load touch configuration from NVS
+         * @return TouchConfig structure
+         */
+        TouchConfig loadTouchConfig();
+
+        /**
+         * Save touch configuration to NVS
+         * @param config Touch configuration to save
+         */
+        void saveTouchConfig(const TouchConfig &config);
     };
 } // namespace Config
 

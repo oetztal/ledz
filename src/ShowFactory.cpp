@@ -7,7 +7,6 @@
 #include "show/Jump.h"
 #include "show/Solid.h"
 #include "show/Starlight.h"
-#include "show/TwoColorBlend.h"
 #include "show/Wave.h"
 #include "show/MorseCode.h"
 #include "show/TheaterChase.h"
@@ -23,7 +22,7 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
     // Register all available shows (in display order)
     // Each lambda receives a StaticJsonDocument and uses defaults via | operator
 
-    registerShow("Solid", "Solid color or color sections (flags, patterns)", [](const StaticJsonDocument<512> &doc) {
+    registerShow("Solid", "Solid color or color sections (flags, patterns, gradients)", [](const StaticJsonDocument<512> &doc) {
         std::vector<Strip::Color> colors;
         std::vector<float> ranges;
 
@@ -54,26 +53,15 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
             }
         }
 
+        // Parse gradient flag (optional, default false)
+        bool gradient = doc["gradient"] | false;
+
         // If no colors parsed, use default warm white
         if (colors.empty()) {
             colors.push_back(color(255, 250, 230)); // Warm white
         }
 
-        return std::make_unique<Show::ColorRanges>(colors, ranges);
-    });
-
-    registerShow("TwoColorBlend", "Gradient between two colors", [](const StaticJsonDocument<512> &doc) {
-        uint8_t r1 = doc["r1"] | 255; // Default to red
-        uint8_t g1 = doc["g1"] | 0;
-        uint8_t b1 = doc["b1"] | 0;
-        uint8_t r2 = doc["r2"] | 0; // Default to blue
-        uint8_t g2 = doc["g2"] | 0;
-        uint8_t b2 = doc["b2"] | 255;
-#ifdef ARDUINO
-        Serial.printf("ShowFactory: Creating TwoColorBlend color1 RGB(%d,%d,%d) to color2 RGB(%d,%d,%d)\n",
-                      r1, g1, b1, r2, g2, b2);
-#endif
-        return std::make_unique<Show::TwoColorBlend>(r1, g1, b1, r2, g2, b2);
+        return std::make_unique<Show::ColorRanges>(colors, ranges, gradient);
     });
 
     registerShow("Fire", "Burning flames", [](const StaticJsonDocument<512> &doc) {
