@@ -51,6 +51,12 @@ jobs:
         run: |
           echo "Running native tests..."
           pio test -e native -v
+          echo "Checking for coverage files after tests..."
+          find . -name "*.gcno" -o -name "*.gcda"
+          if [ ! -d "coverage_report" ]; then
+            echo "Warning: coverage_report directory not found!"
+            ls -R .pio/build/native/ || true
+          fi
 
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v4
