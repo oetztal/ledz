@@ -66,15 +66,8 @@ void AccessLogger::run(AsyncWebServerRequest *request, ArMiddlewareNext next) {
     _out->println(logBuf);
 }
 
-void WebServerManager::setupConfigRoutes() {
+void WebServerManager::setupCommonRoutes() {
 #ifdef ARDUINO
-    Serial.println("Setting up config routes...");
-
-    // Serve WiFi config page (gzip compressed)
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        sendGzippedResponse(request, CONTENT_TYPE_HTML, CONFIG_GZ, CONFIG_GZ_LEN);
-    });
-
     // Serve common CSS (gzip compressed)
     server.on("/common.css", HTTP_GET, [](AsyncWebServerRequest *request) {
         sendGzippedResponse(request, CONTENT_TYPE_CSS, COMMON_GZ, COMMON_GZ_LEN);
@@ -83,6 +76,19 @@ void WebServerManager::setupConfigRoutes() {
     // Serve favicon (gzip compressed)
     server.on("/favicon.svg", HTTP_GET, [](AsyncWebServerRequest *request) {
         sendGzippedResponse(request, CONTENT_TYPE_SVG, FAVICON_GZ, FAVICON_GZ_LEN);
+    });
+#endif
+}
+
+void WebServerManager::setupConfigRoutes() {
+#ifdef ARDUINO
+    Serial.println("Setting up config routes...");
+
+    setupCommonRoutes();
+
+    // Serve WiFi config page (gzip compressed)
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+        sendGzippedResponse(request, CONTENT_TYPE_HTML, CONFIG_GZ, CONFIG_GZ_LEN);
     });
 
     // Handle WiFi configuration POST
@@ -102,19 +108,11 @@ void WebServerManager::setupAPIRoutes() {
 #ifdef ARDUINO
     Serial.println("Setting up API routes...");
 
+    setupCommonRoutes();
+
     // Serve main control page (gzip compressed)
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         sendGzippedResponse(request, CONTENT_TYPE_HTML, CONTROL_GZ, CONTROL_GZ_LEN);
-    });
-
-    // Serve common CSS (gzip compressed)
-    server.on("/common.css", HTTP_GET, [](AsyncWebServerRequest *request) {
-        sendGzippedResponse(request, CONTENT_TYPE_CSS, COMMON_GZ, COMMON_GZ_LEN);
-    });
-
-    // Serve favicon (gzip compressed)
-    server.on("/favicon.svg", HTTP_GET, [](AsyncWebServerRequest *request) {
-        sendGzippedResponse(request, CONTENT_TYPE_SVG, FAVICON_GZ, FAVICON_GZ_LEN);
     });
 
     // GET /api/status - Get device status

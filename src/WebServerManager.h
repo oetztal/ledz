@@ -39,6 +39,11 @@ protected:
     ShowController &showController;
 
     /**
+     * Setup shared routes for assets (CSS, favicon, etc.)
+     */
+    void setupCommonRoutes();
+
+    /**
      * Setup WiFi configuration routes
      */
     void setupConfigRoutes();
