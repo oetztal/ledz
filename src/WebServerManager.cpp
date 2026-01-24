@@ -29,6 +29,37 @@ static const char* CONTENT_TYPE_HTML = "text/html";
 static const char* CONTENT_TYPE_CSS = "text/css";
 static const char* CONTENT_TYPE_SVG = "image/svg+xml";
 static const char* CONTENT_TYPE_JSON = "application/json";
+
+// JSON Key constants
+static const char* JSON_KEY_SUCCESS = "success";
+static const char* JSON_KEY_ERROR = "error";
+static const char* JSON_KEY_VALUE = "value";
+static const char* JSON_KEY_NAME = "name";
+static const char* JSON_KEY_INDEX = "index";
+static const char* JSON_KEY_SHOW_NAME = "show_name";
+static const char* JSON_KEY_PARAMS = "params";
+static const char* JSON_KEY_CURRENT_SHOW = "current_show";
+static const char* JSON_KEY_SHOW_PARAMS = "show_params";
+
+// Common JSON Responses
+static const char* JSON_RESPONSE_SUCCESS = "{\"success\":true}";
+static const char* JSON_RESPONSE_ERROR_INVALID_JSON = "{\"success\":false,\"error\":\"Invalid JSON\"}";
+static const char* JSON_RESPONSE_ERROR_QUEUE_FULL = "{\"success\":false,\"error\":\"Queue full\"}";
+
+// API Paths
+static const char* API_PATH_WIFI = "/api/wifi";
+static const char* API_PATH_STATUS = "/api/status";
+static const char* API_PATH_SHOWS = "/api/shows";
+static const char* API_PATH_SHOW = "/api/show";
+static const char* API_PATH_BRIGHTNESS = "/api/brightness";
+static const char* API_PATH_LAYOUT = "/api/layout";
+static const char* API_PATH_PRESETS = "/api/presets";
+static const char* API_PATH_PRESETS_LOAD = "/api/presets/load";
+static const char* API_PATH_TIMERS = "/api/timers";
+static const char* API_PATH_RESTART = "/api/restart";
+static const char* API_PATH_RESET = "/api/reset";
+static const char* API_PATH_OTA_CHECK = "/api/ota/check";
+static const char* API_PATH_OTA_UPDATE = "/api/ota/update";
 #endif
 
 // Helper functions to send gzipped responses
@@ -92,7 +123,7 @@ void WebServerManager::setupConfigRoutes() {
     });
 
     // Handle WiFi configuration POST
-    server.on("/api/wifi", HTTP_POST,
+    server.on(API_PATH_WIFI, HTTP_POST,
               []([[maybe_unused]] AsyncWebServerRequest *request) {
                   // This callback is called after body processing
               },
@@ -116,7 +147,7 @@ void WebServerManager::setupAPIRoutes() {
     });
 
     // GET /api/status - Get device status
-    server.on("/api/status", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    server.on(API_PATH_STATUS, HTTP_GET, [this](AsyncWebServerRequest *request) {
         StaticJsonDocument<Config::JSON_DOC_LARGE> doc;
 
         // Device info
@@ -136,7 +167,7 @@ void WebServerManager::setupAPIRoutes() {
         }
 
         // Show info
-        doc["current_show"] = showController.getCurrentShowName();
+        doc[JSON_KEY_CURRENT_SHOW] = showController.getCurrentShowName();
 
         // Current show configuration
         Config::ShowConfig showConfig = config.loadShowConfig();
@@ -144,7 +175,7 @@ void WebServerManager::setupAPIRoutes() {
             // Parse the params_json and include it
             StaticJsonDocument<Config::JSON_DOC_MEDIUM> paramsDoc;
             if (DeserializationError error = deserializeJson(paramsDoc, showConfig.params_json); !error) {
-                doc["show_params"] = paramsDoc.as<JsonObject>();
+                doc[JSON_KEY_SHOW_PARAMS] = paramsDoc.as<JsonObject>();
             }
         }
 
@@ -161,14 +192,14 @@ void WebServerManager::setupAPIRoutes() {
     });
 
     // GET /api/shows - List available shows
-    server.on("/api/shows", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    server.on(API_PATH_SHOWS, HTTP_GET, [this](AsyncWebServerRequest *request) {
         StaticJsonDocument<Config::JSON_DOC_LARGE> doc;
         JsonArray shows = doc.createNestedArray("shows");
 
         const std::vector<ShowFactory::ShowInfo> &showList = showController.listShows();
         for (const auto &showInfo: showList) {
             JsonObject show = shows.createNestedObject();
-            show["name"] = showInfo.name;
+            show[JSON_KEY_NAME] = showInfo.name;
             show["description"] = showInfo.description;
         }
 
@@ -178,7 +209,7 @@ void WebServerManager::setupAPIRoutes() {
     });
 
     // POST /api/show - Change current show
-    server.on("/api/show", HTTP_POST,
+    server.on(API_PATH_SHOW, HTTP_POST,
               []([[maybe_unused]] AsyncWebServerRequest *request) {
               },
               nullptr,
@@ -188,11 +219,11 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
                           return;
                       }
 
-                      const char *showName = doc["name"];
+                      const char *showName = doc[JSON_KEY_NAME];
                       if (showName == nullptr) {
                           request->send(400, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Show name required"})");
@@ -201,24 +232,24 @@ void WebServerManager::setupAPIRoutes() {
 
                       // Get parameters if provided
                       String paramsJson;
-                      if (doc.containsKey("params")) {
-                          JsonObject params = doc["params"];
+                      if (doc.containsKey(JSON_KEY_PARAMS)) {
+                          JsonObject params = doc[JSON_KEY_PARAMS];
                           serializeJson(params, paramsJson);
                       } else {
                           paramsJson = "{}";
                       }
 
                       if (showController.queueShowChange(showName, paramsJson.c_str())) {
-                          request->send(200, CONTENT_TYPE_JSON, R"({"success":true})");
+                          request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
                       } else {
-                          request->send(503, CONTENT_TYPE_JSON, R"({"success":false,"error":"Queue full"})");
+                          request->send(503, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_QUEUE_FULL);
                       }
                   }
               }
     );
 
     // POST /api/brightness - Change brightness
-    server.on("/api/brightness", HTTP_POST,
+    server.on(API_PATH_BRIGHTNESS, HTTP_POST,
               []([[maybe_unused]] AsyncWebServerRequest *request) {
               },
               nullptr,
@@ -227,7 +258,7 @@ void WebServerManager::setupAPIRoutes() {
                       StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
 
                       if (deserializeJson(doc, data, len)) {
-                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
                           return;
                       }
 
@@ -237,18 +268,18 @@ void WebServerManager::setupAPIRoutes() {
                           return;
                       }
 
-                      uint8_t brightness = doc["value"];
+                      uint8_t brightness = doc[JSON_KEY_VALUE];
                       if (showController.queueBrightnessChange(brightness)) {
-                          request->send(200, CONTENT_TYPE_JSON, "{\"success\":true}");
+                          request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
                       } else {
-                          request->send(503, CONTENT_TYPE_JSON, R"({"success":false,"error":"Queue full"})");
+                          request->send(503, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_QUEUE_FULL);
                       }
                   }
               }
     );
 
     // POST /api/layout - Change strip layout configuration
-    server.on("/api/layout", HTTP_POST,
+    server.on(API_PATH_LAYOUT, HTTP_POST,
               []([[maybe_unused]] AsyncWebServerRequest *request) {
               },
               nullptr,
@@ -259,7 +290,7 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
                           return;
                       }
 
@@ -279,16 +310,16 @@ void WebServerManager::setupAPIRoutes() {
                       // Queue the layout change for thread-safe execution
                       if (showController.queueLayoutChange(layoutConfig.reverse, layoutConfig.mirror,
                                                            layoutConfig.dead_leds)) {
-                          request->send(200, CONTENT_TYPE_JSON, R"({"success":true})");
+                          request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
                       } else {
-                          request->send(503, CONTENT_TYPE_JSON, R"({"success":false,"error":"Queue full"})");
+                          request->send(503, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_QUEUE_FULL);
                       }
                   }
               }
     );
 
     // GET /api/layout - Get current layout configuration
-    server.on("/api/layout", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    server.on(API_PATH_LAYOUT, HTTP_GET, [this](AsyncWebServerRequest *request) {
         Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
 
         StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
@@ -302,7 +333,7 @@ void WebServerManager::setupAPIRoutes() {
     });
 
     // GET /api/presets - List all presets
-    server.on("/api/presets", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    server.on(API_PATH_PRESETS, HTTP_GET, [this](AsyncWebServerRequest *request) {
         Config::PresetsConfig presetsConfig = config.loadPresetsConfig();
 
         StaticJsonDocument<Config::JSON_DOC_XLARGE> doc;
@@ -311,9 +342,9 @@ void WebServerManager::setupAPIRoutes() {
         for (uint8_t i = 0; i < Config::PresetsConfig::MAX_PRESETS; i++) {
             if (presetsConfig.presets[i].valid) {
                 JsonObject preset = presets.createNestedObject();
-                preset["index"] = i;
-                preset["name"] = presetsConfig.presets[i].name;
-                preset["show_name"] = presetsConfig.presets[i].show_name;
+                preset[JSON_KEY_INDEX] = i;
+                preset[JSON_KEY_NAME] = presetsConfig.presets[i].name;
+                preset[JSON_KEY_SHOW_NAME] = presetsConfig.presets[i].show_name;
                 preset["layout_reverse"] = presetsConfig.presets[i].layout_reverse;
                 preset["layout_mirror"] = presetsConfig.presets[i].layout_mirror;
                 preset["layout_dead_leds"] = presetsConfig.presets[i].layout_dead_leds;
@@ -321,7 +352,7 @@ void WebServerManager::setupAPIRoutes() {
                 // Parse and include params_json
                 StaticJsonDocument<Config::JSON_DOC_MEDIUM> paramsDoc;
                 if (!deserializeJson(paramsDoc, presetsConfig.presets[i].params_json)) {
-                    preset["params"] = paramsDoc.as<JsonObject>();
+                    preset[JSON_KEY_PARAMS] = paramsDoc.as<JsonObject>();
                 }
             }
         }
@@ -333,7 +364,7 @@ void WebServerManager::setupAPIRoutes() {
 
     // POST /api/presets/load - Load a preset by index or name
     // NOTE: Must be registered BEFORE /api/presets POST to avoid route conflict
-    server.on("/api/presets/load", HTTP_POST,
+    server.on(API_PATH_PRESETS_LOAD, HTTP_POST,
               []([[maybe_unused]] AsyncWebServerRequest *request) {
               },
               nullptr,
@@ -344,22 +375,22 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
                           return;
                       }
 
                       int presetIndex = -1;
 
                       // Find preset by index or name
-                      if (doc.containsKey("index")) {
-                          presetIndex = doc["index"];
+                      if (doc.containsKey(JSON_KEY_INDEX)) {
+                          presetIndex = doc[JSON_KEY_INDEX];
                           if (presetIndex < 0 || presetIndex >= Config::PresetsConfig::MAX_PRESETS) {
                               request->send(400, CONTENT_TYPE_JSON,
                                             R"({"success":false,"error":"Invalid preset index"})");
                               return;
                           }
-                      } else if (doc.containsKey("name")) {
-                          const char *presetName = doc["name"];
+                      } else if (doc.containsKey(JSON_KEY_NAME)) {
+                          const char *presetName = doc[JSON_KEY_NAME];
                           presetIndex = config.findPresetByName(presetName);
                           if (presetIndex < 0) {
                               request->send(404, CONTENT_TYPE_JSON,
@@ -401,7 +432,7 @@ void WebServerManager::setupAPIRoutes() {
     );
 
     // POST /api/presets - Save current state as preset
-    server.on("/api/presets", HTTP_POST,
+    server.on(API_PATH_PRESETS, HTTP_POST,
               []([[maybe_unused]] AsyncWebServerRequest *request) {
               },
               nullptr,
@@ -412,11 +443,11 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
                           return;
                       }
 
-                      const char *presetName = doc["name"];
+                      const char *presetName = doc[JSON_KEY_NAME];
                       if (presetName == nullptr || strlen(presetName) == 0) {
                           request->send(400, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Preset name required"})");
@@ -479,7 +510,7 @@ void WebServerManager::setupAPIRoutes() {
     );
 
     // DELETE /api/presets - Delete a preset by index or name
-    server.on("/api/presets", HTTP_DELETE,
+    server.on(API_PATH_PRESETS, HTTP_DELETE,
               []([[maybe_unused]] AsyncWebServerRequest *request) {
               },
               nullptr,
@@ -490,22 +521,22 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
                           return;
                       }
 
                       int presetIndex = -1;
 
                       // Find preset by index or name
-                      if (doc.containsKey("index")) {
-                          presetIndex = doc["index"];
+                      if (doc.containsKey(JSON_KEY_INDEX)) {
+                          presetIndex = doc[JSON_KEY_INDEX];
                           if (presetIndex < 0 || presetIndex >= Config::PresetsConfig::MAX_PRESETS) {
                               request->send(400, CONTENT_TYPE_JSON,
                                             R"({"success":false,"error":"Invalid preset index"})");
                               return;
                           }
-                      } else if (doc.containsKey("name")) {
-                          const char *presetName = doc["name"];
+                      } else if (doc.containsKey(JSON_KEY_NAME)) {
+                          const char *presetName = doc[JSON_KEY_NAME];
                           presetIndex = config.findPresetByName(presetName);
                           if (presetIndex < 0) {
                               request->send(404, CONTENT_TYPE_JSON,
@@ -520,7 +551,7 @@ void WebServerManager::setupAPIRoutes() {
 
                       // Delete the preset
                       if (config.deletePreset(presetIndex)) {
-                          request->send(200, CONTENT_TYPE_JSON, R"({"success":true})");
+                          request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
                       } else {
                           request->send(500, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Failed to delete preset"})");
@@ -530,7 +561,7 @@ void WebServerManager::setupAPIRoutes() {
     );
 
     // POST /api/restart - Restart the device
-    server.on("/api/restart", HTTP_POST, [](AsyncWebServerRequest *request) {
+    server.on(API_PATH_RESTART, HTTP_POST, [](AsyncWebServerRequest *request) {
         request->send(200, CONTENT_TYPE_JSON, R"({"success":true,"message":"Restarting..."})");
         delay(500); // Give time for response to send
         ESP.restart();
@@ -546,7 +577,7 @@ void WebServerManager::setupAPIRoutes() {
                       StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
 
                       if (deserializeJson(doc, data, len)) {
-                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
                           return;
                       }
 
@@ -595,11 +626,11 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
                           return;
                       }
 
-                      const char *name = doc["name"];
+                      const char *name = doc[JSON_KEY_NAME];
 
                       if (name == nullptr || strlen(name) == 0) {
                           request->send(400, CONTENT_TYPE_JSON,
@@ -633,7 +664,7 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
                           return;
                       }
 
@@ -780,7 +811,7 @@ void WebServerManager::setupAPIRoutes() {
     });
 
     // GET /api/timers - List all timers with remaining time
-    server.on("/api/timers", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    server.on(API_PATH_TIMERS, HTTP_GET, [this](AsyncWebServerRequest *request) {
         TimerScheduler *scheduler = network.getTimerScheduler();
         if (!scheduler) {
             request->send(503, CONTENT_TYPE_JSON, R"({"success":false,"error":"Timer scheduler not available"})");
@@ -852,7 +883,7 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
                           return;
                       }
 
@@ -871,7 +902,7 @@ void WebServerManager::setupAPIRoutes() {
                       }
 
                       // Optional: index (defaults to first available slot)
-                      int timerIndex = doc["index"] | -1;
+                      int timerIndex = doc[JSON_KEY_INDEX] | -1;
                       if (timerIndex == -1) {
                           // Find first available slot
                           const Config::TimersConfig &timersConfig = scheduler->getTimersConfig();
@@ -936,7 +967,7 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
                           return;
                       }
 
@@ -956,7 +987,7 @@ void WebServerManager::setupAPIRoutes() {
                       }
 
                       // Optional: index (defaults to first available slot)
-                      int timerIndex = doc["index"] | -1;
+                      int timerIndex = doc[JSON_KEY_INDEX] | -1;
                       if (timerIndex == -1) {
                           const Config::TimersConfig &timersConfig = scheduler->getTimersConfig();
                           for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
@@ -1002,7 +1033,7 @@ void WebServerManager::setupAPIRoutes() {
     );
 
     // DELETE /api/timers - Cancel a timer by index
-    server.on("/api/timers", HTTP_DELETE,
+    server.on(API_PATH_TIMERS, HTTP_DELETE,
               []([[maybe_unused]] AsyncWebServerRequest *request) {
               },
               nullptr,
@@ -1020,17 +1051,17 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
                           return;
                       }
 
-                      if (!doc.containsKey("index")) {
+                      if (!doc.containsKey(JSON_KEY_INDEX)) {
                           request->send(400, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Timer index required"})");
                           return;
                       }
 
-                      int timerIndex = doc["index"];
+                      int timerIndex = doc[JSON_KEY_INDEX];
                       if (timerIndex < 0 || timerIndex >= Config::TimersConfig::MAX_TIMERS) {
                           request->send(400, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Invalid timer index"})");
@@ -1038,7 +1069,7 @@ void WebServerManager::setupAPIRoutes() {
                       }
 
                       if (scheduler->cancelTimer(timerIndex)) {
-                          request->send(200, CONTENT_TYPE_JSON, R"({"success":true})");
+                          request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
                       } else {
                           request->send(500, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Failed to cancel timer"})");
@@ -1066,7 +1097,7 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
                           return;
                       }
 
@@ -1084,7 +1115,7 @@ void WebServerManager::setupAPIRoutes() {
                       }
 
                       scheduler->setTimezoneOffset(offset);
-                      request->send(200, CONTENT_TYPE_JSON, R"({"success":true})");
+                      request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
                   }
               }
     );
@@ -1145,7 +1176,7 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
                           return;
                       }
 
@@ -1162,13 +1193,13 @@ void WebServerManager::setupAPIRoutes() {
                       }
 
                       touch->setTouchConfig(touchConfig);
-                      request->send(200, CONTENT_TYPE_JSON, R"({"success":true})");
+                      request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
                   }
               }
     );
 
     // GET /api/ota/check - Check for firmware updates
-    server.on("/api/ota/check", HTTP_GET, [](AsyncWebServerRequest *request) {
+    server.on(API_PATH_OTA_CHECK, HTTP_GET, [](AsyncWebServerRequest *request) {
         StaticJsonDocument<Config::JSON_DOC_LARGE> doc;
 
         FirmwareInfo info;
@@ -1197,7 +1228,7 @@ void WebServerManager::setupAPIRoutes() {
     });
 
     // POST /api/ota/update - Perform OTA update
-    server.on("/api/ota/update", HTTP_POST,
+    server.on(API_PATH_OTA_UPDATE, HTTP_POST,
               [](AsyncWebServerRequest *request) {
                   // Send immediate response before starting update
                   request->send(200, CONTENT_TYPE_JSON,
@@ -1274,7 +1305,7 @@ void WebServerManager::setupAPIRoutes() {
         bool success = OTAUpdater::confirmBoot();
 
         StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
-        doc["success"] = success;
+        doc[JSON_KEY_SUCCESS] = success;
         doc["message"] = success ? "Boot confirmed, rollback disabled" : "Failed to confirm boot";
 
         String response;
@@ -1317,7 +1348,7 @@ void WebServerManager::handleWiFiConfig(AsyncWebServerRequest *request, uint8_t 
         DeserializationError error = deserializeJson(doc, data, len);
 
         if (error) {
-            request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
+            request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
             return;
         }
 
