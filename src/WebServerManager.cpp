@@ -23,26 +23,18 @@
 #include "generated/timers_gz.h"
 #include "generated/common_gz.h"
 #include "generated/favicon_gz.h"
+
+// Content type constants
+static const char* CONTENT_TYPE_HTML = "text/html";
+static const char* CONTENT_TYPE_CSS = "text/css";
+static const char* CONTENT_TYPE_SVG = "image/svg+xml";
+static const char* CONTENT_TYPE_JSON = "application/json";
 #endif
 
 // Helper functions to send gzipped responses
 #ifdef ARDUINO
-static void sendGzippedHtml(AsyncWebServerRequest *request, const uint8_t *data, size_t len) {
-    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", data, len);
-    response->addHeader("Content-Encoding", "gzip");
-    response->addHeader("Cache-Control", "max-age=86400");
-    request->send(response);
-}
-
-static void sendGzippedCss(AsyncWebServerRequest *request, const uint8_t *data, size_t len) {
-    AsyncWebServerResponse *response = request->beginResponse(200, "text/css", data, len);
-    response->addHeader("Content-Encoding", "gzip");
-    response->addHeader("Cache-Control", "max-age=86400");
-    request->send(response);
-}
-
-static void sendGzippedSvg(AsyncWebServerRequest *request, const uint8_t *data, size_t len) {
-    AsyncWebServerResponse *response = request->beginResponse(200, "image/svg+xml", data, len);
+static void sendGzippedResponse(AsyncWebServerRequest *request, const char *contentType, const uint8_t *data, size_t len) {
+    AsyncWebServerResponse *response = request->beginResponse(200, contentType, data, len);
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Cache-Control", "max-age=86400");
     request->send(response);
@@ -77,17 +69,17 @@ void WebServerManager::setupConfigRoutes() {
 
     // Serve WiFi config page (gzip compressed)
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        sendGzippedHtml(request, CONFIG_GZ, CONFIG_GZ_LEN);
+        sendGzippedResponse(request, CONTENT_TYPE_HTML, CONFIG_GZ, CONFIG_GZ_LEN);
     });
 
     // Serve common CSS (gzip compressed)
     server.on("/common.css", HTTP_GET, [](AsyncWebServerRequest *request) {
-        sendGzippedCss(request, COMMON_GZ, COMMON_GZ_LEN);
+        sendGzippedResponse(request, CONTENT_TYPE_CSS, COMMON_GZ, COMMON_GZ_LEN);
     });
 
     // Serve favicon (gzip compressed)
     server.on("/favicon.svg", HTTP_GET, [](AsyncWebServerRequest *request) {
-        sendGzippedSvg(request, FAVICON_GZ, FAVICON_GZ_LEN);
+        sendGzippedResponse(request, CONTENT_TYPE_SVG, FAVICON_GZ, FAVICON_GZ_LEN);
     });
 
     // Handle WiFi configuration POST
@@ -109,17 +101,17 @@ void WebServerManager::setupAPIRoutes() {
 
     // Serve main control page (gzip compressed)
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        sendGzippedHtml(request, CONTROL_GZ, CONTROL_GZ_LEN);
+        sendGzippedResponse(request, CONTENT_TYPE_HTML, CONTROL_GZ, CONTROL_GZ_LEN);
     });
 
     // Serve common CSS (gzip compressed)
     server.on("/common.css", HTTP_GET, [](AsyncWebServerRequest *request) {
-        sendGzippedCss(request, COMMON_GZ, COMMON_GZ_LEN);
+        sendGzippedResponse(request, CONTENT_TYPE_CSS, COMMON_GZ, COMMON_GZ_LEN);
     });
 
     // Serve favicon (gzip compressed)
     server.on("/favicon.svg", HTTP_GET, [](AsyncWebServerRequest *request) {
-        sendGzippedSvg(request, FAVICON_GZ, FAVICON_GZ_LEN);
+        sendGzippedResponse(request, CONTENT_TYPE_SVG, FAVICON_GZ, FAVICON_GZ_LEN);
     });
 
     // GET /api/status - Get device status
@@ -1286,22 +1278,22 @@ void WebServerManager::setupAPIRoutes() {
 
         String response;
         serializeJson(doc, response);
-        request->send(success ? 200 : 500, "application/json", response);
+        request->send(success ? 200 : 500, CONTENT_TYPE_JSON, response);
     });
 
     // GET /about - About page
     server.on("/about", HTTP_GET, [](AsyncWebServerRequest *request) {
-        sendGzippedHtml(request, ABOUT_GZ, ABOUT_GZ_LEN);
+        sendGzippedResponse(request, CONTENT_TYPE_HTML, ABOUT_GZ, ABOUT_GZ_LEN);
     });
 
     // GET /settings - Settings page
     server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request) {
-        sendGzippedHtml(request, SETTINGS_GZ, SETTINGS_GZ_LEN);
+        sendGzippedResponse(request, CONTENT_TYPE_HTML, SETTINGS_GZ, SETTINGS_GZ_LEN);
     });
 
     // GET /timers - Timers page
     server.on("/timers", HTTP_GET, [](AsyncWebServerRequest *request) {
-        sendGzippedHtml(request, TIMERS_GZ, TIMERS_GZ_LEN);
+        sendGzippedResponse(request, CONTENT_TYPE_HTML, TIMERS_GZ, TIMERS_GZ_LEN);
     });
 #endif
 }
