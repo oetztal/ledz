@@ -28,7 +28,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install build-wrapper
-        uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v6
+        uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v7
 
       - name: Cache PlatformIO
         uses: actions/cache@v4
@@ -107,7 +107,7 @@ jobs:
           retention-days: 7
 
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v7
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
