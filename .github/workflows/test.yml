@@ -6,9 +6,16 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    env:
+      BUILD_WRAPPER_OUT_DIR: build_wrapper_output_directory # Directory where build-wrapper output will be placed
 
     steps:
       - uses: actions/checkout@v4
@@ -19,6 +26,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Install build-wrapper
+        uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v6
 
       - name: Cache PlatformIO
         uses: actions/cache@v4
@@ -42,8 +52,8 @@ jobs:
 
       - name: Build for ESP32
         run: |
-          echo "Building firmware for ESP32-S3..."
-          pio run -e adafruit_qtpy_esp32s3_nopsram
+          echo "Building firmware for ESP32-S3 with build-wrapper..."
+          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} pio run -e adafruit_qtpy_esp32s3_nopsram
 
       - name: Check Firmware Size
         run: |
@@ -76,9 +86,10 @@ jobs:
           retention-days: 7
 
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v6
+        uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: >
             --define "sonar.cfamily.compile-commands=${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json"
