@@ -156,7 +156,7 @@ void WebServerManager::setupAPIRoutes() {
 
         String response;
         serializeJson(doc, response);
-        request->send(200, "application/json", response);
+        request->send(200, CONTENT_TYPE_JSON, response);
     });
 
     // GET /api/shows - List available shows
@@ -173,7 +173,7 @@ void WebServerManager::setupAPIRoutes() {
 
         String response;
         serializeJson(doc, response);
-        request->send(200, "application/json", response);
+        request->send(200, CONTENT_TYPE_JSON, response);
     });
 
     // POST /api/show - Change current show
@@ -187,13 +187,13 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
                           return;
                       }
 
                       const char *showName = doc["name"];
                       if (showName == nullptr) {
-                          request->send(400, "application/json",
+                          request->send(400, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Show name required"})");
                           return;
                       }
@@ -208,9 +208,9 @@ void WebServerManager::setupAPIRoutes() {
                       }
 
                       if (showController.queueShowChange(showName, paramsJson.c_str())) {
-                          request->send(200, "application/json", R"({"success":true})");
+                          request->send(200, CONTENT_TYPE_JSON, R"({"success":true})");
                       } else {
-                          request->send(503, "application/json", R"({"success":false,"error":"Queue full"})");
+                          request->send(503, CONTENT_TYPE_JSON, R"({"success":false,"error":"Queue full"})");
                       }
                   }
               }
@@ -226,21 +226,21 @@ void WebServerManager::setupAPIRoutes() {
                       StaticJsonDocument<256> doc;
 
                       if (deserializeJson(doc, data, len)) {
-                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
                           return;
                       }
 
                       if (!doc.containsKey("value")) {
-                          request->send(400, "application/json",
+                          request->send(400, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Brightness value required"})");
                           return;
                       }
 
                       uint8_t brightness = doc["value"];
                       if (showController.queueBrightnessChange(brightness)) {
-                          request->send(200, "application/json", "{\"success\":true}");
+                          request->send(200, CONTENT_TYPE_JSON, "{\"success\":true}");
                       } else {
-                          request->send(503, "application/json", R"({"success":false,"error":"Queue full"})");
+                          request->send(503, CONTENT_TYPE_JSON, R"({"success":false,"error":"Queue full"})");
                       }
                   }
               }
@@ -258,7 +258,7 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
                           return;
                       }
 
@@ -278,9 +278,9 @@ void WebServerManager::setupAPIRoutes() {
                       // Queue the layout change for thread-safe execution
                       if (showController.queueLayoutChange(layoutConfig.reverse, layoutConfig.mirror,
                                                            layoutConfig.dead_leds)) {
-                          request->send(200, "application/json", R"({"success":true})");
+                          request->send(200, CONTENT_TYPE_JSON, R"({"success":true})");
                       } else {
-                          request->send(503, "application/json", R"({"success":false,"error":"Queue full"})");
+                          request->send(503, CONTENT_TYPE_JSON, R"({"success":false,"error":"Queue full"})");
                       }
                   }
               }
@@ -297,7 +297,7 @@ void WebServerManager::setupAPIRoutes() {
 
         String response;
         serializeJson(doc, response);
-        request->send(200, "application/json", response);
+        request->send(200, CONTENT_TYPE_JSON, response);
     });
 
     // GET /api/presets - List all presets
@@ -327,7 +327,7 @@ void WebServerManager::setupAPIRoutes() {
 
         String response;
         serializeJson(doc, response);
-        request->send(200, "application/json", response);
+        request->send(200, CONTENT_TYPE_JSON, response);
     });
 
     // POST /api/presets/load - Load a preset by index or name
@@ -343,7 +343,7 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
                           return;
                       }
 
@@ -353,7 +353,7 @@ void WebServerManager::setupAPIRoutes() {
                       if (doc.containsKey("index")) {
                           presetIndex = doc["index"];
                           if (presetIndex < 0 || presetIndex >= Config::PresetsConfig::MAX_PRESETS) {
-                              request->send(400, "application/json",
+                              request->send(400, CONTENT_TYPE_JSON,
                                             R"({"success":false,"error":"Invalid preset index"})");
                               return;
                           }
@@ -361,12 +361,12 @@ void WebServerManager::setupAPIRoutes() {
                           const char *presetName = doc["name"];
                           presetIndex = config.findPresetByName(presetName);
                           if (presetIndex < 0) {
-                              request->send(404, "application/json",
+                              request->send(404, CONTENT_TYPE_JSON,
                                             R"({"success":false,"error":"Preset not found"})");
                               return;
                           }
                       } else {
-                          request->send(400, "application/json",
+                          request->send(400, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Index or name required"})");
                           return;
                       }
@@ -376,7 +376,7 @@ void WebServerManager::setupAPIRoutes() {
                       const Config::Preset &preset = presetsConfig.presets[presetIndex];
 
                       if (!preset.valid) {
-                          request->send(404, "application/json",
+                          request->send(404, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Preset slot is empty"})");
                           return;
                       }
@@ -390,9 +390,9 @@ void WebServerManager::setupAPIRoutes() {
 
                           String response;
                           serializeJson(responseDoc, response);
-                          request->send(200, "application/json", response);
+                          request->send(200, CONTENT_TYPE_JSON, response);
                       } else {
-                          request->send(503, "application/json",
+                          request->send(503, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Queue full"})");
                       }
                   }
@@ -411,13 +411,13 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
                           return;
                       }
 
                       const char *presetName = doc["name"];
                       if (presetName == nullptr || strlen(presetName) == 0) {
-                          request->send(400, "application/json",
+                          request->send(400, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Preset name required"})");
                           return;
                       }
@@ -433,7 +433,7 @@ void WebServerManager::setupAPIRoutes() {
                           // Find next available slot
                           slotIndex = config.getNextPresetSlot();
                           if (slotIndex < 0) {
-                              request->send(400, "application/json",
+                              request->send(400, CONTENT_TYPE_JSON,
                                             R"({"success":false,"error":"All preset slots are full"})");
                               return;
                           }
@@ -468,9 +468,9 @@ void WebServerManager::setupAPIRoutes() {
 
                           String response;
                           serializeJson(responseDoc, response);
-                          request->send(200, "application/json", response);
+                          request->send(200, CONTENT_TYPE_JSON, response);
                       } else {
-                          request->send(500, "application/json",
+                          request->send(500, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Failed to save preset"})");
                       }
                   }
@@ -489,7 +489,7 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
                           return;
                       }
 
@@ -499,7 +499,7 @@ void WebServerManager::setupAPIRoutes() {
                       if (doc.containsKey("index")) {
                           presetIndex = doc["index"];
                           if (presetIndex < 0 || presetIndex >= Config::PresetsConfig::MAX_PRESETS) {
-                              request->send(400, "application/json",
+                              request->send(400, CONTENT_TYPE_JSON,
                                             R"({"success":false,"error":"Invalid preset index"})");
                               return;
                           }
@@ -507,21 +507,21 @@ void WebServerManager::setupAPIRoutes() {
                           const char *presetName = doc["name"];
                           presetIndex = config.findPresetByName(presetName);
                           if (presetIndex < 0) {
-                              request->send(404, "application/json",
+                              request->send(404, CONTENT_TYPE_JSON,
                                             R"({"success":false,"error":"Preset not found"})");
                               return;
                           }
                       } else {
-                          request->send(400, "application/json",
+                          request->send(400, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Index or name required"})");
                           return;
                       }
 
                       // Delete the preset
                       if (config.deletePreset(presetIndex)) {
-                          request->send(200, "application/json", R"({"success":true})");
+                          request->send(200, CONTENT_TYPE_JSON, R"({"success":true})");
                       } else {
-                          request->send(500, "application/json",
+                          request->send(500, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Failed to delete preset"})");
                       }
                   }
@@ -530,7 +530,7 @@ void WebServerManager::setupAPIRoutes() {
 
     // POST /api/restart - Restart the device
     server.on("/api/restart", HTTP_POST, [](AsyncWebServerRequest *request) {
-        request->send(200, "application/json", R"({"success":true,"message":"Restarting..."})");
+        request->send(200, CONTENT_TYPE_JSON, R"({"success":true,"message":"Restarting..."})");
         delay(500); // Give time for response to send
         ESP.restart();
     });
@@ -545,7 +545,7 @@ void WebServerManager::setupAPIRoutes() {
                       StaticJsonDocument<256> doc;
 
                       if (deserializeJson(doc, data, len)) {
-                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
                           return;
                       }
 
@@ -553,7 +553,7 @@ void WebServerManager::setupAPIRoutes() {
                       const char *password = doc["password"];
 
                       if (ssid == nullptr || strlen(ssid) == 0) {
-                          request->send(400, "application/json", R"({"success":false,"error":"SSID required"})");
+                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"SSID required"})");
                           return;
                       }
 
@@ -575,7 +575,7 @@ void WebServerManager::setupAPIRoutes() {
                       Serial.printf("WiFi credentials updated: SSID=%s\n", wifiConfig.ssid);
 
                       // Send success response and restart
-                      request->send(200, "application/json",
+                      request->send(200, CONTENT_TYPE_JSON,
                                     R"({"success":true,"message":"WiFi updated, restarting..."})");
                       delay(1000); // Give time for response to send
                       ESP.restart();
@@ -594,14 +594,14 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
                           return;
                       }
 
                       const char *name = doc["name"];
 
                       if (name == nullptr || strlen(name) == 0) {
-                          request->send(400, "application/json",
+                          request->send(400, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Device name required"})");
                           return;
                       }
@@ -615,7 +615,7 @@ void WebServerManager::setupAPIRoutes() {
                       Serial.printf("Device name updated: %s\n", deviceConfig.device_name);
 
                       // Send success response (no restart needed)
-                      request->send(200, "application/json", "{\"success\":true}");
+                      request->send(200, CONTENT_TYPE_JSON, "{\"success\":true}");
                   }
               }
     );
@@ -632,7 +632,7 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
                           return;
                       }
 
@@ -645,7 +645,7 @@ void WebServerManager::setupAPIRoutes() {
                           uint16_t num_pixels = doc["num_pixels"];
 
                           if (num_pixels < 1 || num_pixels > 1000) {
-                              request->send(400, "application/json",
+                              request->send(400, CONTENT_TYPE_JSON,
                                             R"({"success":false,"error":"Number of pixels must be between 1 and 1000"})");
                               return;
                           }
@@ -660,7 +660,7 @@ void WebServerManager::setupAPIRoutes() {
                           uint8_t led_pin = doc["led_pin"];
 
                           if (led_pin > 48) {
-                              request->send(400, "application/json",
+                              request->send(400, CONTENT_TYPE_JSON,
                                             R"({"success":false,"error":"LED pin must be between 0 and 48"})");
                               return;
                           }
@@ -675,7 +675,7 @@ void WebServerManager::setupAPIRoutes() {
                           uint16_t cycle_time = doc["cycle_time"];
 
                           if (cycle_time < 1 || cycle_time > 1000) {
-                              request->send(400, "application/json",
+                              request->send(400, CONTENT_TYPE_JSON,
                                             R"({"success":false,"error":"Cycle time must be between 1 and 1000"})");
                               return;
                           }
@@ -686,7 +686,7 @@ void WebServerManager::setupAPIRoutes() {
                       }
 
                       if (!changed) {
-                          request->send(400, "application/json",
+                          request->send(400, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"No valid parameters provided"})");
                           return;
                       }
@@ -695,7 +695,7 @@ void WebServerManager::setupAPIRoutes() {
                       config.saveDeviceConfig(deviceConfig);
 
                       // Send success response and request deferred restart
-                      request->send(200, "application/json",
+                      request->send(200, CONTENT_TYPE_JSON,
                                     R"({"success":true,"message":"Device settings updated, restarting..."})");
                       config.requestRestart(1000);
                   }
@@ -707,7 +707,7 @@ void WebServerManager::setupAPIRoutes() {
         Serial.println("Factory reset requested");
 
         // Send success response first
-        request->send(200, "application/json",
+        request->send(200, CONTENT_TYPE_JSON,
                       R"({"success":true,"message":"Factory reset complete, restarting..."})");
 
         // Clear all configuration
@@ -775,14 +775,14 @@ void WebServerManager::setupAPIRoutes() {
 
         String response;
         serializeJson(doc, response);
-        request->send(200, "application/json", response);
+        request->send(200, CONTENT_TYPE_JSON, response);
     });
 
     // GET /api/timers - List all timers with remaining time
     server.on("/api/timers", HTTP_GET, [this](AsyncWebServerRequest *request) {
         TimerScheduler *scheduler = network.getTimerScheduler();
         if (!scheduler) {
-            request->send(503, "application/json", R"({"success":false,"error":"Timer scheduler not available"})");
+            request->send(503, CONTENT_TYPE_JSON, R"({"success":false,"error":"Timer scheduler not available"})");
             return;
         }
 
@@ -829,7 +829,7 @@ void WebServerManager::setupAPIRoutes() {
 
         String response;
         serializeJson(doc, response);
-        request->send(200, "application/json", response);
+        request->send(200, CONTENT_TYPE_JSON, response);
     });
 
     // POST /api/timers/countdown - Set a countdown timer
@@ -842,7 +842,7 @@ void WebServerManager::setupAPIRoutes() {
                   if (index == 0) {
                       TimerScheduler *scheduler = network.getTimerScheduler();
                       if (!scheduler) {
-                          request->send(503, "application/json",
+                          request->send(503, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Timer scheduler not available"})");
                           return;
                       }
@@ -851,20 +851,20 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
                           return;
                       }
 
                       // Required: duration in seconds
                       if (!doc.containsKey("duration")) {
-                          request->send(400, "application/json",
+                          request->send(400, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Duration required"})");
                           return;
                       }
 
                       uint32_t duration = doc["duration"];
                       if (duration == 0 || duration > 86400 * 7) { // Max 7 days
-                          request->send(400, "application/json",
+                          request->send(400, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Invalid duration"})");
                           return;
                       }
@@ -881,7 +881,7 @@ void WebServerManager::setupAPIRoutes() {
                               }
                           }
                           if (timerIndex == -1) {
-                              request->send(400, "application/json",
+                              request->send(400, CONTENT_TYPE_JSON,
                                             R"({"success":false,"error":"All timer slots are full"})");
                               return;
                           }
@@ -907,9 +907,9 @@ void WebServerManager::setupAPIRoutes() {
 
                           String response;
                           serializeJson(responseDoc, response);
-                          request->send(200, "application/json", response);
+                          request->send(200, CONTENT_TYPE_JSON, response);
                       } else {
-                          request->send(500, "application/json",
+                          request->send(500, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Failed to set timer"})");
                       }
                   }
@@ -926,7 +926,7 @@ void WebServerManager::setupAPIRoutes() {
                   if (index == 0) {
                       TimerScheduler *scheduler = network.getTimerScheduler();
                       if (!scheduler) {
-                          request->send(503, "application/json",
+                          request->send(503, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Timer scheduler not available"})");
                           return;
                       }
@@ -935,13 +935,13 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
                           return;
                       }
 
                       // Required: hour and minute for the alarm time
                       if (!doc.containsKey("hour") || !doc.containsKey("minute")) {
-                          request->send(400, "application/json",
+                          request->send(400, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Hour and minute required"})");
                           return;
                       }
@@ -949,7 +949,7 @@ void WebServerManager::setupAPIRoutes() {
                       uint8_t hour = doc["hour"];
                       uint8_t minute = doc["minute"];
                       if (hour > 23 || minute > 59) {
-                          request->send(400, "application/json",
+                          request->send(400, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Invalid time"})");
                           return;
                       }
@@ -965,7 +965,7 @@ void WebServerManager::setupAPIRoutes() {
                               }
                           }
                           if (timerIndex == -1) {
-                              request->send(400, "application/json",
+                              request->send(400, CONTENT_TYPE_JSON,
                                             R"({"success":false,"error":"All timer slots are full"})");
                               return;
                           }
@@ -991,9 +991,9 @@ void WebServerManager::setupAPIRoutes() {
 
                           String response;
                           serializeJson(responseDoc, response);
-                          request->send(200, "application/json", response);
+                          request->send(200, CONTENT_TYPE_JSON, response);
                       } else {
-                          request->send(500, "application/json",
+                          request->send(500, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Failed to set alarm"})");
                       }
                   }
@@ -1010,7 +1010,7 @@ void WebServerManager::setupAPIRoutes() {
                   if (index == 0) {
                       TimerScheduler *scheduler = network.getTimerScheduler();
                       if (!scheduler) {
-                          request->send(503, "application/json",
+                          request->send(503, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Timer scheduler not available"})");
                           return;
                       }
@@ -1019,27 +1019,27 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
                           return;
                       }
 
                       if (!doc.containsKey("index")) {
-                          request->send(400, "application/json",
+                          request->send(400, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Timer index required"})");
                           return;
                       }
 
                       int timerIndex = doc["index"];
                       if (timerIndex < 0 || timerIndex >= Config::TimersConfig::MAX_TIMERS) {
-                          request->send(400, "application/json",
+                          request->send(400, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Invalid timer index"})");
                           return;
                       }
 
                       if (scheduler->cancelTimer(timerIndex)) {
-                          request->send(200, "application/json", R"({"success":true})");
+                          request->send(200, CONTENT_TYPE_JSON, R"({"success":true})");
                       } else {
-                          request->send(500, "application/json",
+                          request->send(500, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Failed to cancel timer"})");
                       }
                   }
@@ -1056,7 +1056,7 @@ void WebServerManager::setupAPIRoutes() {
                   if (index == 0) {
                       TimerScheduler *scheduler = network.getTimerScheduler();
                       if (!scheduler) {
-                          request->send(503, "application/json",
+                          request->send(503, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Timer scheduler not available"})");
                           return;
                       }
@@ -1065,25 +1065,25 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
                           return;
                       }
 
                       if (!doc.containsKey("offset")) {
-                          request->send(400, "application/json",
+                          request->send(400, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Timezone offset required"})");
                           return;
                       }
 
                       int8_t offset = doc["offset"];
                       if (offset < -12 || offset > 14) {
-                          request->send(400, "application/json",
+                          request->send(400, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Invalid timezone offset"})");
                           return;
                       }
 
                       scheduler->setTimezoneOffset(offset);
-                      request->send(200, "application/json", R"({"success":true})");
+                      request->send(200, CONTENT_TYPE_JSON, R"({"success":true})");
                   }
               }
     );
@@ -1092,7 +1092,7 @@ void WebServerManager::setupAPIRoutes() {
     server.on("/api/touch", HTTP_GET, [this](AsyncWebServerRequest *request) {
         TouchController *touch = network.getTouchController();
         if (!touch) {
-            request->send(503, "application/json",
+            request->send(503, CONTENT_TYPE_JSON,
                           R"({"success":false,"error":"Touch controller not available"})");
             return;
         }
@@ -1122,7 +1122,7 @@ void WebServerManager::setupAPIRoutes() {
 
         String response;
         serializeJson(doc, response);
-        request->send(200, "application/json", response);
+        request->send(200, CONTENT_TYPE_JSON, response);
     });
 
     // POST /api/touch - Update touch configuration
@@ -1135,7 +1135,7 @@ void WebServerManager::setupAPIRoutes() {
                   if (index == 0) {
                       TouchController *touch = network.getTouchController();
                       if (!touch) {
-                          request->send(503, "application/json",
+                          request->send(503, CONTENT_TYPE_JSON,
                                         R"({"success":false,"error":"Touch controller not available"})");
                           return;
                       }
@@ -1144,7 +1144,7 @@ void WebServerManager::setupAPIRoutes() {
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
-                          request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
                           return;
                       }
 
@@ -1161,7 +1161,7 @@ void WebServerManager::setupAPIRoutes() {
                       }
 
                       touch->setTouchConfig(touchConfig);
-                      request->send(200, "application/json", R"({"success":true})");
+                      request->send(200, CONTENT_TYPE_JSON, R"({"success":true})");
                   }
               }
     );
@@ -1192,14 +1192,14 @@ void WebServerManager::setupAPIRoutes() {
 
         String response;
         serializeJson(doc, response);
-        request->send(200, "application/json", response);
+        request->send(200, CONTENT_TYPE_JSON, response);
     });
 
     // POST /api/ota/update - Perform OTA update
     server.on("/api/ota/update", HTTP_POST,
               [](AsyncWebServerRequest *request) {
                   // Send immediate response before starting update
-                  request->send(200, "application/json",
+                  request->send(200, CONTENT_TYPE_JSON,
                                 R"({"status":"starting","message":"OTA update started"})");
               },
               nullptr,
@@ -1265,7 +1265,7 @@ void WebServerManager::setupAPIRoutes() {
 
         String response;
         serializeJson(doc, response);
-        request->send(200, "application/json", response);
+        request->send(200, CONTENT_TYPE_JSON, response);
     });
 
     // POST /api/ota/confirm - Confirm successful boot after OTA
@@ -1316,7 +1316,7 @@ void WebServerManager::handleWiFiConfig(AsyncWebServerRequest *request, uint8_t 
         DeserializationError error = deserializeJson(doc, data, len);
 
         if (error) {
-            request->send(400, "application/json", R"({"success":false,"error":"Invalid JSON"})");
+            request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid JSON"})");
             return;
         }
 
@@ -1325,7 +1325,7 @@ void WebServerManager::handleWiFiConfig(AsyncWebServerRequest *request, uint8_t 
         const char *password = doc["password"];
 
         if (ssid == nullptr || strlen(ssid) == 0) {
-            request->send(400, "application/json", R"({"success":false,"error":"SSID required"})");
+            request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"SSID required"})");
             return;
         }
 
@@ -1361,7 +1361,7 @@ void WebServerManager::handleWiFiConfig(AsyncWebServerRequest *request, uint8_t 
 
         String response;
         serializeJson(responseDoc, response);
-        request->send(200, "application/json", response);
+        request->send(200, CONTENT_TYPE_JSON, response);
 
         // Note: The Network task will detect config.isConfigured() and restart the device
     }

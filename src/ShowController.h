@@ -5,6 +5,9 @@
 #define LEDZ_SHOWCONTROLLER_H
 
 #include <memory>
+#include <atomic>
+#include <mutex>
+#include <string>
 
 #ifdef ARDUINO
 #include <freertos/FreeRTOS.h>
@@ -72,13 +75,14 @@ private:
 
     std::unique_ptr<Show::Show> currentShow;
     char currentShowName[32];
-    uint8_t brightness;
+    std::atomic<uint8_t> brightness;
 
     // base strip and strip layout
     std::unique_ptr<Strip::Strip> baseStrip;
     std::unique_ptr<Strip::Strip> layout;
 
     ShowStats stats;
+    mutable std::mutex stateMutex;
 
     /**
      * Apply a command (called from LED task)
@@ -148,13 +152,13 @@ public:
      * Get current brightness
      * @return Brightness value (0-255)
      */
-    uint8_t getBrightness() const { return brightness; }
+    uint8_t getBrightness() const { return brightness.load(); }
 
     /**
      * Get current show name
      * @return Show name
      */
-    const char *getCurrentShowName() const { return currentShowName; }
+    std::string getCurrentShowName() const;
 
     /**
      * Get current cycle time

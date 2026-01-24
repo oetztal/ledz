@@ -8,6 +8,7 @@
 #include <vector>
 #include <functional>
 #include <memory>
+#include <string>
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -32,17 +33,13 @@ public:
      * Show metadata for listing available shows
      */
     struct ShowInfo {
-        const char *name;
-        const char *description;
+        std::string name;
+        std::string description;
     };
 
 private:
-    std::map<const char *, ShowConstructor, bool(*)(const char *, const char *)> showConstructors;
+    std::map<std::string, ShowConstructor> showConstructors;
     std::vector<ShowInfo> showList;
-
-    static bool strLess(const char *a, const char *b) {
-        return strcmp(a, b) < 0;
-    }
 
     /**
      * Parse colors from JSON and ensure exactly n colors are returned

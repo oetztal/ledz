@@ -120,8 +120,11 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
             std::unique_ptr<Show::Show> newShow = factory.createShow(cmd.show_name, cmd.params_json);
             if (newShow != nullptr) {
                 currentShow = std::move(newShow);
-                strncpy(currentShowName, cmd.show_name, sizeof(currentShowName) - 1);
-                currentShowName[sizeof(currentShowName) - 1] = '\0';
+                {
+                    std::lock_guard<std::mutex> lock(stateMutex);
+                    strncpy(currentShowName, cmd.show_name, sizeof(currentShowName) - 1);
+                    currentShowName[sizeof(currentShowName) - 1] = '\0';
+                }
 
 #ifdef ARDUINO
                 Serial.print("ShowController: Switched to show: ");
@@ -145,16 +148,16 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
         }
 
         case ShowCommandType::SET_BRIGHTNESS: {
-            brightness = cmd.brightness_value;
+            brightness.store(cmd.brightness_value);
 
 #ifdef ARDUINO
             Serial.print("ShowController: Brightness set to: ");
-            Serial.println(brightness);
+            Serial.println(brightness.load());
 #endif
 
             // Save to configuration
             Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
-            deviceConfig.brightness = brightness;
+            deviceConfig.brightness = brightness.load();
             config.saveDeviceConfig(deviceConfig);
             break;
         }
@@ -214,8 +217,11 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
             std::unique_ptr<Show::Show> newShow = factory.createShow(cmd.show_name, cmd.params_json);
             if (newShow != nullptr) {
                 currentShow = std::move(newShow);
-                strncpy(currentShowName, cmd.show_name, sizeof(currentShowName) - 1);
-                currentShowName[sizeof(currentShowName) - 1] = '\0';
+                {
+                    std::lock_guard<std::mutex> lock(stateMutex);
+                    strncpy(currentShowName, cmd.show_name, sizeof(currentShowName) - 1);
+                    currentShowName[sizeof(currentShowName) - 1] = '\0';
+                }
 
                 Serial.printf("ShowController: Preset show '%s' loaded with params: %s\n",
                               currentShowName, cmd.params_json);
@@ -367,9 +373,16 @@ bool ShowController::isShowComplete() const {
 }
 
 void ShowController::updateStats(const ShowStats &newStats) {
+    std::lock_guard<std::mutex> lock(stateMutex);
     stats = newStats;
 }
 
 ShowStats ShowController::getStats() const {
+    std::lock_guard<std::mutex> lock(stateMutex);
     return stats;
+}
+
+std::string ShowController::getCurrentShowName() const {
+    std::lock_guard<std::mutex> lock(stateMutex);
+    return std::string(currentShowName);
 }

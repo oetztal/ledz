@@ -17,7 +17,7 @@
 #include <ArduinoJson.h>
 #endif
 
-ShowFactory::ShowFactory() : showConstructors(strLess) {
+ShowFactory::ShowFactory() {
     // Register all available shows (in display order)
     // Each lambda receives a StaticJsonDocument and uses defaults via | operator
 
@@ -190,8 +190,8 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
 }
 
 void ShowFactory::registerShow(const char *name, const char *description, ShowConstructor &&constructor) {
-    showConstructors[name] = std::move(constructor);
-    showList.push_back({name, description});
+    showConstructors[std::string(name)] = std::move(constructor);
+    showList.push_back({std::string(name), std::string(description)});
 }
 
 std::unique_ptr<Show::Show> ShowFactory::createShow(const char *name) {
