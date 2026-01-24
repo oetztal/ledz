@@ -5,14 +5,13 @@
 #include "show/Mandelbrot.h"
 #include "show/Chaos.h"
 #include "show/Jump.h"
-#include "show/Solid.h"
 #include "show/Starlight.h"
 #include "show/Wave.h"
 #include "show/MorseCode.h"
 #include "show/TheaterChase.h"
 #include "show/Stroboscope.h"
-#include "color.h"
 #include "show/Fire.h"
+#include "color.h"
 
 #ifdef ARDUINO
 #include <ArduinoJson.h>

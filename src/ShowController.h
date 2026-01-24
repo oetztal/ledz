@@ -180,6 +180,13 @@ public:
     void show() const;
 
     /**
+     * Check if the current show has reached a static state
+     * Used for power save mode
+     * @return true if show is static (no animation), false otherwise
+     */
+    bool isShowComplete() const;
+
+    /**
      * Update show statistics
      * @param stats New statistics
      */

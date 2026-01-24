@@ -362,6 +362,10 @@ void ShowController::show() const {
     }
 }
 
+bool ShowController::isShowComplete() const {
+    return currentShow && currentShow->isComplete();
+}
+
 void ShowController::updateStats(const ShowStats &newStats) {
     stats = newStats;
 }

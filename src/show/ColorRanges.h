@@ -41,6 +41,12 @@ namespace Show {
          */
         void execute(Strip::Strip &strip, Iteration iteration) override;
 
+        /**
+         * Check if the show has reached its final static state
+         * @return true if blend is complete
+         */
+        bool isComplete() const override;
+
         const char *name() { return "ColorRanges"; }
     };
 } // namespace Show
