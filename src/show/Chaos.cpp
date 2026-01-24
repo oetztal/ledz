@@ -21,11 +21,18 @@ namespace Show {
 
         auto num_leds = strip.length();
 
+        float pixel_scale;
+        if (num_leds > 1) {
+            pixel_scale = static_cast<float>(num_leds - 1);
+        } else {
+            pixel_scale = 1.0f;
+        }
+
         auto x = x_initial;
-        for (int i; i < iterations; i++) {
+        for (int i = 0; i < iterations; i++) {
             x = func(x);
 
-            Strip::PixelIndex led = int(x * (num_leds - 1));
+            auto led = static_cast<int16_t>(x * pixel_scale);
             Strip::Color color = wheel((i * color_factor) % 255);
             strip.setPixelColor(led, color);
         }

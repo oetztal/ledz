@@ -135,6 +135,20 @@ docs/
 pio test -e native
 ```
 
+### Test Coverage
+
+To track test coverage, you need `lcov` installed (on macOS: `brew install lcov`).
+The coverage report is automatically generated after running tests if the `--coverage` flag is present in `platformio.ini`.
+
+1. Run tests:
+   ```bash
+   pio test -e native
+   ```
+2. Open the report:
+   ```bash
+   open coverage_report/index.html
+   ```
+
 ### Web Assets
 
 Web files in `data/` are automatically minified and gzip-compressed into C++ header files during the build process. No manual steps required.

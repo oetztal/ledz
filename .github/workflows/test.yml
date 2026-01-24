@@ -28,7 +28,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install build-wrapper
-        uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v6
+        uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v7
 
       - name: Cache PlatformIO
         uses: actions/cache@v4
@@ -44,11 +44,32 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install platformio
+          sudo apt-get update
+          sudo apt-get install -y lcov
 
       - name: Run Native Tests
         run: |
           echo "Running native tests..."
           pio test -e native -v
+          
+          echo "Manually triggering coverage generation..."
+          # If PlatformIO post-action didn't run, we run it manually
+          python3 scripts/generate_coverage_manual.py
+          
+          echo "Checking for coverage files after tests..."
+          find . -name "*.gcno" -o -name "*.gcda"
+          if [ ! -d "coverage_report" ]; then
+            echo "Warning: coverage_report directory not found!"
+            ls -R .pio/build/native/ || true
+          fi
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage_report/
+          retention-days: 7
 
       - name: Build for ESP32
         run: |
@@ -86,10 +107,11 @@ jobs:
           retention-days: 7
 
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v7
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: >
             -Dsonar.cfamily.build-wrapper-output=${{ env.BUILD_WRAPPER_OUT_DIR }}
+            -Dsonar.gcov.reportsPath=.
