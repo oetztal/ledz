@@ -169,7 +169,8 @@ void TouchController::update() {
                     
                     if (layoutStep >= 4) {
                         Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
-                        dead_leds = deviceConfig.dead_leds;
+                        // TODO: fix this
+                        // dead_leds = deviceConfig.dead_leds;
                     }
                     
                     Serial.printf("TouchController: Switching layout to step %u (rev=%d, mir=%d, dead=%d)\n", 

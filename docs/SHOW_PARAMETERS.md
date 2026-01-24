@@ -8,7 +8,7 @@ ledz now supports configurable parameters for shows. Parameters are passed as JS
 - **Solid Show**: Color picker for RGB selection
 - **Mandelbrot Show**: Input fields for Cre0, Cim0, Cim1 (complex plane coordinates), scale, max_iterations, and color_scale
 - **Chaos Show**: Input fields for Rmin, Rmax, and Rdelta (logistic map parameters)
-- **TwoColorBlend Show**: Two color pickers for start and end gradient colors
+- **ColorRanges Show with Blends**: Linear gradients between colors using `blends` parameter
 - **ColorRanges Show**: Dynamic color inputs with flag presets (Ukraine 🇺🇦, Italy 🇮🇹), optional custom ranges
 
 ## Architecture
@@ -72,11 +72,11 @@ curl -X POST http://192.168.1.100/api/show \
   -d '{"name":"Chaos","params":{"Rmin":3.5,"Rmax":4.0,"Rdelta":0.001}}'
 ```
 
-**Example: Set TwoColorBlend Parameters**
+**Example: Set ColorRanges with Linear Gradient (replaces TwoColorBlend)**
 ```bash
 curl -X POST http://192.168.1.100/api/show \
   -H "Content-Type: application/json" \
-  -d '{"name":"TwoColorBlend","params":{"r1":255,"g1":0,"b1":0,"r2":0,"g2":0,"b2":255}}'
+  -d '{"name":"Solid","params":{"colors":[[255,0,0],[0,0,255]],"blends":["LINEAR"]}}'
 ```
 
 **Example: Set ColorRanges Parameters (Ukraine Flag)**
@@ -144,30 +144,15 @@ curl -X POST http://192.168.1.100/api/show \
 {"Rmin": 2.8, "Rmax": 3.6, "Rdelta": 0.0001}   // Slower, exploring period-doubling
 ```
 
-### TwoColorBlend
+### ColorRanges (Solid)
 **Parameters**:
-- `r1` (uint8_t, 0-255): Red component of start color (default: 255)
-- `g1` (uint8_t, 0-255): Green component of start color (default: 0)
-- `b1` (uint8_t, 0-255): Blue component of start color (default: 0)
-- `r2` (uint8_t, 0-255): Red component of end color (default: 0)
-- `g2` (uint8_t, 0-255): Green component of end color (default: 0)
-- `b2` (uint8_t, 0-255): Blue component of end color (default: 255)
-
-**Description**: Creates a smooth linear gradient from color1 (start of strip) to color2 (end of strip) with automatic smooth blending via SmoothBlend.
-
-**Example JSON**:
-```json
-{"r1": 255, "g1": 0, "b1": 0, "r2": 0, "g2": 0, "b2": 255}    // Red to Blue gradient
-{"r1": 255, "g1": 255, "b1": 0, "r2": 128, "g2": 0, "b2": 128}  // Yellow to Purple gradient
-{"r1": 0, "g1": 255, "b1": 0, "r2": 255, "g2": 255, "b2": 0}    // Green to Yellow gradient
-```
-
-### ColorRanges
-**Parameters**:
-- `colors` (array of RGB arrays, required): List of colors as `[r, g, b]` arrays. Minimum 2 colors.
+- `colors` (array of RGB arrays, required): List of colors as `[r, g, b]` arrays. Minimum 1 color.
 - `ranges` (array of floats, optional): Boundary percentages (0-100) where colors transition. **Must have exactly N-1 values for N colors.** If omitted, colors distribute equally.
+- `blends` (array of strings, optional): Blend types for transitions between colors. **Must have exactly N-1 values for N colors.** Values: `"NONE"` (sharp transition, default), `"LINEAR"` (gradient). If omitted, all transitions use `"NONE"`.
 
-**Description**: Displays solid color sections with sharp transitions across the LED strip. Perfect for flags, banners, or multi-color patterns. Colors are smoothly blended from the current state using SmoothBlend.
+**Description**: Displays color sections across the LED strip with configurable transitions. Perfect for flags, banners, multi-color patterns, and gradients. Colors are smoothly blended from the current state using SmoothBlend.
+
+**Note**: This show replaces the former `TwoColorBlend` show. To create a gradient, use `blends: ["LINEAR"]`.
 
 **Range Calculation**:
 - **Equal Distribution** (default): If `ranges` is omitted, colors are distributed equally across the strip
@@ -179,6 +164,10 @@ curl -X POST http://192.168.1.100/api/show \
   - 3 colors: 2 boundaries (e.g., `[25, 75]` = 25% color1, 50% color2, 25% color3)
   - 4 colors: 3 boundaries (e.g., `[20, 50, 80]` = 20% color1, 30% color2, 30% color3, 20% color4)
 
+**Blend Types**:
+- **NONE** (default): Sharp transition between colors
+- **LINEAR**: Smooth gradient interpolation between colors
+
 **Example JSON**:
 ```json
 // Ukraine Flag (default) - Blue and Yellow, equal distribution (50% each)
@@ -189,6 +178,31 @@ curl -X POST http://192.168.1.100/api/show \
 // Italian Flag - Green, White, Red, equal distribution (33.3% each)
 {
   "colors": [[0, 140, 69], [255, 255, 255], [205, 33, 42]]
+}
+
+// Linear gradient from red to blue (replaces TwoColorBlend)
+{
+  "colors": [[255, 0, 0], [0, 0, 255]],
+  "blends": ["LINEAR"]
+}
+
+// Rainbow gradient (smooth transitions between all colors)
+{
+  "colors": [
+    [255, 0, 0],     // Red
+    [255, 127, 0],   // Orange
+    [255, 255, 0],   // Yellow
+    [0, 255, 0],     // Green
+    [0, 0, 255],     // Blue
+    [75, 0, 130]     // Indigo
+  ],
+  "blends": ["LINEAR", "LINEAR", "LINEAR", "LINEAR", "LINEAR"]
+}
+
+// Mixed: sharp transition then linear gradient
+{
+  "colors": [[255, 0, 0], [255, 255, 255], [0, 0, 255]],
+  "blends": ["NONE", "LINEAR"]  // Sharp red->white, gradient white->blue
 }
 
 // 2 colors with custom split: 60% red, 40% blue
@@ -207,19 +221,6 @@ curl -X POST http://192.168.1.100/api/show \
 {
   "colors": [[255, 0, 0], [255, 255, 0], [0, 255, 0], [0, 0, 255]],
   "ranges": [20, 50, 80]  // 3 boundaries for 4 colors: 20%, 30%, 30%, 20%
-}
-
-// Rainbow sections (equal distribution)
-{
-  "colors": [
-    [255, 0, 0],     // Red
-    [255, 127, 0],   // Orange
-    [255, 255, 0],   // Yellow
-    [0, 255, 0],     // Green
-    [0, 0, 255],     // Blue
-    [75, 0, 130]     // Indigo
-  ]
-  // No ranges = equal distribution (16.6% each)
 }
 ```
 
