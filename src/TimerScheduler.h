@@ -27,7 +27,7 @@ public:
     /**
      * Get seconds since midnight for the given epoch time
      */
-    uint32_t getSecondsSinceMidnight(uint32_t epochTime) const;
+    [[nodiscard]] uint32_t getSecondsSinceMidnight(uint32_t epochTime) const;
 
     /**
      * Constructor
@@ -90,13 +90,13 @@ public:
      * @param currentEpoch Current NTP epoch time
      * @return Remaining seconds, or 0 if timer is not active
      */
-    uint32_t getRemainingSeconds(uint8_t index, uint32_t currentEpoch) const;
+    [[nodiscard]] uint32_t getRemainingSeconds(uint8_t index, uint32_t currentEpoch) const;
 
     /**
      * Get the timers configuration (for API access)
      * @return Reference to timers configuration
      */
-    const Config::TimersConfig& getTimersConfig() const { return timersConfig; }
+    [[nodiscard]] const Config::TimersConfig& getTimersConfig() const { return timersConfig; }
 
     /**
      * Set timezone offset
@@ -108,7 +108,7 @@ public:
      * Get timezone offset
      * @return Timezone offset in hours
      */
-    int8_t getTimezoneOffset() const { return timersConfig.timezone_offset_hours; }
+    [[nodiscard]] int8_t getTimezoneOffset() const { return timersConfig.timezone_offset_hours; }
 };
 
 #endif //LEDZ_TIMER_SCHEDULER_H

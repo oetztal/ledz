@@ -1,7 +1,3 @@
-//
-// Timer Scheduler implementation
-//
-
 #include "TimerScheduler.h"
 #include "ShowController.h"
 
@@ -21,7 +17,7 @@ void TimerScheduler::begin() {
 
     for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
         if (timersConfig.timers[i].enabled) {
-            Serial.printf("  Timer %d: type=%d, action=%d, target=%lu\n",
+            Serial.printf("  Timer %d: type=%d, action=%d, target=%u\n",
                           i, static_cast<int>(timersConfig.timers[i].type),
                           static_cast<int>(timersConfig.timers[i].action),
                           timersConfig.timers[i].target_time);
@@ -154,7 +150,7 @@ bool TimerScheduler::setCountdown(uint8_t index, uint32_t durationSeconds,
     config.saveTimersConfig(timersConfig);
 
 #ifdef ARDUINO
-    Serial.printf("TimerScheduler: Set countdown timer %d for %lu seconds\n", index, durationSeconds);
+    Serial.printf("TimerScheduler: Set countdown timer %d for %u seconds\n", index, durationSeconds);
 #endif
 
     return true;
