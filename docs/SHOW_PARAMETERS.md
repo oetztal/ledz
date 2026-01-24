@@ -76,7 +76,7 @@ curl -X POST http://192.168.1.100/api/show \
 ```bash
 curl -X POST http://192.168.1.100/api/show \
   -H "Content-Type: application/json" \
-  -d '{"name":"Solid","params":{"colors":[[255,0,0],[0,0,255]],"blends":["LINEAR"]}}'
+  -d '{"name":"Solid","params":{"colors":[[255,0,0],[0,0,255]],"gradient":true}}'
 ```
 
 **Example: Set ColorRanges Parameters (Ukraine Flag)**
@@ -147,12 +147,12 @@ curl -X POST http://192.168.1.100/api/show \
 ### ColorRanges (Solid)
 **Parameters**:
 - `colors` (array of RGB arrays, required): List of colors as `[r, g, b]` arrays. Minimum 1 color.
-- `ranges` (array of floats, optional): Boundary percentages (0-100) where colors transition. **Must have exactly N-1 values for N colors.** If omitted, colors distribute equally.
-- `blends` (array of strings, optional): Blend types for transitions between colors. **Must have exactly N-1 values for N colors.** Values: `"NONE"` (sharp transition, default), `"LINEAR"` (gradient). If omitted, all transitions use `"NONE"`.
+- `ranges` (array of floats, optional): Boundary percentages (0-100) where colors transition. **Must have exactly N-1 values for N colors.** If omitted, colors distribute equally. Note: ignored in gradient mode.
+- `gradient` (boolean, optional): If `true`, colors act as waypoints with smooth interpolation. If `false` (default), colors fill sections with sharp boundaries.
 
-**Description**: Displays color sections across the LED strip with configurable transitions. Perfect for flags, banners, multi-color patterns, and gradients. Colors are smoothly blended from the current state using SmoothBlend.
+**Description**: Displays color sections across the LED strip. Perfect for flags, banners, multi-color patterns, and gradients. Colors are smoothly blended from the current state using SmoothBlend.
 
-**Note**: This show replaces the former `TwoColorBlend` show. To create a gradient, use `blends: ["LINEAR"]`.
+**Note**: This show replaces the former `TwoColorBlend` show. To create a gradient, use `gradient: true`.
 
 **Range Calculation**:
 - **Equal Distribution** (default): If `ranges` is omitted, colors are distributed equally across the strip
@@ -164,63 +164,63 @@ curl -X POST http://192.168.1.100/api/show \
   - 3 colors: 2 boundaries (e.g., `[25, 75]` = 25% color1, 50% color2, 25% color3)
   - 4 colors: 3 boundaries (e.g., `[20, 50, 80]` = 20% color1, 30% color2, 30% color3, 20% color4)
 
-**Blend Types**:
-- **NONE** (default): Sharp transition between colors
-- **LINEAR**: Smooth gradient interpolation between colors
+**Modes**:
+- **Solid mode** (default, `gradient: false`): Colors fill sections with sharp boundaries
+- **Gradient mode** (`gradient: true`): Colors act as waypoints, smooth interpolation between them
+
+In gradient mode, colors are treated as evenly-spaced waypoints across the strip:
+- 2 colors: waypoints at 0% and 100% → full strip gradient
+- 3 colors: waypoints at 0%, 50%, 100% → gradient A→B in first half, B→C in second half
+- N colors: waypoints evenly distributed from 0% to 100%
 
 **Example JSON**:
 ```json
-// Ukraine Flag (default) - Blue and Yellow, equal distribution (50% each)
+// Single warm white color
+{
+  "colors": [[255, 250, 230]]
+}
+
+// Ukraine Flag - Blue and Yellow, sharp boundary (50% each)
 {
   "colors": [[0, 87, 183], [255, 215, 0]]
 }
 
-// Italian Flag - Green, White, Red, equal distribution (33.3% each)
+// Italian Flag - Green, White, Red with sharp boundaries
 {
   "colors": [[0, 140, 69], [255, 255, 255], [205, 33, 42]]
 }
 
 // Linear gradient from red to blue (replaces TwoColorBlend)
+// Gradient spans the ENTIRE strip
 {
   "colors": [[255, 0, 0], [0, 0, 255]],
-  "blends": ["LINEAR"]
+  "gradient": true
 }
 
 // Rainbow gradient (smooth transitions between all colors)
+// Colors are waypoints: red at 0%, orange at 20%, yellow at 40%, etc.
 {
   "colors": [
-    [255, 0, 0],     // Red
-    [255, 127, 0],   // Orange
-    [255, 255, 0],   // Yellow
-    [0, 255, 0],     // Green
-    [0, 0, 255],     // Blue
-    [75, 0, 130]     // Indigo
+    [255, 0, 0],     // Red (0%)
+    [255, 127, 0],   // Orange (20%)
+    [255, 255, 0],   // Yellow (40%)
+    [0, 255, 0],     // Green (60%)
+    [0, 0, 255],     // Blue (80%)
+    [75, 0, 130]     // Indigo (100%)
   ],
-  "blends": ["LINEAR", "LINEAR", "LINEAR", "LINEAR", "LINEAR"]
+  "gradient": true
 }
 
-// Mixed: sharp transition then linear gradient
-{
-  "colors": [[255, 0, 0], [255, 255, 255], [0, 0, 255]],
-  "blends": ["NONE", "LINEAR"]  // Sharp red->white, gradient white->blue
-}
-
-// 2 colors with custom split: 60% red, 40% blue
+// 2 colors with custom boundary: 60% red, 40% blue (solid mode)
 {
   "colors": [[255, 0, 0], [0, 0, 255]],
-  "ranges": [60]  // 1 boundary for 2 colors
+  "ranges": [60]
 }
 
-// 3 colors with custom ranges: 25% red, 50% white, 25% blue
+// 3 colors with custom ranges: 25% red, 50% white, 25% blue (solid mode)
 {
   "colors": [[255, 0, 0], [255, 255, 255], [0, 0, 255]],
-  "ranges": [25, 75]  // 2 boundaries for 3 colors: Red (0-25%), White (25-75%), Blue (75-100%)
-}
-
-// 4 colors with custom ranges: unequal sections
-{
-  "colors": [[255, 0, 0], [255, 255, 0], [0, 255, 0], [0, 0, 255]],
-  "ranges": [20, 50, 80]  // 3 boundaries for 4 colors: 20%, 30%, 30%, 20%
+  "ranges": [25, 75]
 }
 ```
 

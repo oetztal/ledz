@@ -94,25 +94,14 @@
                     <button class="apply-button" onclick="applyChaosParams()">Apply Parameters</button>
                 </div>
 
-                <div id="twoColorBlendParams" class="params-section">
-                    <div class="param-row">
-                        <label class="param-label" for="twoColorBlendColor1">Start Color</label>
-                        <input type="color" id="twoColorBlendColor1" value="#ff0000">
-                    </div>
-                    <div class="param-row">
-                        <label class="param-label" for="twoColorBlendColor2">End Color</label>
-                        <input type="color" id="twoColorBlendColor2" value="#0000ff">
-                    </div>
-                    <button class="apply-button" onclick="applyTwoColorBlendParams()">Apply Colors</button>
-                </div>
-
                 <div id="colorRangesParams" class="params-section">
                     <small style="display:block; margin-bottom:8px; color:#666;">
-                        Single color with smooth fade-in (default: warm white), or use multiple colors for patterns/flags.
+                        Single color, multi-color patterns (flags), or smooth gradients between colors.
                     </small>
                     <div style="margin-bottom: 12px;">
                         <strong>Presets:</strong>
                         <button class="preset-button" onclick="loadWarmWhite()">💡 Warm White</button>
+                        <button class="preset-button" onclick="loadGradient()">🌈 Gradient</button>
                         <button class="preset-button" onclick="loadUkraineFlag()">🇺🇦 Ukraine</button>
                         <button class="preset-button" onclick="loadItalianFlag()">🇮🇹 Italy</button>
                         <button class="preset-button" onclick="loadFrenchFlag()">🇫🇷 France</button>
@@ -128,14 +117,20 @@
                         <button class="small-button" onclick="removeColorRangesColor()">- Remove Color</button>
                     </div>
                     <div class="param-row">
+                        <label class="param-label">
+                            <input type="checkbox" id="colorRangesLinearBlend" style="margin-right: 6px;">
+                            Gradient mode (smooth transitions between colors)
+                        </label>
+                        <small style="display:block; margin-top:4px; color:#666;">
+                            When enabled, colors blend smoothly. When disabled, colors have sharp transitions.
+                        </small>
+                    </div>
+                    <div class="param-row">
                         <label class="param-label" for="colorRangesRanges">Ranges (%) [optional]</label>
                         <input type="text" id="colorRangesRanges" placeholder="e.g., 33.3, 66.6" value="">
                         <small style="display:block; margin-top:4px; color:#666;">
                             Leave empty for equal distribution.<br>
-                            For N colors, enter N-1 boundary percentages:<br>
-                            • 2 colors = 1 value (e.g., "50" or "60")<br>
-                            • 3 colors = 2 values (e.g., "33.3, 66.6" or "25, 75")<br>
-                            • 4 colors = 3 values (e.g., "25, 50, 75")
+                            For N colors, enter N-1 boundary percentages.
                         </small>
                     </div>
                     <button class="apply-button" onclick="applyColorRangesParams()">Apply Pattern</button>
@@ -330,7 +325,6 @@
         function updateParameterVisibility(showName) {
             document.getElementById('mandelbrotParams').classList.remove('visible');
             document.getElementById('chaosParams').classList.remove('visible');
-            document.getElementById('twoColorBlendParams').classList.remove('visible');
             document.getElementById('colorRangesParams').classList.remove('visible');
             document.getElementById('fireParams').classList.remove('visible');
             document.getElementById('starlightParams').classList.remove('visible');
@@ -343,8 +337,6 @@
                 document.getElementById('mandelbrotParams').classList.add('visible');
             } else if (showName === 'Chaos') {
                 document.getElementById('chaosParams').classList.add('visible');
-            } else if (showName === 'TwoColorBlend') {
-                document.getElementById('twoColorBlendParams').classList.add('visible');
             } else if (showName === 'Solid') {
                 document.getElementById('colorRangesParams').classList.add('visible');
             } else if (showName === 'Fire') {
@@ -407,33 +399,6 @@
             }
         }
 
-        // Apply TwoColorBlend parameters
-        async function applyTwoColorBlendParams() {
-            const hex1 = document.getElementById('twoColorBlendColor1').value;
-            const r1 = parseInt(hex1.substr(1,2), 16);
-            const g1 = parseInt(hex1.substr(3,2), 16);
-            const b1 = parseInt(hex1.substr(5,2), 16);
-
-            const hex2 = document.getElementById('twoColorBlendColor2').value;
-            const r2 = parseInt(hex2.substr(1,2), 16);
-            const g2 = parseInt(hex2.substr(3,2), 16);
-            const b2 = parseInt(hex2.substr(5,2), 16);
-
-            try {
-                await fetch('/api/show', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: 'TwoColorBlend',
-                        params: { r1, g1, b1, r2, g2, b2 }
-                    })
-                });
-                pendingParameterConfig = false;  // Applied successfully
-            } catch (error) {
-                console.error('Failed to apply TwoColorBlend parameters:', error);
-            }
-        }
-
         // ColorRanges color management
         let colorRangesColorCount = 1;
 
@@ -483,7 +448,17 @@
         function loadWarmWhite() {
             ensureColorRangesColorCount(1);
             document.getElementById('colorRangesColor1').value = '#fff4dc'; // Warm white
-            document.getElementById('colorRangesRanges').value = ''; // No ranges for single color
+            document.getElementById('colorRangesRanges').value = '';
+            document.getElementById('colorRangesLinearBlend').checked = false;
+        }
+
+        // Load Gradient preset (two colors with linear blend)
+        function loadGradient() {
+            ensureColorRangesColorCount(2);
+            document.getElementById('colorRangesColor1').value = '#ff0000'; // Red
+            document.getElementById('colorRangesColor2').value = '#0000ff'; // Blue
+            document.getElementById('colorRangesRanges').value = '';
+            document.getElementById('colorRangesLinearBlend').checked = true;
         }
 
         // Load Ukraine flag preset
@@ -491,7 +466,8 @@
             ensureColorRangesColorCount(2);
             document.getElementById('colorRangesColor1').value = '#0057b7'; // Blue
             document.getElementById('colorRangesColor2').value = '#ffd700'; // Yellow
-            document.getElementById('colorRangesRanges').value = ''; // Equal distribution
+            document.getElementById('colorRangesRanges').value = '';
+            document.getElementById('colorRangesLinearBlend').checked = false;
         }
 
         // Load Italian flag preset
@@ -500,7 +476,8 @@
             document.getElementById('colorRangesColor1').value = '#008c45'; // Green
             document.getElementById('colorRangesColor2').value = '#ffffff'; // White
             document.getElementById('colorRangesColor3').value = '#cd212a'; // Red
-            document.getElementById('colorRangesRanges').value = ''; // Equal distribution
+            document.getElementById('colorRangesRanges').value = '';
+            document.getElementById('colorRangesLinearBlend').checked = false;
         }
 
         // Load French flag preset
@@ -509,7 +486,8 @@
             document.getElementById('colorRangesColor1').value = '#0055a4'; // Blue
             document.getElementById('colorRangesColor2').value = '#ffffff'; // White
             document.getElementById('colorRangesColor3').value = '#ef4135'; // Red
-            document.getElementById('colorRangesRanges').value = ''; // Equal distribution
+            document.getElementById('colorRangesRanges').value = '';
+            document.getElementById('colorRangesLinearBlend').checked = false;
         }
 
         // Apply ColorRanges parameters
@@ -541,10 +519,16 @@
                 }
             }
 
+            // Get gradient mode from checkbox
+            const gradient = document.getElementById('colorRangesLinearBlend').checked;
+
             // Always use colors array format
             const params = { colors };
             if (ranges.length > 0) {
                 params.ranges = ranges;
+            }
+            if (gradient) {
+                params.gradient = true;
             }
 
             console.log('Solid params:', JSON.stringify(params));
@@ -809,15 +793,9 @@
                         } else {
                             document.getElementById('colorRangesRanges').value = '';
                         }
-                    }
-                    break;
 
-                case 'TwoColorBlend':
-                    if (params.r1 !== undefined) {
-                        document.getElementById('twoColorBlendColor1').value = rgbToHex(params.r1, params.g1, params.b1);
-                    }
-                    if (params.r2 !== undefined) {
-                        document.getElementById('twoColorBlendColor2').value = rgbToHex(params.r2, params.g2, params.b2);
+                        // Populate gradient checkbox
+                        document.getElementById('colorRangesLinearBlend').checked = params.gradient === true;
                     }
                     break;
 
@@ -928,7 +906,7 @@
             const showName = e.target.value;
 
             // Don't auto-apply for shows with parameters - wait for user to click Apply button
-            const showsWithParams = ['Solid', 'Mandelbrot', 'Chaos', 'TwoColorBlend', 'Fire',
+            const showsWithParams = ['Solid', 'Mandelbrot', 'Chaos', 'Fire',
                                      'Starlight', 'Wave', 'MorseCode', 'TheaterChase', 'Stroboscope'];
 
             if (showsWithParams.includes(showName)) {

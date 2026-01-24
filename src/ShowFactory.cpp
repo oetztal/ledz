@@ -25,7 +25,6 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
     registerShow("Solid", "Solid color or color sections (flags, patterns, gradients)", [](const StaticJsonDocument<512> &doc) {
         std::vector<Strip::Color> colors;
         std::vector<float> ranges;
-        std::vector<Show::BlendType> blends;
 
         // Parse colors array (supports 1 or more colors)
         // Note: Must use JsonArrayConst for StaticJsonDocument (not JsonArray)
@@ -54,27 +53,15 @@ ShowFactory::ShowFactory() : showConstructors(strLess) {
             }
         }
 
-        // Parse blends array (optional)
-        if (doc.containsKey("blends")) {
-            JsonArrayConst blendsArray = doc["blends"].as<JsonArrayConst>();
-            if (!blendsArray.isNull() && blendsArray.size() > 0) {
-                for (JsonVariantConst blendVariant: blendsArray) {
-                    const char* blendStr = blendVariant.as<const char*>();
-                    if (blendStr && strcmp(blendStr, "LINEAR") == 0) {
-                        blends.push_back(Show::BlendType::LINEAR);
-                    } else {
-                        blends.push_back(Show::BlendType::NONE);
-                    }
-                }
-            }
-        }
+        // Parse gradient flag (optional, default false)
+        bool gradient = doc["gradient"] | false;
 
         // If no colors parsed, use default warm white
         if (colors.empty()) {
             colors.push_back(color(255, 250, 230)); // Warm white
         }
 
-        return std::make_unique<Show::ColorRanges>(colors, ranges, blends);
+        return std::make_unique<Show::ColorRanges>(colors, ranges, gradient);
     });
 
     registerShow("Fire", "Burning flames", [](const StaticJsonDocument<512> &doc) {

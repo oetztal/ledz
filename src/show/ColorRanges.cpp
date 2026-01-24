@@ -8,8 +8,8 @@
 namespace Show {
     ColorRanges::ColorRanges(const std::vector<Strip::Color> &colors,
                              const std::vector<float> &ranges,
-                             const std::vector<BlendType> &blends)
-        : colors(colors), ranges(ranges), blends(blends), initialized(false) {
+                             bool gradient)
+        : colors(colors), ranges(ranges), gradient(gradient), initialized(false) {
     }
 
     void ColorRanges::execute(Strip::Strip &strip, Iteration iteration) {
@@ -24,11 +24,7 @@ namespace Show {
             for (auto range: ranges) {
                 Serial.printf("%.1f%%, ", range);
             }
-            Serial.print("], blends=[");
-            for (auto b: blends) {
-                Serial.printf("%s, ", b == BlendType::LINEAR ? "LINEAR" : "NONE");
-            }
-            Serial.println("]");
+            Serial.printf("], gradient=%s\n", gradient ? "true" : "false");
 #endif
 
             uint16_t num_leds = strip.length();
@@ -50,16 +46,6 @@ namespace Show {
                 use_custom_ranges = false;
             }
 
-            // Validate blends if provided
-            bool use_blends = !blends.empty();
-            if (use_blends && blends.size() != colors.size() - 1) {
-#ifdef ARDUINO
-                Serial.printf(
-                    "ColorRanges WARNING: Expected %zu blends for %zu colors, got %zu. Using NONE for all.\n",
-                    colors.size() - 1, colors.size(), blends.size());
-#endif
-                use_blends = false;
-            }
 
             if (!use_custom_ranges) {
                 // Equal distribution
@@ -86,55 +72,53 @@ namespace Show {
             }
             boundaries.push_back(num_leds); // Always end at num_leds
 
-            // Assign colors to each LED based on boundaries and blend types
-            for (uint16_t led = 0; led < num_leds; led++) {
-                // Find which color range this LED belongs to
-                size_t color_index = 0;
-                for (size_t i = 0; i < boundaries.size() - 1; i++) {
-                    if (led >= boundaries[i] && led < boundaries[i + 1]) {
-                        color_index = i;
-                        break;
-                    }
-                }
-
-                // Make sure we don't go out of bounds
-                if (color_index >= colors.size()) {
-                    color_index = colors.size() - 1;
-                }
-
-                // Determine blend type for this transition
-                BlendType blend_type = BlendType::NONE;
-                if (use_blends && color_index < blends.size()) {
-                    blend_type = blends[color_index];
-                }
-
-                Strip::Color result_color;
-                if (blend_type == BlendType::LINEAR && color_index < colors.size() - 1) {
-                    // Linear interpolation within this range
-                    uint16_t range_start = boundaries[color_index];
-                    uint16_t range_end = boundaries[color_index + 1];
-                    uint16_t range_length = range_end - range_start;
-
-                    // Calculate position ratio within the range (0.0 to 1.0)
-                    float ratio = (range_length > 1)
-                        ? (float)(led - range_start) / (float)(range_length - 1)
+            if (gradient && colors.size() > 1) {
+                // Gradient mode: colors are waypoints, interpolate between them
+                // Waypoints are evenly distributed: 0%, 1/(N-1), 2/(N-1), ..., 100%
+                for (uint16_t led = 0; led < num_leds; led++) {
+                    float position = (num_leds > 1)
+                        ? (float)led / (float)(num_leds - 1)
                         : 0.0f;
 
-                    // Interpolate between current color and next color
-                    Strip::Color colorA = colors[color_index];
-                    Strip::Color colorB = colors[color_index + 1];
+                    // Find which segment this LED is in
+                    float segment_size = 1.0f / (float)(colors.size() - 1);
+                    size_t segment = (size_t)(position / segment_size);
+                    if (segment >= colors.size() - 1) segment = colors.size() - 2;
+
+                    // Calculate position within segment (0.0 to 1.0)
+                    float segment_start = (float)segment * segment_size;
+                    float ratio = (position - segment_start) / segment_size;
+                    if (ratio > 1.0f) ratio = 1.0f;
+
+                    // Interpolate between adjacent waypoint colors
+                    Strip::Color colorA = colors[segment];
+                    Strip::Color colorB = colors[segment + 1];
 
                     uint8_t r = (uint8_t)(red(colorA) * (1.0f - ratio) + red(colorB) * ratio);
                     uint8_t g = (uint8_t)(green(colorA) * (1.0f - ratio) + green(colorB) * ratio);
                     uint8_t b = (uint8_t)(blue(colorA) * (1.0f - ratio) + blue(colorB) * ratio);
 
-                    result_color = color(r, g, b);
-                } else {
-                    // Solid color (NONE blend)
-                    result_color = colors[color_index];
+                    target_colors.push_back(color(r, g, b));
                 }
+            } else {
+                // Solid mode: colors fill sections with sharp boundaries
+                for (uint16_t led = 0; led < num_leds; led++) {
+                    // Find which color range this LED belongs to
+                    size_t color_index = 0;
+                    for (size_t i = 0; i < boundaries.size() - 1; i++) {
+                        if (led >= boundaries[i] && led < boundaries[i + 1]) {
+                            color_index = i;
+                            break;
+                        }
+                    }
 
-                target_colors.push_back(result_color);
+                    // Make sure we don't go out of bounds
+                    if (color_index >= colors.size()) {
+                        color_index = colors.size() - 1;
+                    }
+
+                    target_colors.push_back(colors[color_index]);
+                }
             }
 
             // Create SmoothBlend with the color range pattern
