@@ -30,9 +30,9 @@ const char* COLORRANGES_VARIANTS[] = {
     "{\"colors\":[[170,21,27],[241,191,0],[170,21,27]],\"ranges\":[25,75]}"
 };
 const char* TWOCOLORBLEND_VARIANTS[] = {
-    "{\"r1\":0,\"g1\":0,\"b1\":255,\"r2\":255,\"g2\":0,\"b2\":0}",
-    "{\"r1\":0,\"g1\":255,\"b1\":0,\"r2\":255,\"g2\":0,\"b2\":0}",
-    "{\"r1\":0,\"g1\":255,\"b1\":0,\"r2\":0,\"g2\":0,\"b2\":255}"
+    "{\"colors\":[[0,0,255],[255,0,0]],\"gradient\":true}",
+    "{\"colors\":[[0,255,0],[255,0,0]],\"gradient\":true}",
+    "{\"colors\":[[0,255,0],[0,0,255]],\"gradient\":true}",
 };
 const char* COLORRUN_VARIANTS[] = {"{}"};
 const char* JUMP_VARIANTS[] = {"{}"};
@@ -55,7 +55,7 @@ const char* MORSECODE_VARIANTS[] = {
 const TouchController::ShowVariantGroup TouchController::SHOW_VARIANTS[] = {
     {"Solid", SOLID_VARIANTS, 10},
     {"Solid", COLORRANGES_VARIANTS, 3},
-    {"TwoColorBlend", TWOCOLORBLEND_VARIANTS, 3},
+    {"Solid", TWOCOLORBLEND_VARIANTS, 3},
     {"ColorRun", COLORRUN_VARIANTS, 1},
     {"Jump", JUMP_VARIANTS, 1},
     {"Rainbow", RAINBOW_VARIANTS, 1},
@@ -78,6 +78,9 @@ TouchController::TouchController(Config::ConfigManager &config, ShowController &
 
 void TouchController::begin() {
     touchConfig = config.loadTouchConfig();
+#ifdef ARDUINO
+    Serial.printf("TouchController: Configuration loaded - enabled: %d, threshold: %d", touchConfig.enabled, touchConfig.threshold);
+#endif
 
     // Sync currentShowIdx with the actual current show
     const char* currentShowName = showController.getCurrentShowName();
@@ -115,7 +118,7 @@ void TouchController::update() {
         uint32_t touchValue = touchRead(TOUCH_PINS[i]);
 
         // Check if touched (value below threshold means touched)
-        bool isTouched = touchValue < touchConfig.threshold;
+        bool isTouched = touchValue > touchConfig.threshold;
 
         // Detect rising edge (transition from not-touched to touched)
         if (isTouched && !wasTouched[i]) {

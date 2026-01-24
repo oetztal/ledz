@@ -25,10 +25,7 @@ void ShowController::begin() {
         return;
     }
 #endif
-    Serial.println("ShowController: loading show config");
-    // Load configuration
     Config::ShowConfig showConfig = config.loadShowConfig();
-    Serial.println("ShowController: loading device config");
     Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
 
     // Apply loaded configuration

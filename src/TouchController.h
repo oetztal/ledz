@@ -19,7 +19,7 @@ private:
 
     // Touch pin GPIO numbers for ESP32-S3
     // Using GPIO 5, 6, 7 which are touch-capable on QT Py ESP32-S3
-    static constexpr uint8_t TOUCH_PINS[Config::TouchConfig::MAX_TOUCH_PINS] = {5, 6, 7};
+    static constexpr uint8_t TOUCH_PINS[Config::TouchConfig::MAX_TOUCH_PINS] = {9, 7, 5};
 
     // Debounce tracking
     bool wasTouched[Config::TouchConfig::MAX_TOUCH_PINS];
