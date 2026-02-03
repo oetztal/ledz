@@ -239,7 +239,7 @@ void WebServerManager::setupAPIRoutes() {
                           paramsJson = "{}";
                       }
 
-                      if (showController.queueShowChange(showName, paramsJson.c_str())) {
+                      if (showController.queueShowChange(std::string(showName), std::string(paramsJson.c_str()))) {
                           request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
                       } else {
                           request->send(503, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_QUEUE_FULL);
