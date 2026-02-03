@@ -18,7 +18,7 @@ namespace Show {
         std::vector<float> ranges; // Boundary percentages (0-100)
         bool gradient; // Gradient mode: smooth interpolation between colors
         std::unique_ptr<Support::SmoothBlend> blend;
-        bool initialized;
+        bool initialized = false;
 
     public:
         /**

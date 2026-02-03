@@ -9,7 +9,7 @@ namespace Show {
     ColorRanges::ColorRanges(const std::vector<Strip::Color> &colors,
                              const std::vector<float> &ranges,
                              bool gradient)
-        : colors(colors), ranges(ranges), gradient(gradient), initialized(false) {
+        : colors(colors), ranges(ranges), gradient(gradient) {
     }
 
     void ColorRanges::execute(Strip::Strip &strip, Iteration iteration) {

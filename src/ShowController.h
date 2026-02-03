@@ -48,14 +48,11 @@ struct ShowCommand {
  * Show statistics for monitoring performance
  */
 struct ShowStats {
-    uint32_t avg_execution_time; // ms
-    uint32_t avg_show_time;      // ms
-    uint32_t avg_cycle_time;     // ms
-    uint32_t last_execution_time; // ms
-    uint32_t last_show_time;      // ms
-
-    ShowStats() : avg_execution_time(0), avg_show_time(0), avg_cycle_time(0),
-                  last_execution_time(0), last_show_time(0) {}
+    uint32_t avg_execution_time = 0; // ms
+    uint32_t avg_show_time = 0;      // ms
+    uint32_t avg_cycle_time = 0;     // ms
+    uint32_t last_execution_time = 0; // ms
+    uint32_t last_show_time = 0;      // ms
 };
 
 /**

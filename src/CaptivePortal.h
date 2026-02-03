@@ -20,7 +20,7 @@ private:
 #ifdef ARDUINO
     DNSServer dnsServer;
 #endif
-    bool running;
+    bool running = false;
 
 public:
     CaptivePortal();

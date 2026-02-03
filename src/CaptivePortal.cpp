@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #endif
 
-CaptivePortal::CaptivePortal() : running(false) {
+CaptivePortal::CaptivePortal() {
 }
 
 void CaptivePortal::begin() {
