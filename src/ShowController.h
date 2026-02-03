@@ -36,8 +36,8 @@ enum class ShowCommandType {
  */
 struct ShowCommand {
     ShowCommandType type;
-    char show_name[32];
-    char params_json[256]; // JSON parameters for show
+    char *show_name;
+    char *params_json; // JSON parameters for show
     uint8_t brightness_value;
     bool layout_reverse;
     bool layout_mirror;
@@ -48,14 +48,11 @@ struct ShowCommand {
  * Show statistics for monitoring performance
  */
 struct ShowStats {
-    uint32_t avg_execution_time; // ms
-    uint32_t avg_show_time;      // ms
-    uint32_t avg_cycle_time;     // ms
-    uint32_t last_execution_time; // ms
-    uint32_t last_show_time;      // ms
-
-    ShowStats() : avg_execution_time(0), avg_show_time(0), avg_cycle_time(0),
-                  last_execution_time(0), last_show_time(0) {}
+    uint32_t avg_execution_time = 0; // ms
+    uint32_t avg_show_time = 0;      // ms
+    uint32_t avg_cycle_time = 0;     // ms
+    uint32_t last_execution_time = 0; // ms
+    uint32_t last_show_time = 0;      // ms
 };
 
 /**
@@ -74,7 +71,7 @@ private:
     Config::ConfigManager &config;
 
     std::unique_ptr<Show::Show> currentShow;
-    char currentShowName[32];
+    std::string currentShowName;
     std::atomic<uint8_t> brightness;
 
     // base strip and strip layout
@@ -111,7 +108,7 @@ public:
      * @param paramsJson JSON parameters (optional, defaults to "{}")
      * @return true if queued successfully
      */
-    bool queueShowChange(const char *showName, const char *paramsJson = "{}");
+    bool queueShowChange(const std::string &showName, const std::string &paramsJson = "{}");
 
     /**
      * Queue a brightness change command (called from Core 1 - webserver)

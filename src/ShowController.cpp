@@ -1,6 +1,8 @@
 #include "ShowController.h"
 #include "color.h"
 
+#include <cstring> // strlen, strncpy
+
 #ifdef ARDUINO
 #include <Arduino.h>
 #endif
@@ -12,7 +14,6 @@ ShowController::ShowController(ShowFactory &factory, Config::ConfigManager &conf
       , commandQueue(nullptr)
 #endif
 {
-    currentShowName[0] = '\0';
 }
 
 void ShowController::begin() {
@@ -31,31 +32,33 @@ void ShowController::begin() {
     // Apply loaded configuration
     brightness = deviceConfig.brightness;
 
+#ifdef ARDUINO
     Serial.println("ShowController: preparing show");
+#endif
     // Create initial show
     const char *initialShowName = showConfig.current_show;
 
     if (strlen(initialShowName) > 0 && factory.hasShow(initialShowName)) {
-        strncpy(currentShowName, initialShowName, sizeof(currentShowName) - 1);
+        currentShowName = initialShowName;
     } else {
-        strncpy(currentShowName, "Rainbow", sizeof(currentShowName) - 1);
+        currentShowName = "Rainbow";
     }
-    currentShowName[sizeof(currentShowName) - 1] = '\0';
 
     // Load parameters if available
     const char *params = (strlen(showConfig.params_json) > 0) ? showConfig.params_json : "{}";
-    Serial.printf("ShowController: Creating initial show %s with params %s\n", currentShowName, params);
+#ifdef ARDUINO
+    Serial.printf("ShowController: Creating initial show %s with params %s\n", currentShowName.c_str(), params);
+#endif
     currentShow = factory.createShow(currentShowName, params);
 #ifdef ARDUINO
-    Serial.printf("ShowController: Show %s created\n", currentShowName);
-#endif
-
+    Serial.printf("ShowController: Show %s created\n", currentShowName.c_str());
     Serial.printf("ShowController: Initial show %p\n", currentShow.get());
+#endif
 
     if (currentShow) {
 #ifdef ARDUINO
         Serial.print("ShowController: Initial show loaded: ");
-        Serial.print(currentShowName);
+        Serial.print(currentShowName.c_str());
         Serial.print(" with params: ");
         Serial.println(params);
 #endif
@@ -66,7 +69,7 @@ void ShowController::begin() {
     }
 }
 
-bool ShowController::queueShowChange(const char *showName, const char *paramsJson) {
+bool ShowController::queueShowChange(const std::string &showName, const std::string &paramsJson) {
 #ifdef ARDUINO
     if (commandQueue == nullptr) {
         return false;
@@ -74,16 +77,17 @@ bool ShowController::queueShowChange(const char *showName, const char *paramsJso
 
     ShowCommand cmd;
     cmd.type = ShowCommandType::SET_SHOW;
-    strncpy(cmd.show_name, showName, sizeof(cmd.show_name) - 1);
-    cmd.show_name[sizeof(cmd.show_name) - 1] = '\0';
-
-    strncpy(cmd.params_json, paramsJson, sizeof(cmd.params_json) - 1);
-    cmd.params_json[sizeof(cmd.params_json) - 1] = '\0';
+    cmd.show_name = strdup(showName.c_str());
+    cmd.params_json = strdup(paramsJson.c_str());
 
     // Try to send with no wait (non-blocking)
     if (xQueueSend(commandQueue, &cmd, 0) == pdTRUE) {
         return true;
     }
+
+    // If failed to queue, we must free the memory
+    free(cmd.show_name);
+    free(cmd.params_json);
 
     Serial.println("WARNING: Show command queue full!");
     return false;
@@ -122,21 +126,22 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
                 currentShow = std::move(newShow);
                 {
                     std::lock_guard<std::mutex> lock(stateMutex);
-                    strncpy(currentShowName, cmd.show_name, sizeof(currentShowName) - 1);
-                    currentShowName[sizeof(currentShowName) - 1] = '\0';
+                    currentShowName = cmd.show_name;
                 }
 
 #ifdef ARDUINO
                 Serial.print("ShowController: Switched to show: ");
-                Serial.print(currentShowName);
+                Serial.print(currentShowName.c_str());
                 Serial.print(" with params: ");
                 Serial.println(cmd.params_json);
 #endif
 
                 // Save to configuration
                 Config::ShowConfig showConfig = config.loadShowConfig();
-                strncpy(showConfig.current_show, currentShowName, sizeof(showConfig.current_show) - 1);
+                strncpy(showConfig.current_show, currentShowName.c_str(), sizeof(showConfig.current_show) - 1);
+                showConfig.current_show[sizeof(showConfig.current_show) - 1] = '\0';
                 strncpy(showConfig.params_json, cmd.params_json, sizeof(showConfig.params_json) - 1);
+                showConfig.params_json[sizeof(showConfig.params_json) - 1] = '\0';
                 config.saveShowConfig(showConfig);
             } else {
 #ifdef ARDUINO
@@ -184,7 +189,7 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
                 std::unique_ptr<Show::Show> newShow = factory.createShow(currentShowName, showConfig.params_json);
                 if (newShow != nullptr) {
                     currentShow = std::move(newShow);
-                    Serial.printf("ShowController: Restarted show '%s' with updated layout\n", currentShowName);
+                    Serial.printf("ShowController: Restarted show '%s' with updated layout\n", currentShowName.c_str());
                 }
             } else {
                 Serial.println("ERROR: Layout pointers not set!");
@@ -219,16 +224,15 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
                 currentShow = std::move(newShow);
                 {
                     std::lock_guard<std::mutex> lock(stateMutex);
-                    strncpy(currentShowName, cmd.show_name, sizeof(currentShowName) - 1);
-                    currentShowName[sizeof(currentShowName) - 1] = '\0';
+                    currentShowName = cmd.show_name;
                 }
 
                 Serial.printf("ShowController: Preset show '%s' loaded with params: %s\n",
-                              currentShowName, cmd.params_json);
+                              currentShowName.c_str(), cmd.params_json);
 
                 // Save show config
                 Config::ShowConfig showConfig = config.loadShowConfig();
-                strncpy(showConfig.current_show, currentShowName, sizeof(showConfig.current_show) - 1);
+                strncpy(showConfig.current_show, currentShowName.c_str(), sizeof(showConfig.current_show) - 1);
                 strncpy(showConfig.params_json, cmd.params_json, sizeof(showConfig.params_json) - 1);
                 config.saveShowConfig(showConfig);
             } else {
@@ -250,6 +254,11 @@ void ShowController::processCommands() {
     ShowCommand cmd;
     while (xQueueReceive(commandQueue, &cmd, 0) == pdTRUE) {
         applyCommand(cmd);
+        // Free memory allocated for pointers in the command
+        if (cmd.type == ShowCommandType::SET_SHOW || cmd.type == ShowCommandType::LOAD_PRESET) {
+            free(cmd.show_name);
+            free(cmd.params_json);
+        }
     }
 #endif
 }
@@ -286,11 +295,9 @@ bool ShowController::queuePresetLoad(const Config::Preset &preset) {
     ShowCommand cmd;
     cmd.type = ShowCommandType::LOAD_PRESET;
 
-    strncpy(cmd.show_name, preset.show_name, sizeof(cmd.show_name) - 1);
-    cmd.show_name[sizeof(cmd.show_name) - 1] = '\0';
-
-    strncpy(cmd.params_json, preset.params_json, sizeof(cmd.params_json) - 1);
-    cmd.params_json[sizeof(cmd.params_json) - 1] = '\0';
+    // ShowCommand uses pointers; Preset stores C strings.
+    cmd.show_name = strdup(preset.show_name);
+    cmd.params_json = strdup(preset.params_json);
 
     cmd.layout_reverse = preset.layout_reverse;
     cmd.layout_mirror = preset.layout_mirror;
@@ -300,6 +307,10 @@ bool ShowController::queuePresetLoad(const Config::Preset &preset) {
         Serial.printf("ShowController: Queued preset load '%s'\n", preset.name);
         return true;
     }
+
+    // If failed to queue, we must free the memory
+    free(cmd.show_name);
+    free(cmd.params_json);
 
     Serial.println("WARNING: Preset load command queue full!");
     return false;
@@ -319,10 +330,14 @@ void ShowController::setStrip(std::unique_ptr<Strip::Strip> &&base) {
         Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
         layout = std::make_unique<Strip::Layout>(*baseStrip, layoutConfig.reverse, layoutConfig.mirror,
                                                  layoutConfig.dead_leds);
+#ifdef ARDUINO
         Serial.printf("Layout initialized: reverse=%d, mirror=%d, dead_leds=%u\n",
                       layoutConfig.reverse, layoutConfig.mirror, layoutConfig.dead_leds);
+#endif
     } else {
+#ifdef ARDUINO
         Serial.println("ERROR: Failed to initialize layout! base strip not set");
+#endif
     }
 }
 
@@ -356,8 +371,8 @@ uint16_t ShowController::getCycleTime() const {
 }
 
 void ShowController::executeShow(unsigned int iteration) const {
-    if (layout) {
-        layout->setBrightness(brightness);
+    if (layout && currentShow) {
+        layout->setBrightness(brightness.load());
         currentShow->execute(*layout, iteration);
     }
 }
@@ -384,5 +399,5 @@ ShowStats ShowController::getStats() const {
 
 std::string ShowController::getCurrentShowName() const {
     std::lock_guard<std::mutex> lock(stateMutex);
-    return std::string(currentShowName);
+    return currentShowName;
 }

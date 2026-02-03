@@ -3,7 +3,7 @@
 
 namespace Show {
     TheaterChase::TheaterChase(unsigned int num_steps_per_cycle)
-        : num_steps_per_cycle(num_steps_per_cycle), index(0) {
+        : num_steps_per_cycle(num_steps_per_cycle) {
     }
 
     void TheaterChase::execute(Strip::Strip &strip, Iteration iteration) {

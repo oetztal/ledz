@@ -16,7 +16,7 @@ private:
     Config::ConfigManager &config;
     ShowController &showController;
     Config::TimersConfig timersConfig;
-    bool ntpAvailable;
+    bool ntpAvailable = false;
 
     /**
      * Execute a timer action

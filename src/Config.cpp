@@ -5,7 +5,7 @@
 #endif
 
 namespace Config {
-    ConfigManager::ConfigManager() : restartRequested(false), restartAt(0) {
+    ConfigManager::ConfigManager() {
     }
 
     void ConfigManager::requestRestart(uint32_t delayMs) {

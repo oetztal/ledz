@@ -129,16 +129,12 @@ namespace Config {
      * Timer entry structure
      */
     struct TimerEntry {
-        bool enabled;
-        TimerType type;
-        TimerAction action;
-        uint8_t preset_index;
-        uint32_t target_time;      // epoch for COUNTDOWN, seconds-since-midnight for ALARM_DAILY
-        uint32_t duration_seconds; // original duration for countdown display
-
-        TimerEntry() : enabled(false), type(TimerType::COUNTDOWN),
-                       action(TimerAction::TURN_OFF), preset_index(0),
-                       target_time(0), duration_seconds(0) {}
+        bool enabled = false;
+        TimerType type = TimerType::COUNTDOWN;
+        TimerAction action = TimerAction::TURN_OFF;
+        uint8_t preset_index = 0;
+        uint32_t target_time = 0;      // epoch for COUNTDOWN, seconds-since-midnight for ALARM_DAILY
+        uint32_t duration_seconds = 0; // original duration for countdown display
     };
 
     /**
@@ -147,9 +143,7 @@ namespace Config {
     struct TimersConfig {
         static constexpr uint8_t MAX_TIMERS = 4;
         TimerEntry timers[MAX_TIMERS];
-        int8_t timezone_offset_hours;
-
-        TimersConfig() : timezone_offset_hours(0) {}
+        int8_t timezone_offset_hours = 0;
     };
 
     /**

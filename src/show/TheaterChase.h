@@ -11,7 +11,7 @@ namespace Show {
     class TheaterChase : public Show {
     private:
         unsigned int num_steps_per_cycle; // Steps needed for one complete color rotation
-        unsigned int index; // Current animation step
+        unsigned int index = 0; // Current animation step
 
     public:
         /**

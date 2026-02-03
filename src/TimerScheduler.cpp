@@ -6,7 +6,7 @@
 #endif
 
 TimerScheduler::TimerScheduler(Config::ConfigManager &config, ShowController &showController)
-    : config(config), showController(showController), ntpAvailable(false) {
+    : config(config), showController(showController) {
 }
 
 void TimerScheduler::begin() {

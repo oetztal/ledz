@@ -65,14 +65,14 @@ public:
      * @param description Human-readable description
      * @param constructor Function that creates the show instance
      */
-    void registerShow(const char *name, const char *description, ShowConstructor &&constructor);
+    void registerShow(const std::string &name, const std::string &description, ShowConstructor &&constructor);
 
     /**
      * Create a show by name
      * @param name Show name
      * @return Show instance (caller owns pointer) or nullptr if not found
      */
-    std::unique_ptr<Show::Show> createShow(const char *name);
+    std::unique_ptr<Show::Show> createShow(const std::string &name);
 
     /**
      * Create a show by name with JSON parameters
@@ -80,7 +80,7 @@ public:
      * @param paramsJson JSON string with parameters (e.g., {"r":255,"g":0,"b":0})
      * @return Show instance (caller owns pointer) or nullptr if not found
      */
-    std::unique_ptr<Show::Show> createShow(const char *name, const char *paramsJson);
+    std::unique_ptr<Show::Show> createShow(const std::string &name, const std::string &paramsJson);
 
     /**
      * Get list of all registered shows
@@ -93,7 +93,7 @@ public:
      * @param name Show name
      * @return true if registered
      */
-    bool hasShow(const char *name) const;
+    bool hasShow(const std::string &name) const;
 };
 
 #endif //LEDZ_SHOWFACTORY_H

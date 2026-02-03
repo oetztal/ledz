@@ -189,21 +189,21 @@ ShowFactory::ShowFactory() {
     });
 }
 
-void ShowFactory::registerShow(const char *name, const char *description, ShowConstructor &&constructor) {
-    showConstructors[std::string(name)] = std::move(constructor);
-    showList.push_back({std::string(name), std::string(description)});
+void ShowFactory::registerShow(const std::string &name, const std::string &description, ShowConstructor &&constructor) {
+    showConstructors[name] = std::move(constructor);
+    showList.push_back({name, description});
 }
 
-std::unique_ptr<Show::Show> ShowFactory::createShow(const char *name) {
+std::unique_ptr<Show::Show> ShowFactory::createShow(const std::string &name) {
     return createShow(name, "{}"); // Default to empty params
 }
 
-std::unique_ptr<Show::Show> ShowFactory::createShow(const char *name, const char *paramsJson) {
+std::unique_ptr<Show::Show> ShowFactory::createShow(const std::string &name, const std::string &paramsJson) {
     // Check if show exists
     auto it = showConstructors.find(name);
     if (it == showConstructors.end()) {
 #ifdef ARDUINO
-        Serial.printf("ShowFactory: show %s not found", name);
+        Serial.printf("ShowFactory: show %s not found", name.c_str());
 #endif
         return {};
     }
@@ -211,12 +211,12 @@ std::unique_ptr<Show::Show> ShowFactory::createShow(const char *name, const char
 #ifdef ARDUINO
     // Parse JSON parameters (increased buffer for ColorRanges with many colors and nested arrays)
     StaticJsonDocument<Config::JSON_DOC_LARGE> doc;
-    DeserializationError error = deserializeJson(doc, paramsJson);
+    DeserializationError error = deserializeJson(doc, paramsJson.c_str());
 
     // If JSON parsing fails, log warning and use empty document (will use defaults)
     if (error) {
         Serial.print("ShowFactory: Failed to parse params for ");
-        Serial.print(name);
+        Serial.print(name.c_str());
         Serial.print(": ");
         Serial.println(error.c_str());
         Serial.println("Using default parameters");
@@ -236,6 +236,6 @@ const std::vector<ShowFactory::ShowInfo> &ShowFactory::listShows() const {
     return showList;
 }
 
-bool ShowFactory::hasShow(const char *name) const {
+bool ShowFactory::hasShow(const std::string &name) const {
     return showConstructors.find(name) != showConstructors.end();
 }
