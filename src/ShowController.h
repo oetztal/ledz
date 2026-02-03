@@ -36,8 +36,8 @@ enum class ShowCommandType {
  */
 struct ShowCommand {
     ShowCommandType type;
-    std::string show_name;
-    std::string params_json; // JSON parameters for show
+    char *show_name;
+    char *params_json; // JSON parameters for show
     uint8_t brightness_value;
     bool layout_reverse;
     bool layout_mirror;
