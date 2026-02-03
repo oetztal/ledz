@@ -1,8 +1,6 @@
 #ifndef LEDZ_WIFI_H
 #define LEDZ_WIFI_H
 
-#include "Network.h"
-
 #ifdef ARDUINO
 #include <WiFiUdp.h>
 #include <NTPClient.h>
