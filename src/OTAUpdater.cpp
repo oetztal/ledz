@@ -168,7 +168,7 @@ bool OTAUpdater::performUpdate(
     }
 
     if (httpCode != HTTP_CODE_OK) {
-        Serial.printf("[OTA] HTTP error: %d\n", httpCode);
+        Serial.printf("[OTA] HTTP error: %s (free heap: %u bytes)\n", HTTPClient::errorToString(httpCode).c_str(), ESP.getFreeHeap());
         http.end();
         return false;
     }
