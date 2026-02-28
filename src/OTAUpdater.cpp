@@ -36,7 +36,7 @@ bool OTAUpdater::checkForUpdate(const char *owner, const char *repo, FirmwareInf
     int httpCode = http.GET();
 
     if (httpCode != HTTP_CODE_OK) {
-        Serial.printf("[OTA] HTTP error: %d\n", httpCode);
+        Serial.printf("[OTA] HTTP GET failed: %s (free heap: %u bytes)\n", HTTPClient::errorToString(httpCode).c_str(), ESP.getFreeHeap());
         http.end();
         return false;
     }
