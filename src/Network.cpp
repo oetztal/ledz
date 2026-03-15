@@ -97,15 +97,18 @@ void Network::startSTA(const char *ssid, const char *password) {
     // Set WiFi mode explicitly
     WiFi.mode(WIFI_STA);
 
-    // Disable WiFi power saving for low latency
-    WiFi.setSleep(WIFI_PS_NONE);
+    // Enable modem sleep to reduce power consumption.
+    // The WiFi modem sleeps between DTIM beacon intervals and wakes automatically
+    // for incoming packets, so the webserver remains fully responsive.
+    WiFi.setSleep(WIFI_PS_MIN_MODEM);
 
-    // Set transmit power to maximum
-    WiFi.setTxPower(WIFI_POWER_19_5dBm);
+    // Use a moderate TX power sufficient for typical indoor distances (< 30 m).
+    // Reducing from the 19.5 dBm maximum saves significant transmitter power.
+    WiFi.setTxPower(WIFI_POWER_13dBm);
 
     Serial.println("WiFi Configuration:");
-    Serial.printf("  Power save: NONE\n");
-    Serial.printf("  TX Power: 19.5dBm (max)\n");
+    Serial.printf("  Power save: MIN_MODEM\n");
+    Serial.printf("  TX Power: 13dBm\n");
 
     WiFi.begin(ssid, password);
 
@@ -137,7 +140,7 @@ void Network::startSTA(const char *ssid, const char *password) {
         Serial.printf("  Gateway: %s\n", WiFi.gatewayIP().toString().c_str());
         Serial.printf("  DNS: %s\n", WiFi.dnsIP().toString().c_str());
         Serial.printf("  TX Power: %d\n", WiFi.getTxPower());
-        Serial.printf("  Sleep Mode: %d (0=NONE)\n", WiFi.getSleep());
+        Serial.printf("  Sleep Mode: %d (1=MIN_MODEM)\n", WiFi.getSleep());
         Serial.printf("  Auto Reconnect: %d\n", WiFi.getAutoReconnect());
         Serial.println();
 

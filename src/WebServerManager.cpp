@@ -815,6 +815,8 @@ void WebServerManager::setupAPIRoutes() {
             doc["wifi_rssi"] = WiFi.RSSI();
             doc["ip_address"] = WiFi.localIP().toString();
             doc["mac_address"] = WiFi.macAddress();
+            doc["wifi_tx_power"] = WiFi.getTxPower();
+            doc["wifi_sleep_mode"] = WiFi.getSleep();
         } else if (WiFiClass::getMode() == WIFI_AP) {
             doc["ap_ssid"] = WiFi.softAPgetHostname();
             doc["ap_ip"] = WiFi.softAPIP().toString();
