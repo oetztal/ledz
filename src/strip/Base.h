@@ -8,11 +8,16 @@
 #endif
 #include "Strip.h"
 
+#ifdef ARDUINO
+#include "../Config.h"
+#endif
+
 namespace Strip {
     class Base : public Strip {
 #ifdef ARDUINO
         std::unique_ptr<Adafruit_NeoPixel> strip;
         std::unique_ptr<Color[]> colors;
+        Config::GammaMode gammaMode;
 #endif
     public:
         Base(Pin pin, unsigned short length);
@@ -28,6 +33,22 @@ namespace Strip {
         PixelIndex length() const override;
 
         void setBrightness(uint8_t brightness) override;
+
+#ifdef ARDUINO
+        /**
+         * Set gamma correction mode
+         * @param mode Gamma correction mode
+         */
+        void setGammaMode(Config::GammaMode mode);
+
+    private:
+        /**
+         * Apply gamma correction based on current mode
+         * @param color Input color
+         * @return Gamma-corrected color
+         */
+        uint32_t applyGammaCorrection(uint32_t color);
+#endif
 
     };
 }

@@ -158,6 +158,7 @@ void WebServerManager::setupAPIRoutes() {
         doc["led_pin"] = deviceConfig.led_pin;
         doc["brightness"] = showController.getBrightness();
         doc["cycle_time"] = deviceConfig.cycle_time;
+        doc["gamma_mode"] = deviceConfig.gamma_mode;
         doc["firmware_version"] = FIRMWARE_VERSION;
 
         // OTA partition info
@@ -699,6 +700,21 @@ void WebServerManager::setupAPIRoutes() {
 
                           deviceConfig.led_pin = led_pin;
                           Serial.printf("LED pin updated: %u\n", led_pin);
+                          changed = true;
+                      }
+
+                      // Update gamma_mode if provided
+                      if (doc.containsKey("gamma_mode")) {
+                          int gamma_mode = doc["gamma_mode"];
+
+                          if (gamma_mode < 0 || gamma_mode > 2) {
+                              request->send(400, CONTENT_TYPE_JSON,
+                                            "{\"success\":false,\"error\":\"Gamma mode must be 0 (default), 1 (NeoPixel), or 2 (none)\"}");
+                              return;
+                          }
+
+                          deviceConfig.gamma_mode = static_cast<Config::GammaMode>(gamma_mode);
+                          Serial.printf("Gamma mode updated: %d\n", gamma_mode);
                           changed = true;
                       }
 

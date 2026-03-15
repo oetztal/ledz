@@ -50,6 +50,17 @@
             </div>
 
             <div class="form-group">
+                <label for="gammaMode">Gamma Correction Mode</label>
+                <select id="gammaMode">
+                    <option value="0">Default (γ=2.2) - Recommended for best color mixing</option>
+                    <option value="1">NeoPixel (γ=2.6) - Original Adafruit gamma</option>
+                    <option value="2">None - No gamma correction</option>
+                </select>
+                <small style="display:block; margin-top:4px; color:#666;">Gamma correction improves color perception. Default mode
+                    provides better mixed color intensity for rainbow effects.</small>
+            </div>
+
+            <div class="form-group">
                 <label for="cycleTime">Show Cycle Time (ms)</label>
                 <select id="cycleTime">
                     <option value="10">10 ms (Default)</option>
@@ -64,7 +75,7 @@
             <div class="info-box">
                 <strong>Current: </strong><span id="currentNumPixels">Loading...</span> LEDs on pin <span
                     id="currentLedPin">Loading...</span> with cycle time <span id="currentCycleTime">Loading...</span>
-                ms<br>
+                ms and gamma mode <span id="currentGammaMode">Loading...</span><br>
                 <strong>Note: </strong>The device will restart after updating these settings.
             </div>
         </div>
@@ -199,20 +210,28 @@
             const numPixels = data.num_pixels || 300;
             const ledPin = data.led_pin || 35;
             const cycleTime = data.cycle_time || 10;
+            const gammaMode = data.gamma_mode || 0;
             document.getElementById('currentNumPixels').textContent = numPixels;
             document.getElementById('currentLedPin').textContent = ledPin;
             document.getElementById('currentCycleTime').textContent = cycleTime;
 
-            // Set the select value
+            // Set the select values
             const cycleTimeSelect = document.getElementById('cycleTime');
             if (cycleTimeSelect) {
                 cycleTimeSelect.value = cycleTime.toString();
+            }
+            
+            const gammaModeSelect = document.getElementById('gammaMode');
+            if (gammaModeSelect) {
+                gammaModeSelect.value = gammaMode.toString();
+                document.getElementById('currentGammaMode').textContent = getGammaModeName(gammaMode);
             }
         } catch (error) {
             console.error('Failed to load hardware settings:', error);
             document.getElementById('currentNumPixels').textContent = 'Error';
             document.getElementById('currentLedPin').textContent = 'Error';
             document.getElementById('currentCycleTime').textContent = 'Error';
+            document.getElementById('currentGammaMode').textContent = 'Error';
         }
     }
 
@@ -276,6 +295,13 @@
         if (!isNaN(cycleTime)) {
             updates.cycle_time = cycleTime;
             changes.push(`${cycleTime}ms cycle time`);
+        }
+
+        // Add gamma mode if selected
+        const gammaMode = parseInt(document.getElementById('gammaMode').value);
+        if (!isNaN(gammaMode)) {
+            updates.gamma_mode = gammaMode;
+            changes.push(getGammaModeName(gammaMode));
         }
 
         if (changes.length === 0) {
@@ -459,6 +485,15 @@
         if (bytes < 1024) return bytes + ' B';
         if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function getGammaModeName(mode) {
+        switch(mode) {
+            case 0: return 'Default gamma (γ=2.2)';
+            case 1: return 'NeoPixel gamma (γ=2.6)';
+            case 2: return 'No gamma correction';
+            default: return 'Unknown gamma mode';
+        }
     }
 
     // Touch Control Functions

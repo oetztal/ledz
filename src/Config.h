@@ -46,6 +46,15 @@ namespace Config {
     };
 
     /**
+     * Gamma correction modes
+     */
+    enum GammaMode {
+        GAMMA_DEFAULT = 0,    // Use our improved gamma (γ=2.2) - recommended
+        GAMMA_NEOPIXEL = 1,  // Use Adafruit NeoPixel gamma (γ=2.6)
+        GAMMA_NONE = 2       // No gamma correction
+    };
+
+    /**
      * Device configuration structure
      */
     struct DeviceConfig {
@@ -53,6 +62,7 @@ namespace Config {
         uint16_t num_pixels;
         uint8_t led_pin; // GPIO pin for LED strip (default: PIN_NEOPIXEL=39 for onboard, or 35=MOSI for external)
         uint16_t cycle_time; // Cycle time in ms (e.g., 10, 20, 25, 50)
+        GammaMode gamma_mode; // Gamma correction mode
         char device_id[16]; // e.g., "AABBCC"
         char device_name[32]; // Custom device name
 
@@ -62,7 +72,8 @@ namespace Config {
 #else
             led_pin(39),
 #endif
-            cycle_time(10)
+            cycle_time(10),
+            gamma_mode(GAMMA_DEFAULT)
         {
             device_id[0] = '\0';
             device_name[0] = '\0';

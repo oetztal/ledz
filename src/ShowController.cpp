@@ -334,6 +334,14 @@ void ShowController::setStrip(std::unique_ptr<Strip::Strip> &&base) {
         Serial.printf("Layout initialized: reverse=%d, mirror=%d, dead_leds=%u\n",
                       layoutConfig.reverse, layoutConfig.mirror, layoutConfig.dead_leds);
 #endif
+        
+        // Load and apply gamma configuration
+        Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
+        auto basePtr = static_cast<Strip::Base*>(baseStrip.get());
+        basePtr->setGammaMode(deviceConfig.gamma_mode);
+#ifdef ARDUINO
+        Serial.printf("Gamma mode set to: %d\n", deviceConfig.gamma_mode);
+#endif
     } else {
 #ifdef ARDUINO
         Serial.println("ERROR: Failed to initialize layout! base strip not set");
