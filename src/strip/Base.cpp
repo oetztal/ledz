@@ -1,4 +1,5 @@
 #include "Base.h"
+#include "../support/Gamma.h"
 
 namespace Strip {
     Base::Base(Pin pin, unsigned short length) {
@@ -25,14 +26,14 @@ namespace Strip {
             colors[i]=c;
         }
 
-        strip->fill(Adafruit_NeoPixel::gamma32(c));
+        strip->fill(Support::Gamma::correct32(c));
 #endif
     }
 
     void Base::setPixelColor(PixelIndex pixel_index, Color color) {
 #ifdef ARDUINO
         colors[pixel_index]=color;
-        strip->setPixelColor(pixel_index, Adafruit_NeoPixel::gamma32(color));
+        strip->setPixelColor(pixel_index, Support::Gamma::correct32(color));
 #endif
     }
 
@@ -63,7 +64,7 @@ namespace Strip {
         auto currentBrightness = strip->getBrightness();
         if (currentBrightness != brightness) {
             for (int i=0; i<strip->numPixels(); i++) {
-                strip->setPixelColor(i, Adafruit_NeoPixel::gamma32(colors[i]));
+                strip->setPixelColor(i, Support::Gamma::correct32(colors[i]));
             }
             strip->setBrightness(brightness);
         }
