@@ -18,7 +18,7 @@ ShowController::ShowController(ShowFactory &factory, Config::ConfigManager &conf
 
 void ShowController::begin() {
 #ifdef ARDUINO
-    // Create FreeRTOS queue (5 commands deep)
+    // Create FreeRTOS queue sized by SHOW_COMMAND_QUEUE_SIZE
     commandQueue = xQueueCreate(SHOW_COMMAND_QUEUE_SIZE, sizeof(ShowCommand));
 
     if (commandQueue == nullptr) {
