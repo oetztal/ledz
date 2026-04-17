@@ -33,11 +33,6 @@ enum class ShowCommandType {
 };
 
 /**
- * Queue size for show commands between cores
- */
-static constexpr size_t SHOW_COMMAND_QUEUE_SIZE = 5;
-
-/**
  * Show command structure for queue
  */
 struct ShowCommand {

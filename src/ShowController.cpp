@@ -5,6 +5,9 @@
 
 #ifdef ARDUINO
 #include <Arduino.h>
+
+// Queue size for show commands between cores
+static constexpr size_t SHOW_COMMAND_QUEUE_SIZE = 5;
 #endif
 
 ShowController::ShowController(ShowFactory &factory, Config::ConfigManager &config)
