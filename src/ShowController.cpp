@@ -5,6 +5,9 @@
 
 #ifdef ARDUINO
 #include <Arduino.h>
+
+// Queue size for show commands between cores
+static constexpr size_t SHOW_COMMAND_QUEUE_SIZE = 5;
 #endif
 
 ShowController::ShowController(ShowFactory &factory, Config::ConfigManager &config)
@@ -18,8 +21,8 @@ ShowController::ShowController(ShowFactory &factory, Config::ConfigManager &conf
 
 void ShowController::begin() {
 #ifdef ARDUINO
-    // Create FreeRTOS queue (5 commands deep)
-    commandQueue = xQueueCreate(5, sizeof(ShowCommand));
+    // Create FreeRTOS queue sized by SHOW_COMMAND_QUEUE_SIZE
+    commandQueue = xQueueCreate(SHOW_COMMAND_QUEUE_SIZE, sizeof(ShowCommand));
 
     if (commandQueue == nullptr) {
         Serial.println("ERROR: Failed to create show command queue!");

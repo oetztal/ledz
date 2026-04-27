@@ -4,6 +4,7 @@
 #ifndef LEDZ_SHOWCONTROLLER_H
 #define LEDZ_SHOWCONTROLLER_H
 
+#include <cstddef>
 #include <memory>
 #include <atomic>
 #include <mutex>
