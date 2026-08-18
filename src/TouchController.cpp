@@ -9,8 +9,6 @@
 #include <Arduino.h>
 #endif
 
-// Define the static member
-constexpr uint8_t TouchController::TOUCH_PINS[Config::TouchConfig::MAX_TOUCH_PINS];
 
 const char* SOLID_VARIANTS[] = {
     "{\"colors\":[[255,170,120]]}",
@@ -27,20 +25,20 @@ const char* SOLID_VARIANTS[] = {
 const char* COLORRANGES_VARIANTS[] = {
     "{\"colors\":[[0,0,255],[255,255,0]]}",
     "{\"colors\":[[255,0,0],[255,255,255],[0,255,0]]}",
-    "{\"colors\":[[170,21,27],[241,191,0],[170,21,27]],\"ranges\":[25,75]}"
+    R"({"colors":[[170,21,27],[241,191,0],[170,21,27]],"ranges":[25,75]})"
 };
 const char* TWOCOLORBLEND_VARIANTS[] = {
-    "{\"colors\":[[0,0,255],[255,0,0]],\"gradient\":true}",
-    "{\"colors\":[[0,255,0],[255,0,0]],\"gradient\":true}",
-    "{\"colors\":[[0,255,0],[0,0,255]],\"gradient\":true}",
+    R"({"colors":[[0,0,255],[255,0,0]],"gradient":true})",
+    R"({"colors":[[0,255,0],[255,0,0]],"gradient":true})",
+    R"({"colors":[[0,255,0],[0,0,255]],"gradient":true})",
 };
 const char* COLORRUN_VARIANTS[] = {"{}"};
 const char* JUMP_VARIANTS[] = {"{}"};
 const char* RAINBOW_VARIANTS[] = {"{}"};
 const char* WAVE_VARIANTS[] = {"{}"};
 const char* STARLIGHT_VARIANTS[] = {
-    "{\"probability\":0.1,\"length\":0,\"fade\":250}",
-    "{\"probability\":0.02,\"length\":5000,\"fade\":1000}"
+    R"({"probability":0.1,"length":0,"fade":250})",
+    R"({"probability":0.02,"length":5000,"fade":1000})"
 };
 const char* THEATERCHASE_VARIANTS[] = {
     "{\"num_steps_per_cycle\":21}",
@@ -48,8 +46,8 @@ const char* THEATERCHASE_VARIANTS[] = {
     "{\"num_steps_per_cycle\":84}"
 };
 const char* MORSECODE_VARIANTS[] = {
-    "{\"message\":\"foo bar baz\"}",
-    "{\"message\":\"gutes neues\"}"
+    R"({"message":"foo bar baz"})",
+    R"({"message":"gutes neues"})"
 };
 
 const TouchController::ShowVariantGroup TouchController::SHOW_VARIANTS[] = {
