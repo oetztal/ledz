@@ -3,6 +3,8 @@
 #ifdef ARDUINO
 #include <WiFi.h>
 #include <Adafruit_NeoPixel.h>
+#include <sys/time.h>
+#include <lwip/dns.h>  // dns_setserver() — install fallback resolvers
 #endif
 
 #include "Network.h"
@@ -183,9 +185,38 @@ void Network::startSTA(const char *ssid, const char *password) {
             Serial.println("Error starting mDNS responder!");
         }
 
+        // Install public resolvers in lwIP's spare server slots, keeping the
+        // DHCP-provided router in slot 0. lwIP moves to the next configured
+        // server after DNS_MAX_RETRIES timeouts against the current one, so a
+        // router that answers other hosts but silently drops this device's
+        // queries no longer breaks every outbound name lookup (OTA included).
+        // Slots 1+ are untouched by DHCP, which only ever writes slot 0 here.
+        for (uint8_t slot = 1; slot <= 2; ++slot) {
+            const char *addr = (slot == 1) ? NET_FALLBACK_DNS_1 : NET_FALLBACK_DNS_2;
+            ip_addr_t fallback;
+            if (!ipaddr_aton(addr, &fallback)) continue;
+            const ip_addr_t *existing = dns_getserver(slot);
+            if (existing && !ip_addr_isany(existing)) continue;  // respect DHCP-supplied
+            dns_setserver(slot, &fallback);
+        }
+        Serial.printf("  Resolvers: %s, %s, %s\n",
+                      WiFi.dnsIP(0).toString().c_str(),
+                      WiFi.dnsIP(1).toString().c_str(),
+                      WiFi.dnsIP(2).toString().c_str());
+
         // Start NTP client
         ntpClient.begin();
         ntpClient.update();
+
+        // Initialize the ESP-IDF SNTP client as well. Unlike the NTPClient
+        // polling wrapper, lwip's SNTP actually calls settimeofday() under
+        // the hood — which is what mbedtls (used by the OTA TLS handshake)
+        // reads through time()/gettimeofday(). Without this, GitHub's leaf
+        // certs — valid from 2024+ — look "not yet valid" against the boot
+        // RTC (≈ Jan 1970) and the OTA check fails with ESP_ERR_HTTP_CONNECT.
+        // Multiple pool servers give lwip a chance to keep working even when
+        // one DNS round-trip or UDP-port-123 detour is flaky.
+        configTime(0, 0, "pool.ntp.org", "time.nist.gov", "time.cloudflare.com");
 
         Serial.print("NTP time: ");
         Serial.println(ntpClient.getFormattedTime());

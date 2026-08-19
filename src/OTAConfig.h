@@ -56,6 +56,18 @@
 #define OTA_SHA256_ASSET_SUFFIX ".sha256"
 
 // ============================================================================
+// DNS Fallback
+// ============================================================================
+
+// Public resolvers installed into lwIP's server slots 1 and 2 once the STA
+// link is up, leaving the DHCP-provided router in slot 0. lwIP walks to the
+// next configured server after DNS_MAX_RETRIES attempts against the current
+// one, so a router that silently drops our queries no longer means no OTA.
+// These are also the addresses the OTA resolver diagnostics probe against.
+#define NET_FALLBACK_DNS_1 "1.1.1.1"
+#define NET_FALLBACK_DNS_2 "8.8.8.8"
+
+// ============================================================================
 // Task Stack Sizes
 // ============================================================================
 

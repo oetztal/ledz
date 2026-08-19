@@ -21,6 +21,19 @@
 #ifdef ARDUINO
 #include <esp_http_client.h>
 #include <esp_task_wdt.h>
+#include <esp_tls.h>  // esp_tls_get_and_clear_last_error() for TLS diagnostic codes
+#include <esp_sntp.h>  // esp_sntp_restart() / sntp_set_sync_mode(IMMED)
+#include <WiFi.h>
+#include <esp_netif.h>
+#include <lwip/netdb.h>   // getaddrinfo() — the resolver esp-tls itself uses
+#include <lwip/sockets.h>
+#include <lwip/inet.h>
+#include <esp_system.h>   // esp_reset_reason() — is the clock this boot's, or RTC carry-over?
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/time.h>
+#include <Arduino.h>  // getLocalTime() for SNTP sync wait
+
 #include <Update.h>
 #include <ArduinoJson.h>
 #include <freertos/semphr.h>
@@ -59,6 +72,14 @@ namespace {
 struct HttpClient {
     esp_http_client_handle_t handle = nullptr;
 
+    // Diagnostic state captured during the last attempt. Surfaced to callers
+    // so the failure log can name the actual esp_err_t / socket errno
+    // instead of the opaque -1 callers used to see.
+    esp_err_t lastOpenErr = ESP_OK;
+    int lastHeadersResult = 0;
+    int lastSocketErrno = 0;
+    int lastStatusCode = 0;
+
     explicit HttpClient(const esp_http_client_config_t &config) {
         handle = esp_http_client_init(&config);
     }
@@ -76,25 +97,59 @@ struct HttpClient {
 
     explicit operator bool() const { return handle != nullptr; }
 
+    // Capture the underlying socket errno and surface it on failure.
+    // `esp_http_client_get_errno()` is the only public diagnostic the
+    // transport layer exposes; it directly reports lwIP `SO_ERROR` values
+    // (EHOSTUNREACH=113, ETIMEDOUT=110, ECONNREFUSED=111, ...), which is
+    // far more useful than the opaque -1 callers used to see.
+    void captureSocketErrno() {
+        if (!handle) return;
+        lastSocketErrno = esp_http_client_get_errno(handle);
+    }
+
     // Open the connection, following 301/302/307/308 up to `maxRedirects`.
-    // Returns the final HTTP status on success, or -1 on failure.
+    // Returns the final HTTP status on success, or -1 on failure. On failure,
+    // detailed state is captured into the `last*` fields so the caller can
+    // log a precise reason.
     int openWithRedirects(int maxRedirects = 5) {
         if (!handle) return -1;
         int hops = 0;
         while (true) {
-            esp_err_t err = esp_http_client_open(handle, 0);
-            if (err != ESP_OK) return -1;
-            int status = esp_http_client_fetch_headers(handle);
-            if (status < 0) return -1;
-            int code = esp_http_client_get_status_code(handle);
+            lastOpenErr = esp_http_client_open(handle, 0);
+            if (lastOpenErr != ESP_OK) {
+                captureSocketErrno();
+                OTA_LOG("HTTP open failed: %s (errno=%d)",
+                        esp_err_to_name(lastOpenErr), lastSocketErrno);
+                return -1;
+            }
+            lastHeadersResult = esp_http_client_fetch_headers(handle);
+            if (lastHeadersResult < 0) {
+                captureSocketErrno();
+                OTA_LOG("HTTP fetch_headers failed: %d (errno=%d, esp_err=%s)",
+                        lastHeadersResult, lastSocketErrno,
+                        esp_err_to_name(lastOpenErr));
+                return -1;
+            }
+            lastStatusCode = esp_http_client_get_status_code(handle);
+            int code = lastStatusCode;
             if (code == 301 || code == 302 || code == 307 || code == 308) {
-                if (hops >= maxRedirects) return -1;
+                if (hops >= maxRedirects) {
+                    OTA_LOG("HTTP too many redirects (last status=%d)", code);
+                    return -1;
+                }
                 char *loc = nullptr;
                 if (esp_http_client_get_header(handle, "Location", &loc) != ESP_OK || !loc) {
+                    OTA_LOG("HTTP missing Location header on %d", code);
                     return -1;
                 }
                 String next(loc);
                 free(loc);
+                // Close the existing connection BEFORE changing the URL.
+                // Without this, esp_http_client_open() returns ESP_OK because
+                // the state machine still thinks it's connected, but the
+                // subsequent fetch_headers() reads the old response and
+                // returns the stale redirect status again (infinite loop).
+                esp_http_client_close(handle);
                 esp_http_client_set_url(handle, next.c_str());
                 ++hops;
                 continue;
@@ -260,6 +315,321 @@ bool parseHexSha256(const String &hex, uint8_t out[32]) {
 }
 #endif // OTA_ENABLE_SHA256_VERIFICATION
 
+#ifdef ARDUINO
+// ---------------------------------------------------------------------------
+// Name-resolution diagnostics
+//
+// A failing OTA check bottoms out in one of three very different faults, and
+// the resolver's own error code (EAI_FAIL for all of them) cannot tell them
+// apart:
+//   1. lwIP has no usable DNS server configured,
+//   2. lwIP cannot allocate a UDP socket for the query (PCB/fd exhaustion) —
+//      fails instantly and stays broken for the lifetime of the boot,
+//   3. the query goes out but no answer comes back (router filtering, or the
+//      datagram lost on a marginal link) — fails after ~10 s of retries.
+// These helpers pin down which one, so we stop guessing.
+// ---------------------------------------------------------------------------
+
+// Encode `name` as a DNS QNAME (length-prefixed labels, zero terminator).
+// Returns bytes written, or 0 if the name doesn't fit / has an empty label.
+size_t encodeQName(const char *name, uint8_t *buf, size_t cap) {
+    size_t n = 0;
+    for (const char *p = name; *p;) {
+        const char *dot = strchr(p, '.');
+        size_t len = dot ? static_cast<size_t>(dot - p) : strlen(p);
+        if (len == 0 || len > 63 || n + len + 2 > cap) return 0;
+        buf[n++] = static_cast<uint8_t>(len);
+        memcpy(buf + n, p, len);
+        n += len;
+        p = dot ? dot + 1 : p + len;
+    }
+    if (n + 1 > cap) return 0;
+    buf[n++] = 0;  // root label
+    return n;
+}
+
+struct RawDnsResult {
+    enum class Outcome { Answered, SocketFailed, SendFailed, NoReply, Malformed } outcome;
+    int err = 0;         // errno for the socket/send/recv failures
+    int rcode = -1;      // DNS RCODE (0 = NOERROR, 3 = NXDOMAIN, 5 = REFUSED)
+    int answerCount = 0;
+    uint32_t elapsedMs = 0;
+};
+
+// Send a hand-built DNS A query straight to `server` over UDP/53 and wait for
+// the reply. This is ground truth: it shares nothing with lwIP's resolver, so
+// an answer here while getaddrinfo() fails means the resolver is at fault,
+// and a timeout here means the query never made it back through the network.
+RawDnsResult rawDnsQuery(uint32_t serverIp4, const char *name, uint32_t timeoutMs) {
+    RawDnsResult r{RawDnsResult::Outcome::Answered};
+    uint32_t start = millis();
+
+    int fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (fd < 0) {
+        r.outcome = RawDnsResult::Outcome::SocketFailed;
+        r.err = errno;
+        r.elapsedMs = millis() - start;
+        return r;
+    }
+    struct timeval tv{};
+    tv.tv_sec = timeoutMs / 1000;
+    tv.tv_usec = (timeoutMs % 1000) * 1000;
+    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+    uint8_t query[128];
+    query[0] = 0x4c; query[1] = 0x5a;  // transaction id ("LZ")
+    query[2] = 0x01; query[3] = 0x00;  // standard query, recursion desired
+    query[4] = 0x00; query[5] = 0x01;  // qdcount = 1
+    memset(query + 6, 0, 6);           // ancount / nscount / arcount = 0
+    size_t n = 12;
+    size_t qn = encodeQName(name, query + n, sizeof(query) - n - 4);
+    if (qn == 0) {
+        close(fd);
+        r.outcome = RawDnsResult::Outcome::Malformed;
+        return r;
+    }
+    n += qn;
+    query[n++] = 0x00; query[n++] = 0x01;  // qtype = A
+    query[n++] = 0x00; query[n++] = 0x01;  // qclass = IN
+
+    struct sockaddr_in dst{};
+    dst.sin_family = AF_INET;
+    dst.sin_port = htons(53);
+    dst.sin_addr.s_addr = serverIp4;
+    if (sendto(fd, query, n, 0, reinterpret_cast<struct sockaddr *>(&dst), sizeof(dst)) < 0) {
+        r.outcome = RawDnsResult::Outcome::SendFailed;
+        r.err = errno;
+        close(fd);
+        r.elapsedMs = millis() - start;
+        return r;
+    }
+
+    uint8_t reply[256];
+    int got = recvfrom(fd, reply, sizeof(reply), 0, nullptr, nullptr);
+    close(fd);
+    r.elapsedMs = millis() - start;
+    if (got < 0) {
+        r.outcome = RawDnsResult::Outcome::NoReply;
+        r.err = errno;
+        return r;
+    }
+    if (got < 12) {
+        r.outcome = RawDnsResult::Outcome::Malformed;
+        return r;
+    }
+    r.rcode = reply[3] & 0x0f;
+    r.answerCount = (reply[6] << 8) | reply[7];
+    return r;
+}
+
+// Resolve `host` through the same resolver esp-tls uses, logging the outcome
+// and how long it took. Elapsed time is the tell: instant failure means lwIP
+// never got a query out, ~10 s means it retried and gave up waiting.
+bool probeGetAddrInfo(const char *host, int family, const char *familyName) {
+    struct addrinfo hints{};
+    hints.ai_family = family;
+    hints.ai_socktype = SOCK_STREAM;
+    struct addrinfo *res = nullptr;
+    uint32_t start = millis();
+    int gai = getaddrinfo(host, "443", &hints, &res);
+    uint32_t elapsed = millis() - start;
+
+    if (gai == 0 && res) {
+        char ipstr[INET6_ADDRSTRLEN] = "?";
+        if (res->ai_family == AF_INET6) {
+            auto *sa = reinterpret_cast<struct sockaddr_in6 *>(res->ai_addr);
+            inet_ntop(AF_INET6, &sa->sin6_addr, ipstr, sizeof(ipstr));
+        } else {
+            auto *sa = reinterpret_cast<struct sockaddr_in *>(res->ai_addr);
+            inet_ntop(AF_INET, &sa->sin_addr, ipstr, sizeof(ipstr));
+        }
+        OTA_LOG("OTA diag: getaddrinfo(%s, %s) -> %s in %lu ms",
+                host, familyName, ipstr, (unsigned long)elapsed);
+        freeaddrinfo(res);
+        return true;
+    }
+    if (res) freeaddrinfo(res);
+    OTA_LOG("OTA diag: getaddrinfo(%s, %s) FAILED gai=%d after %lu ms",
+            host, familyName, gai, (unsigned long)elapsed);
+    return false;
+}
+
+// Returns true if the server actually answered (whatever the RCODE).
+bool logRawDnsQuery(uint32_t serverIp4, const char *host, const char *serverLabel) {
+    RawDnsResult raw = rawDnsQuery(serverIp4, host, 4000);
+    switch (raw.outcome) {
+        case RawDnsResult::Outcome::Answered:
+            OTA_LOG("OTA diag: raw DNS A? %s @%s -> rcode=%d answers=%d in %lu ms",
+                    host, serverLabel, raw.rcode, raw.answerCount,
+                    (unsigned long)raw.elapsedMs);
+            break;
+        case RawDnsResult::Outcome::NoReply:
+            OTA_LOG("OTA diag: raw DNS A? %s @%s got NO REPLY in %lu ms (errno=%d)",
+                    host, serverLabel, (unsigned long)raw.elapsedMs, raw.err);
+            break;
+        case RawDnsResult::Outcome::SocketFailed:
+            OTA_LOG("OTA diag: raw DNS A? %s @%s could not open a socket (errno=%d)",
+                    host, serverLabel, raw.err);
+            break;
+        case RawDnsResult::Outcome::SendFailed:
+            OTA_LOG("OTA diag: raw DNS A? %s @%s sendto failed (errno=%d) — no route",
+                    host, serverLabel, raw.err);
+            break;
+        case RawDnsResult::Outcome::Malformed:
+            OTA_LOG("OTA diag: raw DNS A? %s @%s reply malformed/too short",
+                    host, serverLabel);
+            break;
+    }
+    return raw.outcome == RawDnsResult::Outcome::Answered;
+}
+
+// Non-blocking TCP connect with an explicit timeout. Returns true if the peer
+// is *reachable*, which includes an outright refusal: ECONNREFUSED means the
+// host answered and merely has the port closed. Only a timeout means nothing
+// came back at all, and EHOSTUNREACH means we have no route.
+bool logTcpProbe(uint32_t ip4, uint16_t port, const char *label) {
+    if (ip4 == 0) return false;
+    uint32_t start = millis();
+    int fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (fd < 0) {
+        OTA_LOG("OTA diag: tcp %s socket() failed (errno=%d)", label, errno);
+        return false;
+    }
+    int flags = fcntl(fd, F_GETFL, 0);
+    fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+
+    struct sockaddr_in dst{};
+    dst.sin_family = AF_INET;
+    dst.sin_port = htons(port);
+    dst.sin_addr.s_addr = ip4;
+
+    int rc = connect(fd, reinterpret_cast<struct sockaddr *>(&dst), sizeof(dst));
+    if (rc == 0) {
+        OTA_LOG("OTA diag: tcp %s connected immediately (%lu ms)",
+                label, (unsigned long)(millis() - start));
+        close(fd);
+        return true;
+    }
+    if (errno != EINPROGRESS) {
+        OTA_LOG("OTA diag: tcp %s connect failed at once (errno=%d)", label, errno);
+        close(fd);
+        return false;
+    }
+
+    fd_set wset;
+    FD_ZERO(&wset);
+    FD_SET(fd, &wset);
+    struct timeval tv{};
+    tv.tv_sec = 5;
+    int sel = select(fd + 1, nullptr, &wset, nullptr, &tv);
+    uint32_t elapsed = millis() - start;
+    bool reachable = false;
+    if (sel > 0) {
+        int soErr = 0;
+        socklen_t len = sizeof(soErr);
+        getsockopt(fd, SOL_SOCKET, SO_ERROR, &soErr, &len);
+        if (soErr == 0) {
+            OTA_LOG("OTA diag: tcp %s CONNECTED in %lu ms (host reachable)",
+                    label, (unsigned long)elapsed);
+            reachable = true;
+        } else {
+            reachable = (soErr == ECONNREFUSED);
+            OTA_LOG("OTA diag: tcp %s refused/failed in %lu ms (SO_ERROR=%d)%s",
+                    label, (unsigned long)elapsed, soErr,
+                    reachable ? " — host is reachable, port closed" : "");
+        }
+    } else if (sel == 0) {
+        OTA_LOG("OTA diag: tcp %s TIMED OUT after %lu ms — no response at all",
+                label, (unsigned long)elapsed);
+    } else {
+        OTA_LOG("OTA diag: tcp %s select() failed (errno=%d)", label, errno);
+    }
+    close(fd);
+    return reachable;
+}
+
+// Probe the network after a failed request and print one actionable verdict.
+// Runs only on the failure path — the probes cost up to ~35 s, which is fine
+// when the check has already failed but must never delay a working update.
+void explainNetworkFailure(const char *host) {
+    // Force IPv4 rather than AF_UNSPEC: AF_UNSPEC makes lwIP walk an
+    // A-then-AAAA sequence, so a plain IPv4 probe isolates the A lookup. If
+    // resolution works, the fault is downstream of DNS (TLS handshake, CA
+    // bundle, cert validity) and none of the network probes below apply.
+    if (probeGetAddrInfo(host, AF_INET, "AF_INET")) {
+        OTA_LOG("OTA verdict: %s resolves, so the failure is in the TLS/HTTP "
+                "layer, not the network — check the CA bundle and the clock",
+                host);
+        return;
+    }
+
+    // What lwIP's resolver itself is configured with. WiFi.dnsIP() reads the
+    // same table, but log all DNS_MAX_SERVERS slots: a populated slot 0 with
+    // the query still failing rules out "no server configured" outright.
+    uint32_t server0 = 0;
+    {
+        char servers[64] = {0};
+        size_t off = 0;
+        for (uint8_t i = 0; i < 3; ++i) {
+            IPAddress s = WiFi.dnsIP(i);
+            if (i == 0) server0 = static_cast<uint32_t>(s);
+            off += snprintf(servers + off, sizeof(servers) - off, "%s%s",
+                            i ? "," : "", s.toString().c_str());
+            if (off >= sizeof(servers)) break;
+        }
+        OTA_LOG("OTA diag: resolvers=[%s] reset_reason=%d sntp_sync=%d",
+                servers, (int)esp_reset_reason(), (int)sntp_get_sync_status());
+    }
+
+    // Can we get a UDP socket at all? lwIP allocates one per DNS query, and
+    // if sockets or UDP PCBs are exhausted every lookup fails instantly and
+    // permanently — a fault that looks exactly like a dead DNS server.
+    bool socketsOk = true;
+    int probe = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (probe < 0) {
+        socketsOk = false;
+        OTA_LOG("OTA diag: UDP socket allocation FAILED (errno=%d)", errno);
+    } else {
+        close(probe);
+    }
+
+    // Raw queries bypassing lwIP's resolver entirely, then TCP reachability.
+    // ECONNREFUSED counts as reachable, so only a timeout means the path is
+    // dead. Gateway-vs-internet is the split that matters: the gateway
+    // answering while the internet does not is a router that has this device
+    // on a no-forwarding policy, and no amount of resolver configuration can
+    // work around it.
+    const uint32_t publicDns = inet_addr(NET_FALLBACK_DNS_1);
+    bool routerAnswers = server0 != 0 && logRawDnsQuery(server0, host, "configured resolver");
+    bool publicAnswers = logRawDnsQuery(publicDns, host, NET_FALLBACK_DNS_1);
+    bool gatewayReachable = logTcpProbe(static_cast<uint32_t>(WiFi.gatewayIP()), 53, "gateway:53");
+    bool internetReachable = logTcpProbe(publicDns, 53, NET_FALLBACK_DNS_1 ":53");
+
+    if (!socketsOk) {
+        OTA_LOG("OTA verdict: the network stack is out of sockets, so no lookup "
+                "can be sent. This is a firmware socket leak, not a network fault.");
+    } else if (!gatewayReachable) {
+        OTA_LOG("OTA verdict: gateway %s does not respond even over TCP. The WiFi "
+                "link is associated but there is no working path to the router.",
+                WiFi.gatewayIP().toString().c_str());
+    } else if (!internetReachable) {
+        // The case seen in the field: LAN fine, nothing forwarded upstream.
+        OTA_LOG("OTA verdict: gateway %s is reachable but nothing upstream is — "
+                "this device has no internet access. Check the router's access "
+                "policy (parental controls / MAC allow-list / guest isolation) "
+                "for %s (%s). Nothing in the firmware can work around it.",
+                WiFi.gatewayIP().toString().c_str(),
+                WiFi.localIP().toString().c_str(), WiFi.macAddress().c_str());
+    } else if (!routerAnswers && !publicAnswers) {
+        OTA_LOG("OTA verdict: TCP works upstream but no DNS server answers over "
+                "UDP/53 — UDP/53 egress is filtered on this network.");
+    } else {
+        OTA_LOG("OTA verdict: a DNS server answers directly, yet lwIP's resolver "
+                "still fails. Suspect the resolver configuration, not the network.");
+    }
+}
+#endif // ARDUINO
+
 // ---------------------------------------------------------------------------
 // Private: checkForUpdate
 // ---------------------------------------------------------------------------
@@ -281,6 +651,77 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
             xSemaphoreGive(m);
         }
     }
+
+#ifdef ARDUINO
+    // Common failure mode on real devices: the user clicks "Check for
+    // updates" while the device is still in AP setup mode (no upstream
+    // link) or the STA link has dropped. The TLS handshake then fails
+    // with EHOSTUNREACH or ETIMEDOUT; rather than burying that as a
+    // generic -1, surface it explicitly.
+    wl_status_t wifi = WiFi.status();
+    if (wifi != WL_CONNECTED) {
+        OTA_LOG("GitHub API check skipped: WiFi not connected (status=%d, mode=%d, heap=%u)",
+                (int)wifi, (int)WiFi.getMode(), ESP.getFreeHeap());
+        SemaphoreHandle_t m = checkResultMutex();
+        if (xSemaphoreTake(m, portMAX_DELAY)) {
+            checkState = CheckState::Failed;
+            xSemaphoreGive(m);
+        }
+        return false;
+    }
+
+    // mbedtls X.509 verification reads through time()/gettimeofday(). If the
+    // system clock is still at boot-RTC (≈ Jan 1970 + uptime), GitHub's leaf
+    // certs — which are only valid from 2024+ — look "not yet valid" and the
+    // TLS handshake aborts. Surface it explicitly so we don't have to guess.
+    // 1700000000 = 2023-11-14. Anything past 2023 is the modern web's floor.
+    {
+        // Wait for lwip SNTP (started by configTime() in
+        // Network::setupUsingSTAMode) to deliver a time. SNTP's first
+        // round-trip on a cold boot can easily take 20-30 s while DNS
+        // resolves and the UDP/123 packet makes its way out, so we give it
+        // generous headroom. If it still hasn't arrived we force a fresh
+        // attempt (esp_sntp_restart) and wait again — that's the difference
+        // between "the user's network is too locked-down to ever serve NTP"
+        // and "the first sync just hadn't completed yet".
+        auto waitForSync = [](uint32_t ms) -> bool {
+            struct tm out{};
+            return getLocalTime(&out, ms);
+        };
+
+        bool synced = waitForSync(30000);
+        if (!synced && esp_sntp_enabled()) {
+            OTA_LOG("OTA check: SNTP first attempt did not complete within 30s — forcing fresh sync");
+            esp_sntp_restart();
+            synced = waitForSync(20000);
+        }
+
+        if (!synced) {
+            time_t sys_time = time(nullptr);
+            OTA_LOG("OTA check aborted: system clock not synced after 50s total "
+                    "(epoch=%ld). lwip SNTP never delivered. UDP/123 or NTP server "
+                    "DNS is likely blocked on this network; OTA over HTTPS cannot work.",
+                    (long)sys_time);
+            SemaphoreHandle_t m = checkResultMutex();
+            if (xSemaphoreTake(m, portMAX_DELAY)) {
+                checkState = CheckState::Failed;
+                xSemaphoreGive(m);
+            }
+            return false;
+        }
+        time_t sys_time = time(nullptr);
+        struct tm timeinfo;
+        gmtime_r(&sys_time, &timeinfo);
+        char buf[32];
+        strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &timeinfo);
+        OTA_LOG("OTA diag: rssi=%d ch=%d ip=%s sys_time=%s (%ld)",
+                (int)WiFi.RSSI(), (int)WiFi.channel(), WiFi.localIP().toString().c_str(),
+                buf, (long)sys_time);
+    }
+
+    OTA_LOG("OTA diag: dns=%s gw=%s",
+            WiFi.dnsIP().toString().c_str(), WiFi.gatewayIP().toString().c_str());
+#endif
 
     String apiUrl = String("https://api.github.com/repos/") + owner + "/" + repo + "/releases/latest";
 
@@ -307,13 +748,25 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
 
     int status = client.openWithRedirects();
     if (status != 200) {
-        OTA_LOG("GitHub API returned %d (free heap: %u)", status, ESP.getFreeHeap());
+        // EINPROGRESS is the in-flight state of a non-blocking connect, not a
+        // fault, so don't present it as the reason for the failure.
+        if (client.lastSocketErrno == 0 || client.lastSocketErrno == EINPROGRESS) {
+            OTA_LOG("GitHub API returned %d (free heap: %u)", status, ESP.getFreeHeap());
+        } else {
+            OTA_LOG("GitHub API returned %d (free heap: %u, errno=%d)",
+                    status, ESP.getFreeHeap(), client.lastSocketErrno);
+        }
         client.drain();
         SemaphoreHandle_t m = checkResultMutex();
         if (xSemaphoreTake(m, portMAX_DELAY)) {
             checkState = CheckState::Failed;
             xSemaphoreGive(m);
         }
+#ifdef ARDUINO
+        // Only now, with the request already failed, is it worth spending ~35 s
+        // probing the network to say *why* in one actionable line.
+        explainNetworkFailure("api.github.com");
+#endif
         return false;
     }
 
