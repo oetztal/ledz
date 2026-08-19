@@ -228,8 +228,38 @@ In gradient mode, colors are treated as evenly-spaced waypoints across the strip
 - **🇺🇦 Ukraine**: Blue (#0057B7) and Yellow (#FFD700)
 - **🇮🇹 Italy**: Green (#008C45), White (#FFFFFF), Red (#CD212A)
 
+### Rainbow
+**Parameters**:
+- `time_step` (float): Hue change per frame (default: `1.0`). Higher values scroll faster; `0` freezes the rainbow in time.
+- `pixel_step` (float): Hue change per pixel (default: `1.0`). Higher values compress more rainbow cycles into the strip; `0` makes the whole strip share one hue.
+
+**Behavior with zero values**:
+- `time_step=0, pixel_step=0`: strip is solid (all pixels `wheel(0)`).
+- `pixel_step=0`: whole strip cycles one color in unison over time.
+- `time_step=0`: static rainbow distribution frozen in time.
+
+**UI range**: Sliders clamp to `0.0–5.0` with step `0.05`. The C++ side accepts any finite float, including negative values via the API (which reverses the scroll direction), but the UI does not expose them.
+
+**Example JSON**:
+```json
+// Default rainbow
+{"time_step": 1.0, "pixel_step": 1.0}
+
+// Fast scroll, classic spectrum
+{"time_step": 3.0, "pixel_step": 1.0}
+
+// Static rainbow distribution (no time animation)
+{"time_step": 0.0, "pixel_step": 1.0}
+
+// All pixels cycle one color together
+{"time_step": 1.0, "pixel_step": 0.0}
+
+// Compressed spectrum (multiple cycles visible)
+{"time_step": 1.0, "pixel_step": 3.0}
+```
+
 ### Other Shows
-Rainbow, ColorRun, Jump currently don't support parameters and will use their default behavior.
+ColorRun and Jump currently don't support parameters and will use their default behavior.
 
 ## Adding Parameter Support to New Shows
 

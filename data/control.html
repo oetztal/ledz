@@ -78,6 +78,22 @@
                     <button class="apply-button" onclick="applyMandelbrotParams()">Apply Parameters</button>
                 </div>
 
+                <div id="rainbowParams" class="params-section">
+                    <div class="param-row">
+                        <label class="param-label" for="rainbowTimeStep">Time Step</label>
+                        <input type="range" id="rainbowTimeStep" min="0" max="5" step="0.05" value="1.0" oninput="document.getElementById('rainbowTimeStepValue').textContent = this.value;">
+                        <div class="brightness-value"><span id="rainbowTimeStepValue">1.0</span></div>
+                        <small style="display:block; margin-top:4px; color:#666;">Hue change per frame (higher = faster scroll)</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="rainbowPixelStep">Pixel Step</label>
+                        <input type="range" id="rainbowPixelStep" min="0" max="5" step="0.05" value="1.0" oninput="document.getElementById('rainbowPixelStepValue').textContent = this.value;">
+                        <div class="brightness-value"><span id="rainbowPixelStepValue">1.0</span></div>
+                        <small style="display:block; margin-top:4px; color:#666;">Hue change per pixel (higher = denser spectrum)</small>
+                    </div>
+                    <button class="apply-button" onclick="applyRainbowParams()">Apply Parameters</button>
+                </div>
+
                 <div id="chaosParams" class="params-section">
                     <div class="param-row">
                         <label class="param-label" for="chaosRmin">Rmin (Start)</label>
@@ -332,6 +348,7 @@
             document.getElementById('morseCodeParams').classList.remove('visible');
             document.getElementById('theaterChaseParams').classList.remove('visible');
             document.getElementById('stroboscopeParams').classList.remove('visible');
+            document.getElementById('rainbowParams').classList.remove('visible');
 
             if (showName === 'Mandelbrot') {
                 document.getElementById('mandelbrotParams').classList.add('visible');
@@ -351,6 +368,8 @@
                 document.getElementById('theaterChaseParams').classList.add('visible');
             } else if (showName === 'Stroboscope') {
                 document.getElementById('stroboscopeParams').classList.add('visible');
+            } else if (showName === 'Rainbow') {
+                document.getElementById('rainbowParams').classList.add('visible');
             }
         }
 
@@ -593,6 +612,27 @@
                 pendingParameterConfig = false;  // Applied successfully
             } catch (error) {
                 console.error('Failed to apply Starlight parameters:', error);
+            }
+        }
+
+        // Apply Rainbow parameters
+        async function applyRainbowParams() {
+            const time_step = parseFloat(document.getElementById('rainbowTimeStep').value);
+            const pixel_step = parseFloat(document.getElementById('rainbowPixelStep').value);
+
+            try {
+                pendingParameterConfig = true;
+                await fetch('/api/show', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: 'Rainbow',
+                        params: { time_step, pixel_step }
+                    })
+                });
+                pendingParameterConfig = false;
+            } catch (error) {
+                console.error('Failed to apply Rainbow parameters:', error);
             }
         }
 
@@ -858,6 +898,17 @@
                     if (params.Rmax !== undefined) document.getElementById('chaosRmax').value = params.Rmax;
                     if (params.Rdelta !== undefined) document.getElementById('chaosRdelta').value = params.Rdelta;
                     break;
+
+                case 'Rainbow':
+                    if (params.time_step !== undefined) {
+                        document.getElementById('rainbowTimeStep').value = params.time_step;
+                        document.getElementById('rainbowTimeStepValue').textContent = params.time_step;
+                    }
+                    if (params.pixel_step !== undefined) {
+                        document.getElementById('rainbowPixelStep').value = params.pixel_step;
+                        document.getElementById('rainbowPixelStepValue').textContent = params.pixel_step;
+                    }
+                    break;
             }
         }
 
@@ -907,7 +958,8 @@
 
             // Don't auto-apply for shows with parameters - wait for user to click Apply button
             const showsWithParams = ['Solid', 'Mandelbrot', 'Chaos', 'Fire',
-                                     'Starlight', 'Wave', 'MorseCode', 'TheaterChase', 'Stroboscope'];
+                                     'Starlight', 'Wave', 'MorseCode', 'TheaterChase', 'Stroboscope',
+                                     'Rainbow'];
 
             if (showsWithParams.includes(showName)) {
                 pendingParameterConfig = true;  // User is now configuring parameters

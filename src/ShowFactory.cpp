@@ -115,10 +115,13 @@ ShowFactory::ShowFactory() {
     });
 
     registerShow("Rainbow", "Rainbow color cycle", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
-        // Rainbow has no parameters yet
-        Serial.println("ShowFactory: Creating Rainbow");
-
-        return std::make_unique<Show::Rainbow>();
+        float time_step = doc["time_step"] | 1.0f;
+        float pixel_step = doc["pixel_step"] | 1.0f;
+#ifdef ARDUINO
+        Serial.printf("ShowFactory: Creating Rainbow time_step=%.2f, pixel_step=%.2f\n",
+                      time_step, pixel_step);
+#endif
+        return std::make_unique<Show::Rainbow>(time_step, pixel_step);
     });
 
     registerShow("Wave", "Propagating wave with rainbow colors", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {

@@ -5,8 +5,12 @@
 
 namespace Show {
     class Rainbow : public Show {
+    private:
+        float time_step;
+        float pixel_step;
+
     public:
-        Rainbow();
+        Rainbow(float time_step = 1.0f, float pixel_step = 1.0f);
 
         void execute(Strip::Strip &strip, Iteration iteration) override;
     };

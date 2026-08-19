@@ -1,6 +1,7 @@
 #include "unity.h"
 #include "../MockStrip.h"
 #include "show/Fire.h"
+#include "show/Rainbow.h"
 
 Show::FireState *state;
 
@@ -95,6 +96,57 @@ void test_spark_amount() {
     TEST_ASSERT_EQUAL_FLOAT(0.7f, state->get_temperature(0));
 }
 
+// Rainbow show tests
+void test_rainbow_default_constructor_runs() {
+    auto show = new Show::Rainbow();
+    MockStrip strip(10);
+    show->execute(strip, 0);
+    TEST_ASSERT_NOT_NULL(show);
+    delete show;
+}
+
+void test_rainbow_default_execute_runs_without_crash() {
+    Show::Rainbow show;
+    MockStrip strip(30);
+    for (Show::Iteration t = 0; t < 5; t++) {
+        show.execute(strip, t);
+    }
+    TEST_ASSERT_EQUAL_UINT32(30, strip.length());
+}
+
+void test_rainbow_pixel_step_zero_all_pixels_share_hue() {
+    Show::Rainbow show(1.0f, 0.0f);
+    MockStrip strip(10);
+    show.execute(strip, 0);
+    auto first = strip.getPixelColor(0);
+    for (int i = 1; i < 10; i++) {
+        TEST_ASSERT_EQUAL_HEX32(first, strip.getPixelColor(i));
+    }
+}
+
+void test_rainbow_time_step_zero_hue_advances_with_pixel() {
+    Show::Rainbow show(0.0f, 1.0f);
+    MockStrip strip(20);
+    show.execute(strip, 0);
+    TEST_ASSERT_EQUAL_HEX32(strip.getPixelColor(0), strip.getPixelColor(0));
+    bool saw_difference = false;
+    for (int i = 1; i < 20; i++) {
+        if (strip.getPixelColor(i) != strip.getPixelColor(0)) {
+            saw_difference = true;
+            break;
+        }
+    }
+    TEST_ASSERT_TRUE(saw_difference);
+}
+
+void test_rainbow_explicit_constructor_does_not_crash() {
+    auto show = new Show::Rainbow(2.5f, 0.5f);
+    MockStrip strip(15);
+    show->execute(strip, 100);
+    delete show;
+    TEST_PASS();
+}
+
 int runUnityTests() {
     UNITY_BEGIN();
 
@@ -107,6 +159,13 @@ int runUnityTests() {
     RUN_TEST(test_spread_multiple_weights);
     RUN_TEST(test_spark_amount);
     RUN_TEST(test_create_fire);
+
+    // Rainbow show
+    RUN_TEST(test_rainbow_default_constructor_runs);
+    RUN_TEST(test_rainbow_default_execute_runs_without_crash);
+    RUN_TEST(test_rainbow_pixel_step_zero_all_pixels_share_hue);
+    RUN_TEST(test_rainbow_time_step_zero_hue_advances_with_pixel);
+    RUN_TEST(test_rainbow_explicit_constructor_does_not_crash);
 
     return UNITY_END();
 }
