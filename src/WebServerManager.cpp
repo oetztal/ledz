@@ -76,6 +76,14 @@ static void sendGzippedResponse(AsyncWebServerRequest *request, const char *cont
 // Run: python3 scripts/compress_web.py to regenerate compressed headers
 
 void AccessLogger::run(AsyncWebServerRequest *request, ArMiddlewareNext next) {
+    // The first HTTP handler invocation flips the active webserver's
+    // hasServedAnyRequestFlag so the Network task can satisfy
+    // OTA_AUTO_CONFIRM_REQUIRE_REQUEST. Doing it in middleware means we
+    // don't have to wrap every handler.
+    if (WebServerManager::activeInstance) {
+        WebServerManager::activeInstance->markServedRequest();
+    }
+
     Print *_out = &Serial;
     char logBuf[128];
     const char* ip = request->client()->remoteIP().toString().c_str();
@@ -88,10 +96,10 @@ void AccessLogger::run(AsyncWebServerRequest *request, ArMiddlewareNext next) {
 
     AsyncWebServerResponse *response = request->getResponse();
     if (response) {
-        snprintf(logBuf, sizeof(logBuf), "[HTTP] %s %s %s (%u ms) %u", 
+        snprintf(logBuf, sizeof(logBuf), "[HTTP] %s %s %s (%u ms) %u",
                  ip, url, method, elapsed, response->code());
     } else {
-        snprintf(logBuf, sizeof(logBuf), "[HTTP] %s %s %s (%u ms) (no response)", 
+        snprintf(logBuf, sizeof(logBuf), "[HTTP] %s %s %s (%u ms) (no response)",
                  ip, url, method, elapsed);
     }
     _out->println(logBuf);
@@ -1216,96 +1224,66 @@ void WebServerManager::setupAPIRoutes() {
               }
     );
 
-    // GET /api/ota/check - Check for firmware updates
+    // GET /api/ota/check - kick off a background check on Core 1
     server.on(API_PATH_OTA_CHECK, HTTP_GET, [](AsyncWebServerRequest *request) {
-        StaticJsonDocument<Config::JSON_DOC_LARGE> doc;
-
-        FirmwareInfo info;
-        bool releaseFound = OTAUpdater::checkForUpdate(OTA_GITHUB_OWNER, OTA_GITHUB_REPO, info);
-
-        // Only report update available if release found AND version is different
-        bool updateAvailable = releaseFound && (info.version != FIRMWARE_VERSION);
-
-        if (releaseFound) {
-            doc["update_available"] = updateAvailable;
-            doc["current_version"] = FIRMWARE_VERSION;
-            doc["latest_version"] = info.version;
-            doc["release_name"] = info.name;
-            doc["size_bytes"] = info.size;
-            doc["download_url"] = info.downloadUrl;
-            doc["release_notes"] = info.releaseNotes;
+        StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
+        bool started = OTAUpdater::startBackgroundCheck(OTA_GITHUB_OWNER, OTA_GITHUB_REPO);
+        if (started) {
+            doc["started"] = true;
+            request->send(202, CONTENT_TYPE_JSON, "{\"started\":true}");
         } else {
-            doc["update_available"] = false;
-            doc["current_version"] = FIRMWARE_VERSION;
-            doc["message"] = "No update available or failed to check";
+            doc["started"] = false;
+            doc["error"] = "OTA already in progress";
+            String body;
+            serializeJson(doc, body);
+            request->send(409, CONTENT_TYPE_JSON, body);
         }
-
-        String response;
-        serializeJson(doc, response);
-        request->send(200, CONTENT_TYPE_JSON, response);
     });
 
-    // POST /api/ota/update - Perform OTA update
-    server.on(API_PATH_OTA_UPDATE, HTTP_POST,
-              [](AsyncWebServerRequest *request) {
-                  // Send immediate response before starting update
-                  request->send(200, CONTENT_TYPE_JSON,
-                                R"({"status":"starting","message":"OTA update started"})");
-              },
-              nullptr,
-              [this]([[maybe_unused]] AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-                  if (index == 0) {
-                      Serial.println("[WebServer] OTA update requested");
-                  }
+    // POST /api/ota/update - kick off a background install on Core 1
+    server.on(API_PATH_OTA_UPDATE, HTTP_POST, [](AsyncWebServerRequest *request) {
+        bool force = request->hasParam("force") &&
+                     (request->getParam("force")->value() == String("true") ||
+                      request->getParam("force")->value() == String("1"));
 
-                  if (index + len == total) {
-                      StaticJsonDocument<Config::JSON_DOC_MEDIUM> doc;
-                      deserializeJson(doc, data, len);
+        bool started = OTAUpdater::startBackgroundUpdateFromLatestCheck(force);
+        if (started) {
+            request->send(202, CONTENT_TYPE_JSON, "{\"started\":true}");
+        } else {
+            String reason = "OTA already in progress or no completed check";
+            CheckState cs = OTAUpdater::getCheckState();
+            if (cs == CheckState::Done) {
+                reason = "Latest version is not newer than running (use ?force=true to override)";
+            } else if (cs == CheckState::InProgress) {
+                reason = "A check is still running";
+            } else if (cs == CheckState::Failed) {
+                reason = "Latest check failed; retry";
+            }
+            StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
+            doc["started"] = false;
+            doc["error"] = reason;
+            String body;
+            serializeJson(doc, body);
+            request->send(409, CONTENT_TYPE_JSON, body);
+        }
+    });
 
-                      String downloadUrl = doc["download_url"] | "";
-                      size_t size = doc["size"] | 0;
-
-                      if (downloadUrl.isEmpty() || size == 0) {
-                          return;
-                      }
-
-                      Serial.printf("[WebServer] Starting OTA: %s (%zu bytes)\n", downloadUrl.c_str(), size);
-
-                      // Perform OTA update (this will block)
-                      bool success = OTAUpdater::performUpdate(downloadUrl, size, [](int percent, size_t bytes) {
-                          Serial.printf("[OTA] Progress: %d%% (%zu bytes)\n", percent, bytes);
-                      });
-
-                      if (success) {
-                          Serial.println("[WebServer] OTA update successful, scheduling restart...");
-                          this->config.requestRestart(1000);
-                      } else {
-                          Serial.println("[WebServer] OTA update failed!");
-                      }
-                  }
-              }
-    );
-
-    // GET /api/ota/status - Get OTA status
+    // GET /api/ota/status - state-machine snapshot for the UI to poll
     server.on("/api/ota/status", HTTP_GET, [](AsyncWebServerRequest *request) {
-        StaticJsonDocument<Config::JSON_DOC_MEDIUM> doc;
+        StaticJsonDocument<Config::JSON_DOC_LARGE> doc;
 
         doc["firmware_version"] = FIRMWARE_VERSION;
         doc["build_date"] = FIRMWARE_BUILD_DATE;
         doc["build_time"] = FIRMWARE_BUILD_TIME;
 
-        // Partition info
         String partitionLabel;
         uint32_t partitionAddress;
         if (OTAUpdater::getRunningPartitionInfo(partitionLabel, partitionAddress)) {
             doc["partition"] = partitionLabel;
             doc["partition_address"] = partitionAddress;
         }
-
-        // Check if running unconfirmed update
         doc["unconfirmed_update"] = OTAUpdater::hasUnconfirmedUpdate();
 
-        // Memory info
         uint32_t freeHeap, minFreeHeap, psramFree;
         OTAUpdater::getMemoryInfo(freeHeap, minFreeHeap, psramFree);
         doc["free_heap"] = freeHeap;
@@ -1313,19 +1291,57 @@ void WebServerManager::setupAPIRoutes() {
         doc["psram_free"] = psramFree;
         doc["ota_safe"] = OTAUpdater::hasEnoughMemory();
 
+        // check sub-object
+        {
+            JsonObject chk = doc.createNestedObject("check");
+            CheckState cs = OTAUpdater::getCheckState();
+            switch (cs) {
+                case CheckState::Idle:       chk["state"] = "idle"; break;
+                case CheckState::InProgress: chk["state"] = "in_progress"; break;
+                case CheckState::Done:       chk["state"] = "done"; break;
+                case CheckState::Failed:     chk["state"] = "failed"; break;
+            }
+            if (cs == CheckState::Done || cs == CheckState::InProgress) {
+                FirmwareInfo info = OTAUpdater::getCheckResult();
+                if (info.isValid) {
+                    chk["version"] = info.version;
+                    chk["name"] = info.name;
+                    chk["size_bytes"] = info.size;
+                    chk["download_url"] = info.downloadUrl;
+                    chk["changelog"] = info.changelog;
+                }
+            }
+        }
+
+        // update sub-object
+        {
+            JsonObject upd = doc.createNestedObject("update");
+            Progress p = OTAUpdater::getProgress();
+            switch (p.state) {
+                case UpdateState::Idle:        upd["state"] = "idle"; break;
+                case UpdateState::Downloading: upd["state"] = "downloading"; break;
+                case UpdateState::Flashing:    upd["state"] = "flashing"; break;
+                case UpdateState::Pending:     upd["state"] = "pending"; break;
+                case UpdateState::Failed:      upd["state"] = "failed"; break;
+            }
+            upd["percent"] = p.percent;
+            upd["bytes_written"] = p.bytes_written;
+            upd["expected_bytes"] = p.expected_bytes;
+            upd["started_at_ms"] = p.started_at_ms;
+            if (!p.error_message.isEmpty()) upd["error"] = p.error_message;
+        }
+
         String response;
         serializeJson(doc, response);
         request->send(200, CONTENT_TYPE_JSON, response);
     });
 
-    // POST /api/ota/confirm - Confirm successful boot after OTA
+    // POST /api/ota/confirm - manual boot confirmation (escape hatch)
     server.on("/api/ota/confirm", HTTP_POST, [](AsyncWebServerRequest *request) {
         bool success = OTAUpdater::confirmBoot();
-
         StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
         doc[JSON_KEY_SUCCESS] = success;
         doc["message"] = success ? "Boot confirmed, rollback disabled" : "Failed to confirm boot";
-
         String response;
         serializeJson(doc, response);
         request->send(success ? 200 : 500, CONTENT_TYPE_JSON, response);
@@ -1347,6 +1363,8 @@ void WebServerManager::setupAPIRoutes() {
     });
 #endif
 }
+
+WebServerManager *WebServerManager::activeInstance = nullptr;
 
 WebServerManager::WebServerManager(Config::ConfigManager &config, Network &network, ShowController &show_controller)
     : config(config), network(network), showController(show_controller)
@@ -1422,6 +1440,8 @@ void WebServerManager::begin() {
 #ifdef ARDUINO
     Serial.println("Starting webserver...");
 
+    activeInstance = this;
+
     // Add access logging middleware for all requests
     // server.addMiddleware(&logging);
 
@@ -1438,6 +1458,7 @@ void WebServerManager::begin() {
 void WebServerManager::end() {
 #ifdef ARDUINO
     server.end();
+    if (activeInstance == this) activeInstance = nullptr;
     Serial.println("Webserver stopped");
 #endif
 }

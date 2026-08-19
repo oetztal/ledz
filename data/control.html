@@ -15,6 +15,11 @@
                 <span id="deviceId">Loading...</span>
                 <span id="firmwareVersion" style="opacity: 0.7; font-size: 0.9em; margin-left: 10px;"></span>
                 <span id="otaPartition" style="opacity: 0.6; font-size: 0.85em; margin-left: 5px;"></span>
+                <a id="otaUpdateBadge" href="/settings" style="display:none; margin-left:10px; padding:2px 8px;
+                    background:#4caf50; color:#fff; border-radius:4px; font-size:0.85em; text-decoration:none;"
+                    title="A firmware update is available">
+                    Update available: <span id="otaUpdateVersion"></span>
+                </a>
             </div>
         </div>
 
@@ -1169,11 +1174,32 @@
             updateParameterVisibility(document.getElementById('showSelect').value);
             loadLayout();
             loadPresets();
+            loadOTABadge();
         }
         init();
 
         // Update status periodically
         setInterval(updateStatus, 10000);
+        setInterval(loadOTABadge, 30000);
+
+        async function loadOTABadge() {
+            try {
+                const response = await fetch('/api/ota/status');
+                if (!response.ok) return;
+                const data = await response.json();
+                const badge = document.getElementById('otaUpdateBadge');
+                const versionSpan = document.getElementById('otaUpdateVersion');
+                if (data.check && data.check.state === 'done' &&
+                    data.check.version && data.check.version !== data.firmware_version) {
+                    versionSpan.textContent = data.check.version;
+                    badge.style.display = 'inline-block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (e) {
+                // Silent: badge just stays hidden.
+            }
+        }
 
         // Timer status display
         let cachedTimers = [];

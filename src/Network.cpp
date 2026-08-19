@@ -9,6 +9,8 @@
 #include "Config.h"
 #include "DeviceId.h"
 #include "WebServerManager.h"
+#include "OTAUpdater.h"
+#include "OTAConfig.h"
 
 #ifdef ARDUINO
 #include <set>
@@ -288,6 +290,8 @@ void Network::configureUsingAPMode() {
     // Main loop - NTP updates and touch control
     auto lastNtpUpdate = ntpClient.getEpochTime();
 
+    const unsigned long bootTimeMs = millis();
+
     unsigned long lastCheck = millis();
     unsigned long lastSecond = millis();
     while (true) {
@@ -339,6 +343,19 @@ void Network::configureUsingAPMode() {
             // Check timers
             if (timerScheduler) {
                 timerScheduler->checkTimers(ntpClient.getEpochTime());
+            }
+
+            // Auto-confirm an unconfirmed OTA image once the device has been
+            // up long enough AND has served at least one HTTP request.
+            if (OTAUpdater::hasUnconfirmedUpdate()) {
+                bool minUptime = (now - bootTimeMs) >= OTA_AUTO_CONFIRM_MIN_UPTIME_MS;
+                bool servedRequest = !OTA_AUTO_CONFIRM_REQUIRE_REQUEST ||
+                                     (webServer && webServer->hasServedAnyRequest());
+                if (minUptime && servedRequest) {
+                    if (OTAUpdater::confirmBoot()) {
+                        Serial.printf("Auto-confirmed after %lu ms uptime\n", now - bootTimeMs);
+                    }
+                }
             }
         }
     }
