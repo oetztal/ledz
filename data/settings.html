@@ -115,7 +115,8 @@
             <div class="info-box" id="otaCurrentVersion">
                 <strong>Current Version: </strong><span id="currentVersion">Loading...</span><br>
                 <strong>Partition: </strong><span id="currentPartition">Loading...</span><br>
-                <strong>Build Date: </strong><span id="buildDate">Loading...</span>
+                <strong>Build Date: </strong><span id="buildDate">Loading...</span><br>
+                <strong>Update state: </strong><span id="updateStateBadge">unknown</span>
             </div>
 
             <button class="btn btn-primary" onclick="checkForUpdates()" id="checkUpdateBtn">Check for Updates</button>
@@ -126,17 +127,28 @@
                     <strong>Version: </strong><span id="latestVersion"></span><br>
                     <strong>Size: </strong><span id="updateSize"></span><br>
                     <strong>Release Notes:</strong><br>
-                    <div id="releaseNotes" style="margin-top: 5px; white-space: pre-wrap; font-size: 12px;"></div>
+                    <pre id="releaseNotes" class="release-notes"></pre>
+                </div>
+                <div class="form-group" id="forceGroup" style="display:none;">
+                    <label>
+                        <input type="checkbox" id="forceUpdateCheckbox">
+                        Allow installing older or equal version
+                    </label>
+                    <small style="display:block; color:#666;">Enable only if you intend to downgrade. The device will
+                        install the latest available release even if it is not newer than the running one.</small>
                 </div>
                 <button class="btn btn-primary" onclick="performUpdate()" id="installUpdateBtn">Install Update</button>
             </div>
 
             <div id="updateProgress" style="display: none; margin-top: 15px;">
                 <div class="info-box">
-                    <strong>Installing update...</strong><br>
-                    <div style="margin-top: 10px;">Please wait. The device will restart automatically after the update
-                        completes.
+                    <strong id="progressLabel">Installing update...</strong>
+                    <div class="progress-bar" style="margin-top: 10px; background:#eee; border-radius:4px; overflow:hidden;">
+                        <div id="progressBar" style="width:0%; height:18px; background:#4caf50; transition: width 0.3s;"></div>
                     </div>
+                    <div id="progressBytes" style="margin-top:6px; font-size:12px; color:#666;">0 / 0 bytes</div>
+                    <div id="progressHint" style="margin-top: 10px;">Please wait. The device will restart automatically
+                        after the update completes.</div>
                 </div>
             </div>
 
@@ -397,17 +409,124 @@
 
     // OTA Update Functions
     let updateInfo = null;
+    let pollTimer = null;
+    let lastCheckData = null;
 
     async function loadOTAStatus() {
         try {
-            const response = await fetch('/api/ota/status');
-            const data = await response.json();
+            const data = await fetchOTAStatus();
+            if (!data) return;
             document.getElementById('currentVersion').textContent = data.firmware_version || 'Unknown';
             document.getElementById('currentPartition').textContent = data.partition || 'Unknown';
             document.getElementById('buildDate').textContent = data.build_date || 'Unknown';
+            updateStateBadge(data);
+            maybeRevealUpdateAvailable(data);
         } catch (error) {
             console.error('Failed to load OTA status:', error);
             document.getElementById('currentVersion').textContent = 'Error loading';
+        }
+    }
+
+    async function fetchOTAStatus() {
+        const response = await fetch('/api/ota/status');
+        if (!response.ok) return null;
+        return await response.json();
+    }
+
+    function updateStateBadge(data) {
+        const el = document.getElementById('updateStateBadge');
+        if (!el) return;
+        const u = data.update || {};
+        const c = data.check || {};
+        el.textContent =
+            `check=${c.state || 'idle'} update=${u.state || 'idle'} ` +
+            `${u.percent || 0}%`;
+    }
+
+    function maybeRevealUpdateAvailable(data) {
+        if (!data.check) return;
+        if (data.check.state === 'done' && data.check.version &&
+            data.check.version !== data.firmware_version && data.check.size_bytes) {
+            updateInfo = data.check;
+            document.getElementById('latestVersion').textContent = data.check.version;
+            document.getElementById('updateSize').textContent = formatBytes(data.check.size_bytes);
+            document.getElementById('releaseNotes').innerHTML = renderReleaseNotes(data.check.changelog || 'No release notes available.');
+            // Show force checkbox only when latest is not strictly newer than current
+            const forceGroup = document.getElementById('forceGroup');
+            if (forceGroup) {
+                const cmp = compareVersions(data.check.version, data.firmware_version);
+                forceGroup.style.display = cmp <= 0 ? 'block' : 'none';
+            }
+            document.getElementById('updateAvailable').style.display = 'block';
+            const btn = document.getElementById('checkUpdateBtn');
+            btn.textContent = 'Update Available!';
+            btn.disabled = false;
+        }
+    }
+
+    function renderReleaseNotes(markdown) {
+        const escaped = String(markdown)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        const linked = escaped.replace(/(https?:\/\/[^\s<]+)/g,
+            '<a href="$1" target="_blank" rel="noopener">$1</a>');
+        return linked.replace(/\n/g, '<br>');
+    }
+
+    function compareVersions(a, b) {
+        // Naive semver-ish compare for the UI; returns -1/0/1.
+        const stripV = (s) => String(s || '').replace(/^v/i, '').split('-')[0];
+        const pa = stripV(a).split('.').map((n) => parseInt(n, 10) || 0);
+        const pb = stripV(b).split('.').map((n) => parseInt(n, 10) || 0);
+        for (let i = 0; i < 3; i++) {
+            const aa = pa[i] || 0, bb = pb[i] || 0;
+            if (aa !== bb) return aa < bb ? -1 : 1;
+        }
+        return 0;
+    }
+
+    function startPolling() {
+        if (pollTimer) return;
+        pollTimer = setInterval(pollOTAStatus, 1000);
+    }
+
+    function stopPolling() {
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    }
+
+    async function pollOTAStatus() {
+        try {
+            const data = await fetchOTAStatus();
+            if (!data) return;
+            lastCheckData = data;
+            updateStateBadge(data);
+            const u = data.update || {};
+            if (u.state === 'downloading' || u.state === 'flashing' || u.state === 'pending') {
+                document.getElementById('updateProgress').style.display = 'block';
+                document.getElementById('progressBar').style.width = (u.percent || 0) + '%';
+                document.getElementById('progressBytes').textContent =
+                    `${u.bytes_written || 0} / ${u.expected_bytes || 0} bytes`;
+                document.getElementById('progressLabel').textContent =
+                    u.state === 'pending' ? 'Update flashed, rebooting...' :
+                    u.state === 'flashing' ? 'Flashing firmware...' : 'Downloading firmware...';
+                document.getElementById('updateAvailable').style.display = 'none';
+            } else if (u.state === 'failed') {
+                document.getElementById('progressLabel').textContent = 'Update failed';
+                document.getElementById('progressHint').textContent =
+                    u.error || 'The device could not install the update.';
+                stopPolling();
+                document.getElementById('checkUpdateBtn').disabled = false;
+                document.getElementById('checkUpdateBtn').textContent = 'Check for Updates';
+            } else if (u.state === 'idle' && data.check && data.check.state !== 'in_progress') {
+                stopPolling();
+                document.getElementById('updateProgress').style.display = 'none';
+                document.getElementById('checkUpdateBtn').disabled = false;
+                document.getElementById('checkUpdateBtn').textContent = 'Check for Updates';
+                maybeRevealUpdateAvailable(data);
+            }
+        } catch (error) {
+            console.error('pollOTAStatus failed:', error);
         }
     }
 
@@ -419,19 +538,14 @@
         try {
             const response = await fetch('/api/ota/check');
             const data = await response.json();
-
-            if (data.update_available) {
-                updateInfo = data;
-                document.getElementById('latestVersion').textContent = data.latest_version;
-                document.getElementById('updateSize').textContent = formatBytes(data.size_bytes);
-                document.getElementById('releaseNotes').textContent = data.release_notes || 'No release notes available.';
-                document.getElementById('updateAvailable').style.display = 'block';
-                btn.textContent = 'Update Available!';
-            } else {
-                alert('You are running the latest version: ' + data.current_version);
+            if (data.started === false) {
+                alert('Check already in progress.');
                 btn.textContent = 'Check for Updates';
                 btn.disabled = false;
+                return;
             }
+            // Start polling for the result.
+            startPolling();
         } catch (error) {
             console.error('Failed to check for updates:', error);
             alert('Failed to check for updates. Please ensure you have internet connection.');
@@ -446,42 +560,43 @@
             return;
         }
 
-        if (!confirm('Install firmware update ' + updateInfo.latest_version + '?\n\nThe device will restart after the update completes.')) {
+        if (!confirm('Install firmware update ' + updateInfo.version + '?\n\nThe device will restart after the update completes.')) {
             return;
         }
 
+        const force = document.getElementById('forceUpdateCheckbox') &&
+                      document.getElementById('forceUpdateCheckbox').checked;
+
         document.getElementById('updateAvailable').style.display = 'none';
         document.getElementById('updateProgress').style.display = 'block';
+        document.getElementById('progressLabel').textContent = 'Starting update...';
+        document.getElementById('progressBar').style.width = '0%';
+        document.getElementById('progressBytes').textContent = '0 / 0 bytes';
         document.getElementById('checkUpdateBtn').disabled = true;
 
         try {
-            const response = await fetch('/api/ota/update', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    download_url: updateInfo.download_url,
-                    size: updateInfo.size_bytes
-                })
-            });
-
-            if (response.ok) {
-                setTimeout(() => {
-                    alert('Update started! The device will restart in a few moments.\n\nPlease wait about 30 seconds, then refresh this page.');
-                }, 2000);
-            } else {
-                alert('Failed to start update. Please try again.');
+            const response = await fetch('/api/ota/update?force=' + (force ? 'true' : 'false'),
+                                         { method: 'POST' });
+            const data = await response.json();
+            if (!response.ok || data.started === false) {
+                alert('Failed to start update: ' + (data.error || response.statusText));
                 document.getElementById('updateProgress').style.display = 'none';
                 document.getElementById('checkUpdateBtn').disabled = false;
+                document.getElementById('checkUpdateBtn').textContent = 'Check for Updates';
+                return;
             }
+            startPolling();
         } catch (error) {
             console.error('Failed to perform update:', error);
             alert('Error performing update. Please try again.');
             document.getElementById('updateProgress').style.display = 'none';
             document.getElementById('checkUpdateBtn').disabled = false;
+            document.getElementById('checkUpdateBtn').textContent = 'Check for Updates';
         }
     }
 
     function formatBytes(bytes) {
+        if (typeof bytes !== 'number' || isNaN(bytes)) return '?';
         if (bytes < 1024) return bytes + ' B';
         if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';

@@ -1,6 +1,8 @@
 .pio
 
 .idea
+.claude
+.opencode
 
 # Auto-generated compressed web content
 src/generated/

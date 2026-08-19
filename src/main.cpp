@@ -7,6 +7,7 @@
 #include "ShowController.h"
 #include "strip/Base.h"
 #include "task/LedShow.h"
+#include "OTAUpdater.h"
 
 
 TaskHandle_t networkTaskHandle = nullptr;
@@ -22,6 +23,7 @@ void setup() {
     Serial.println("Started");
     // config.reset();
     config.begin();
+    OTAUpdater::setConfig(&config);
 
 #ifdef ARDUINO
     // Load device configuration

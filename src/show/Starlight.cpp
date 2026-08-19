@@ -63,13 +63,6 @@ namespace Show {
 #endif
             if (active_stars.find(led) == active_stars.end()) {
                 active_stars[led] = current_time;
-#ifdef ARDUINO
-                // Debug: Only log occasionally to avoid spam
-                if (active_stars.size() <= 5) {
-                    Serial.printf("Starlight: New star at LED %u (total active: %zu)\n",
-                                  led, active_stars.size());
-                }
-#endif
             }
         }
 

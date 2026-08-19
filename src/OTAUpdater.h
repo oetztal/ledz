@@ -1,114 +1,125 @@
 //
 // OTA Firmware Update Manager for ESP32-S3
 //
-// Handles GitHub release checking, firmware download, and safe OTA updates
-// with rollback support
+// Architecture:
+//   - TLS-verified GitHub release check, performed off the AsyncTCP thread.
+//   - State machine (`CheckState`, `UpdateState`) observable via /api/ota/status.
+//   - Background workers pinned to Core 1 so /api/ota/* handlers return in
+//     microseconds and the rest of the web UI keeps serving during the
+//     multi-minute download.
 //
 
 #pragma once
 
 #include <Arduino.h>
+#include <functional>
+
+namespace Config {
+    class ConfigManager;
+}
 
 #ifdef ARDUINO
-#include <HTTPClient.h>
 #include <Update.h>
-#include <ArduinoJson.h>
-#include <WiFiClientSecure.h>
 #include <esp_ota_ops.h>
 #endif
 
-/**
- * Firmware release information from GitHub
- */
-struct FirmwareInfo {
-    String version; // Tag name (e.g., "v1.0.0")
-    String name; // Release name
-    String downloadUrl; // Direct download link to .bin file
-    size_t size; // File size in bytes
-    String releaseNotes; // Release notes body
-    bool isValid; // Whether the structure contains valid data
+// ---------------------------------------------------------------------------
+// Public types
+// ---------------------------------------------------------------------------
+
+enum class CheckState : uint8_t {
+    Idle = 0,
+    InProgress = 1,
+    Done = 2,
+    Failed = 3,
 };
 
-/**
- * OTA Update Manager
- * Handles:
- * - Checking GitHub for new releases
- * - Downloading firmware with progress
- * - Flashing to OTA partition
- * - Safe boot confirmation with rollback support
- */
+enum class UpdateState : uint8_t {
+    Idle = 0,
+    Downloading = 1,
+    Flashing = 2,
+    Pending = 3, // flashed; awaiting reboot
+    Failed = 4,
+};
+
+struct FirmwareInfo {
+    String version;        // Tag name (e.g., "v1.2.4")
+    String name;           // Release name
+    String downloadUrl;    // Direct download URL to .bin (must be github.com)
+    size_t size = 0;       // File size in bytes
+    String changelog;      // Release notes body (capped at 2 KB by parser)
+    bool isValid = false;  // True if the struct contains valid data
+};
+
+struct Progress {
+    UpdateState state = UpdateState::Idle;
+    uint8_t percent = 0;              // 0-100
+    size_t bytes_written = 0;
+    size_t expected_bytes = 0;
+    unsigned long started_at_ms = 0; // millis() when this run started
+    String error_message;             // populated on Failed
+};
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
 class OTAUpdater {
 public:
-    /**
-   * Check GitHub for latest firmware release
-   * @param owner GitHub repository owner
-   * @param repo GitHub repository name
-   * @param info [out] Populated with release information
-   * @return true if successfully retrieved release info
-   */
-    static bool checkForUpdate(const char *owner, const char *repo, FirmwareInfo &info);
+    // ---- Background workers ------------------------------------------------
 
-    /**
-   * Download firmware from URL and flash to OTA partition
-   * Streams data directly to flash to minimize memory usage
-   * @param downloadUrl Direct download URL to .bin file
-   * @param expectedSize Expected firmware size in bytes
-   * @param onProgress Optional callback for progress updates (0-100)
-   * @return true if update successful
-   */
-    static bool performUpdate(
-        const String &downloadUrl,
-        size_t expectedSize,
-        std::function<void(int, size_t)> onProgress = nullptr
-    );
+    // Spawn `otaCheckTask` on Core 1. Refuses if a check is already running
+    // or if a download/flash is in progress.
+    // Returns true if the worker was created.
+    static bool startBackgroundCheck(const char *owner, const char *repo);
 
-    /**
-   * Confirm successful boot after OTA update
-   * Call this after verifying new firmware works correctly
-   * Disables automatic rollback
-   * @return true if confirmation successful
-   */
+    // Spawn `otaWorkerTask` on Core 1 using the URL/size from the most recent
+    // successful `getCheckResult()`. `force = true` bypasses the semver
+    // newer-than check (downgrades, reinstalls).
+    // Returns true if the worker was created.
+    static bool startBackgroundUpdateFromLatestCheck(bool force = false);
+
+    // ---- State observers ---------------------------------------------------
+
+    static CheckState getCheckState();
+    static FirmwareInfo getCheckResult(); // returns a copy
+    static Progress getProgress();
+    static bool isUpdateInProgress();
+
+    // ---- Boot confirmation (unchanged semantics) --------------------------
+
     static bool confirmBoot();
-
-    /**
-   * Check if device is running NEW firmware (not yet confirmed)
-   * @return true if running unconfirmed OTA update
-   */
     static bool hasUnconfirmedUpdate();
 
+    // ---- Configuration dependency ------------------------------------------
+
     /**
-   * Get information about currently running partition
-   * @param label [out] Partition label (e.g., "app0")
-   * @param address [out] Partition base address
-   * @return true if successful
-   */
+     * Inject the global ConfigManager so the OTA worker can call
+     * `requestRestart()` after a successful flash. Must be called once
+     * during setup() before any update completes.
+     */
+    static void setConfig(Config::ConfigManager *cfg);
+
+    // ---- Partition + memory introspection (unchanged) ---------------------
+
     static bool getRunningPartitionInfo(String &label, uint32_t &address);
-
-    /**
-   * Get memory information for OTA operations
-   * @param freeHeap [out] Free SRAM in bytes
-   * @param minFreeHeap [out] Minimum free SRAM since boot
-   * @param psramFree [out] Free PSRAM in bytes (0 if no PSRAM)
-   */
     static void getMemoryInfo(uint32_t &freeHeap, uint32_t &minFreeHeap, uint32_t &psramFree);
-
-    /**
-   * Check if sufficient memory is available for OTA
-   * Requires at least 65KB free heap
-   * @return true if safe to perform OTA
-   */
     static bool hasEnoughMemory();
 
-private:
-    // Configuration constants
-    static constexpr int TIMEOUT_MS = 30000; // 30 seconds timeout (HTTPClient max)
-    static constexpr int CHUNK_SIZE = 4096; // 4KB download chunks
-    static constexpr int MIN_FREE_HEAP = 65536; // 64KB minimum required
-    static constexpr int MAX_JSON_SIZE = 8192; // JSON document size (increased for GitHub API)
+    // ---- Worker-task entry points (exposed for xTaskCreatePinnedToCore) ----
 
-    /**
-   * Initialize secure WiFi client with certificate bundle
-   * @return Configured WiFiClientSecure
-   */
-    static WiFiClientSecure createSecureClient();
+    struct CheckJob { char owner[64]; char repo[64]; };
+    struct UpdateJob { String url; size_t expected_size; bool force; };
+
+    static void otaCheckTaskEntry(void *arg);
+    static void otaWorkerTaskEntry(void *arg);
+
+    static void publishProgress(int percent, size_t bytes);
+
+private:
+    // ---- Private helpers (used by worker tasks) ---------------------------
+
+    static bool checkForUpdate(const char *owner, const char *repo, FirmwareInfo &out);
+    static bool performUpdate(const String &downloadUrl, size_t expectedSize,
+                              const std::function<void(int, size_t)> &onProgress);
 };
