@@ -13,10 +13,13 @@
 
 #include "OTAUpdater.h"
 #include "Config.h"
+#include "Log.h"
 #include "OTAConfig.h"
 #include "support/SemVer.h"
 
 #include <atomic>
+
+static const char* TAG = "ota";
 
 #ifdef ARDUINO
 #include <esp_http_client.h>
@@ -118,14 +121,14 @@ struct HttpClient {
             lastOpenErr = esp_http_client_open(handle, 0);
             if (lastOpenErr != ESP_OK) {
                 captureSocketErrno();
-                OTA_LOG("HTTP open failed: %s (errno=%d)",
+                ESP_LOGE(TAG, "HTTP open failed: %s (errno=%d)",
                         esp_err_to_name(lastOpenErr), lastSocketErrno);
                 return -1;
             }
             lastHeadersResult = esp_http_client_fetch_headers(handle);
             if (lastHeadersResult < 0) {
                 captureSocketErrno();
-                OTA_LOG("HTTP fetch_headers failed: %d (errno=%d, esp_err=%s)",
+                ESP_LOGE(TAG, "HTTP fetch_headers failed: %d (errno=%d, esp_err=%s)",
                         lastHeadersResult, lastSocketErrno,
                         esp_err_to_name(lastOpenErr));
                 return -1;
@@ -134,12 +137,12 @@ struct HttpClient {
             int code = lastStatusCode;
             if (code == 301 || code == 302 || code == 307 || code == 308) {
                 if (hops >= maxRedirects) {
-                    OTA_LOG("HTTP too many redirects (last status=%d)", code);
+                    ESP_LOGE(TAG, "HTTP too many redirects (last status=%d)", code);
                     return -1;
                 }
                 char *loc = nullptr;
                 if (esp_http_client_get_header(handle, "Location", &loc) != ESP_OK || !loc) {
-                    OTA_LOG("HTTP missing Location header on %d", code);
+                    ESP_LOGE(TAG, "HTTP missing Location header on %d", code);
                     return -1;
                 }
                 String next(loc);
@@ -443,13 +446,13 @@ bool probeGetAddrInfo(const char *host, int family, const char *familyName) {
             auto *sa = reinterpret_cast<struct sockaddr_in *>(res->ai_addr);
             inet_ntop(AF_INET, &sa->sin_addr, ipstr, sizeof(ipstr));
         }
-        OTA_LOG("OTA diag: getaddrinfo(%s, %s) -> %s in %lu ms",
+        ESP_LOGD(TAG, "OTA diag: getaddrinfo(%s, %s) -> %s in %lu ms",
                 host, familyName, ipstr, (unsigned long)elapsed);
         freeaddrinfo(res);
         return true;
     }
     if (res) freeaddrinfo(res);
-    OTA_LOG("OTA diag: getaddrinfo(%s, %s) FAILED gai=%d after %lu ms",
+    ESP_LOGD(TAG, "OTA diag: getaddrinfo(%s, %s) FAILED gai=%d after %lu ms",
             host, familyName, gai, (unsigned long)elapsed);
     return false;
 }
@@ -459,24 +462,24 @@ bool logRawDnsQuery(uint32_t serverIp4, const char *host, const char *serverLabe
     RawDnsResult raw = rawDnsQuery(serverIp4, host, 4000);
     switch (raw.outcome) {
         case RawDnsResult::Outcome::Answered:
-            OTA_LOG("OTA diag: raw DNS A? %s @%s -> rcode=%d answers=%d in %lu ms",
+            ESP_LOGD(TAG, "OTA diag: raw DNS A? %s @%s -> rcode=%d answers=%d in %lu ms",
                     host, serverLabel, raw.rcode, raw.answerCount,
                     (unsigned long)raw.elapsedMs);
             break;
         case RawDnsResult::Outcome::NoReply:
-            OTA_LOG("OTA diag: raw DNS A? %s @%s got NO REPLY in %lu ms (errno=%d)",
+            ESP_LOGD(TAG, "OTA diag: raw DNS A? %s @%s got NO REPLY in %lu ms (errno=%d)",
                     host, serverLabel, (unsigned long)raw.elapsedMs, raw.err);
             break;
         case RawDnsResult::Outcome::SocketFailed:
-            OTA_LOG("OTA diag: raw DNS A? %s @%s could not open a socket (errno=%d)",
+            ESP_LOGD(TAG, "OTA diag: raw DNS A? %s @%s could not open a socket (errno=%d)",
                     host, serverLabel, raw.err);
             break;
         case RawDnsResult::Outcome::SendFailed:
-            OTA_LOG("OTA diag: raw DNS A? %s @%s sendto failed (errno=%d) — no route",
+            ESP_LOGD(TAG, "OTA diag: raw DNS A? %s @%s sendto failed (errno=%d) — no route",
                     host, serverLabel, raw.err);
             break;
         case RawDnsResult::Outcome::Malformed:
-            OTA_LOG("OTA diag: raw DNS A? %s @%s reply malformed/too short",
+            ESP_LOGD(TAG, "OTA diag: raw DNS A? %s @%s reply malformed/too short",
                     host, serverLabel);
             break;
     }
@@ -492,7 +495,7 @@ bool logTcpProbe(uint32_t ip4, uint16_t port, const char *label) {
     uint32_t start = millis();
     int fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (fd < 0) {
-        OTA_LOG("OTA diag: tcp %s socket() failed (errno=%d)", label, errno);
+        ESP_LOGD(TAG, "OTA diag: tcp %s socket() failed (errno=%d)", label, errno);
         return false;
     }
     int flags = fcntl(fd, F_GETFL, 0);
@@ -505,13 +508,13 @@ bool logTcpProbe(uint32_t ip4, uint16_t port, const char *label) {
 
     int rc = connect(fd, reinterpret_cast<struct sockaddr *>(&dst), sizeof(dst));
     if (rc == 0) {
-        OTA_LOG("OTA diag: tcp %s connected immediately (%lu ms)",
+        ESP_LOGD(TAG, "OTA diag: tcp %s connected immediately (%lu ms)",
                 label, (unsigned long)(millis() - start));
         close(fd);
         return true;
     }
     if (errno != EINPROGRESS) {
-        OTA_LOG("OTA diag: tcp %s connect failed at once (errno=%d)", label, errno);
+        ESP_LOGD(TAG, "OTA diag: tcp %s connect failed at once (errno=%d)", label, errno);
         close(fd);
         return false;
     }
@@ -529,20 +532,20 @@ bool logTcpProbe(uint32_t ip4, uint16_t port, const char *label) {
         socklen_t len = sizeof(soErr);
         getsockopt(fd, SOL_SOCKET, SO_ERROR, &soErr, &len);
         if (soErr == 0) {
-            OTA_LOG("OTA diag: tcp %s CONNECTED in %lu ms (host reachable)",
+            ESP_LOGD(TAG, "OTA diag: tcp %s CONNECTED in %lu ms (host reachable)",
                     label, (unsigned long)elapsed);
             reachable = true;
         } else {
             reachable = (soErr == ECONNREFUSED);
-            OTA_LOG("OTA diag: tcp %s refused/failed in %lu ms (SO_ERROR=%d)%s",
+            ESP_LOGD(TAG, "OTA diag: tcp %s refused/failed in %lu ms (SO_ERROR=%d)%s",
                     label, (unsigned long)elapsed, soErr,
                     reachable ? " — host is reachable, port closed" : "");
         }
     } else if (sel == 0) {
-        OTA_LOG("OTA diag: tcp %s TIMED OUT after %lu ms — no response at all",
+        ESP_LOGD(TAG, "OTA diag: tcp %s TIMED OUT after %lu ms — no response at all",
                 label, (unsigned long)elapsed);
     } else {
-        OTA_LOG("OTA diag: tcp %s select() failed (errno=%d)", label, errno);
+        ESP_LOGD(TAG, "OTA diag: tcp %s select() failed (errno=%d)", label, errno);
     }
     close(fd);
     return reachable;
@@ -557,7 +560,7 @@ void explainNetworkFailure(const char *host) {
     // resolution works, the fault is downstream of DNS (TLS handshake, CA
     // bundle, cert validity) and none of the network probes below apply.
     if (probeGetAddrInfo(host, AF_INET, "AF_INET")) {
-        OTA_LOG("OTA verdict: %s resolves, so the failure is in the TLS/HTTP "
+        ESP_LOGW(TAG, "OTA verdict: %s resolves, so the failure is in the TLS/HTTP "
                 "layer, not the network — check the CA bundle and the clock",
                 host);
         return;
@@ -577,7 +580,7 @@ void explainNetworkFailure(const char *host) {
                             i ? "," : "", s.toString().c_str());
             if (off >= sizeof(servers)) break;
         }
-        OTA_LOG("OTA diag: resolvers=[%s] reset_reason=%d sntp_sync=%d",
+        ESP_LOGD(TAG, "OTA diag: resolvers=[%s] reset_reason=%d sntp_sync=%d",
                 servers, (int)esp_reset_reason(), (int)sntp_get_sync_status());
     }
 
@@ -588,7 +591,7 @@ void explainNetworkFailure(const char *host) {
     int probe = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (probe < 0) {
         socketsOk = false;
-        OTA_LOG("OTA diag: UDP socket allocation FAILED (errno=%d)", errno);
+        ESP_LOGD(TAG, "OTA diag: UDP socket allocation FAILED (errno=%d)", errno);
     } else {
         close(probe);
     }
@@ -606,25 +609,25 @@ void explainNetworkFailure(const char *host) {
     bool internetReachable = logTcpProbe(publicDns, 53, NET_FALLBACK_DNS_1 ":53");
 
     if (!socketsOk) {
-        OTA_LOG("OTA verdict: the network stack is out of sockets, so no lookup "
+        ESP_LOGW(TAG, "OTA verdict: the network stack is out of sockets, so no lookup "
                 "can be sent. This is a firmware socket leak, not a network fault.");
     } else if (!gatewayReachable) {
-        OTA_LOG("OTA verdict: gateway %s does not respond even over TCP. The WiFi "
+        ESP_LOGW(TAG, "OTA verdict: gateway %s does not respond even over TCP. The WiFi "
                 "link is associated but there is no working path to the router.",
                 WiFi.gatewayIP().toString().c_str());
     } else if (!internetReachable) {
         // The case seen in the field: LAN fine, nothing forwarded upstream.
-        OTA_LOG("OTA verdict: gateway %s is reachable but nothing upstream is — "
+        ESP_LOGW(TAG, "OTA verdict: gateway %s is reachable but nothing upstream is — "
                 "this device has no internet access. Check the router's access "
                 "policy (parental controls / MAC allow-list / guest isolation) "
                 "for %s (%s). Nothing in the firmware can work around it.",
                 WiFi.gatewayIP().toString().c_str(),
                 WiFi.localIP().toString().c_str(), WiFi.macAddress().c_str());
     } else if (!routerAnswers && !publicAnswers) {
-        OTA_LOG("OTA verdict: TCP works upstream but no DNS server answers over "
+        ESP_LOGW(TAG, "OTA verdict: TCP works upstream but no DNS server answers over "
                 "UDP/53 — UDP/53 egress is filtered on this network.");
     } else {
-        OTA_LOG("OTA verdict: a DNS server answers directly, yet lwIP's resolver "
+        ESP_LOGW(TAG, "OTA verdict: a DNS server answers directly, yet lwIP's resolver "
                 "still fails. Suspect the resolver configuration, not the network.");
     }
 }
@@ -639,7 +642,7 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
 
     InProgressGuard guard;
     if (!guard.ok()) {
-        OTA_LOG("check refused: another OTA in progress");
+        ESP_LOGW(TAG, "check refused: another OTA in progress");
         return false;
     }
 
@@ -660,7 +663,7 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
     // generic -1, surface it explicitly.
     wl_status_t wifi = WiFi.status();
     if (wifi != WL_CONNECTED) {
-        OTA_LOG("GitHub API check skipped: WiFi not connected (status=%d, mode=%d, heap=%u)",
+        ESP_LOGD(TAG, "GitHub API check skipped: WiFi not connected (status=%d, mode=%d, heap=%u)",
                 (int)wifi, (int)WiFi.getMode(), ESP.getFreeHeap());
         SemaphoreHandle_t m = checkResultMutex();
         if (xSemaphoreTake(m, portMAX_DELAY)) {
@@ -691,14 +694,14 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
 
         bool synced = waitForSync(30000);
         if (!synced && esp_sntp_enabled()) {
-            OTA_LOG("OTA check: SNTP first attempt did not complete within 30s — forcing fresh sync");
+            ESP_LOGD(TAG, "OTA check: SNTP first attempt did not complete within 30s — forcing fresh sync");
             esp_sntp_restart();
             synced = waitForSync(20000);
         }
 
         if (!synced) {
             time_t sys_time = time(nullptr);
-            OTA_LOG("OTA check aborted: system clock not synced after 50s total "
+            ESP_LOGW(TAG, "OTA check aborted: system clock not synced after 50s total "
                     "(epoch=%ld). lwip SNTP never delivered. UDP/123 or NTP server "
                     "DNS is likely blocked on this network; OTA over HTTPS cannot work.",
                     (long)sys_time);
@@ -714,12 +717,12 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
         gmtime_r(&sys_time, &timeinfo);
         char buf[32];
         strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &timeinfo);
-        OTA_LOG("OTA diag: rssi=%d ch=%d ip=%s sys_time=%s (%ld)",
+        ESP_LOGD(TAG, "OTA diag: rssi=%d ch=%d ip=%s sys_time=%s (%ld)",
                 (int)WiFi.RSSI(), (int)WiFi.channel(), WiFi.localIP().toString().c_str(),
                 buf, (long)sys_time);
     }
 
-    OTA_LOG("OTA diag: dns=%s gw=%s",
+    ESP_LOGD(TAG, "OTA diag: dns=%s gw=%s",
             WiFi.dnsIP().toString().c_str(), WiFi.gatewayIP().toString().c_str());
 #endif
 
@@ -740,7 +743,7 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
             checkState = CheckState::Failed;
             xSemaphoreGive(m);
         }
-        OTA_LOG("HTTP init failed");
+        ESP_LOGE(TAG, "HTTP init failed");
         return false;
     }
 
@@ -751,9 +754,9 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
         // EINPROGRESS is the in-flight state of a non-blocking connect, not a
         // fault, so don't present it as the reason for the failure.
         if (client.lastSocketErrno == 0 || client.lastSocketErrno == EINPROGRESS) {
-            OTA_LOG("GitHub API returned %d (free heap: %u)", status, ESP.getFreeHeap());
+            ESP_LOGW(TAG, "GitHub API returned %d (free heap: %u)", status, ESP.getFreeHeap());
         } else {
-            OTA_LOG("GitHub API returned %d (free heap: %u, errno=%d)",
+            ESP_LOGW(TAG, "GitHub API returned %d (free heap: %u, errno=%d)",
                     status, ESP.getFreeHeap(), client.lastSocketErrno);
         }
         client.drain();
@@ -777,7 +780,7 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
         client.drain();
 
         if (err) {
-            OTA_LOG("JSON parse error: %s (heap=%u)", err.c_str(), ESP.getFreeHeap());
+            ESP_LOGW(TAG, "JSON parse error: %s (heap=%u)", err.c_str(), ESP.getFreeHeap());
             SemaphoreHandle_t m = checkResultMutex();
             if (xSemaphoreTake(m, portMAX_DELAY)) {
                 checkState = CheckState::Failed;
@@ -814,7 +817,7 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
     doc.shrinkToFit();
 
     if (out.version.isEmpty() || out.downloadUrl.isEmpty() || out.size == 0) {
-        OTA_LOG("No usable release found (tag=%s, url=%s, size=%zu)",
+        ESP_LOGW(TAG, "No usable release found (tag=%s, url=%s, size=%zu)",
                 out.version.c_str(), out.downloadUrl.c_str(), out.size);
         SemaphoreHandle_t m = checkResultMutex();
         if (xSemaphoreTake(m, portMAX_DELAY)) {
@@ -833,7 +836,7 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
         xSemaphoreGive(m);
     }
 
-    OTA_LOG("Check OK: %s (%s, %zu bytes, %u changelog bytes)",
+    ESP_LOGI(TAG, "Check OK: %s (%s, %zu bytes, %u changelog bytes)",
             out.name.c_str(), out.version.c_str(), out.size, out.changelog.length());
     return true;
 }
@@ -844,14 +847,14 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
 
 bool doPerformUpdate(const String &downloadUrl, size_t expectedSize,
                      const std::function<void(int, size_t)> &onProgress) {
-    OTA_LOG("performUpdate: %s (%zu bytes)", downloadUrl.c_str(), expectedSize);
+    ESP_LOGI(TAG, "performUpdate: %s (%zu bytes)", downloadUrl.c_str(), expectedSize);
 
     if (expectedSize == 0) {
-        OTA_LOG("performUpdate: refused, expectedSize == 0");
+        ESP_LOGW(TAG, "performUpdate: refused, expectedSize == 0");
         return false;
     }
     if (ESP.getFreeHeap() < OTA_MIN_FREE_HEAP_BYTES) {
-        OTA_LOG("performUpdate: refused, heap=%u < %u", ESP.getFreeHeap(), OTA_MIN_FREE_HEAP_BYTES);
+        ESP_LOGW(TAG, "performUpdate: refused, heap=%u < %u", ESP.getFreeHeap(), OTA_MIN_FREE_HEAP_BYTES);
         return false;
     }
 
@@ -865,24 +868,24 @@ bool doPerformUpdate(const String &downloadUrl, size_t expectedSize,
 
     HttpClient client(cfg);
     if (!client) {
-        OTA_LOG("HTTP init failed");
+        ESP_LOGE(TAG, "HTTP init failed");
         return false;
     }
 
     int status = client.openWithRedirects();
     if (status != 200) {
-        OTA_LOG("download HTTP status %d (free heap: %u)", status, ESP.getFreeHeap());
+        ESP_LOGW(TAG, "download HTTP status %d (free heap: %u)", status, ESP.getFreeHeap());
         return false;
     }
 
     int64_t contentLen = esp_http_client_get_content_length(client.handle);
     if (contentLen > 0 && static_cast<size_t>(contentLen) != expectedSize) {
-        OTA_LOG("Content-Length mismatch: header=%lld expected=%zu", contentLen, expectedSize);
+        ESP_LOGW(TAG, "Content-Length mismatch: header=%lld expected=%zu", contentLen, expectedSize);
         return false;
     }
 
     if (!Update.begin(expectedSize, U_FLASH)) {
-        OTA_LOG("Update.begin failed: %s", Update.errorString());
+        ESP_LOGE(TAG, "Update.begin failed: %s", Update.errorString());
         return false;
     }
 
@@ -890,12 +893,12 @@ bool doPerformUpdate(const String &downloadUrl, size_t expectedSize,
     OtaVerifyContext verify;
     String hashHex;
     if (!fetchExpectedSha256(downloadUrl, hashHex)) {
-        OTA_LOG("SHA-256 file missing or malformed (strict mode)");
+        ESP_LOGE(TAG, "SHA-256 file missing or malformed (strict mode)");
         Update.abort();
         return false;
     }
     if (!parseHexSha256(hashHex, verify.expected)) {
-        OTA_LOG("SHA-256 hex parse failed");
+        ESP_LOGE(TAG, "SHA-256 hex parse failed");
         Update.abort();
         return false;
     }
@@ -912,7 +915,7 @@ bool doPerformUpdate(const String &downloadUrl, size_t expectedSize,
         if (n > 0) {
             size_t written = Update.write(buffer, n);
             if (written != static_cast<size_t>(n)) {
-                OTA_LOG("Flash write failed: %d vs %d (%s)", written, n, Update.errorString());
+                ESP_LOGE(TAG, "Flash write failed: %d vs %d (%s)", written, n, Update.errorString());
                 Update.abort();
                 return false;
             }
@@ -928,19 +931,19 @@ bool doPerformUpdate(const String &downloadUrl, size_t expectedSize,
             vTaskDelay(1);
         } else if (n == 0) {
             // EOF before expectedSize reached
-            OTA_LOG("Unexpected EOF at %zu/%zu bytes", totalRead, expectedSize);
+            ESP_LOGW(TAG, "Unexpected EOF at %zu/%zu bytes", totalRead, expectedSize);
             Update.abort();
             return false;
         } else {
             // n < 0 -> error
-            OTA_LOG("esp_http_client_read error: %d", n);
+            ESP_LOGE(TAG, "esp_http_client_read error: %d", n);
             Update.abort();
             return false;
         }
 
         // Idle-timeout watchdog
         if (millis() - lastDataReceived > 60000) {
-            OTA_LOG("Download stalled (no bytes for 60s, %zu/%zu)", totalRead, expectedSize);
+            ESP_LOGW(TAG, "Download stalled (no bytes for 60s, %zu/%zu)", totalRead, expectedSize);
             Update.abort();
             return false;
         }
@@ -948,19 +951,19 @@ bool doPerformUpdate(const String &downloadUrl, size_t expectedSize,
 
 #if OTA_ENABLE_SHA256_VERIFICATION
     if (!verify.finishAndCheck()) {
-        OTA_LOG("SHA-256 mismatch - aborting");
+        ESP_LOGE(TAG, "SHA-256 mismatch - aborting");
         Update.abort();
         return false;
     }
-    OTA_LOG("SHA-256 verified OK");
+    ESP_LOGI(TAG, "SHA-256 verified OK");
 #endif
 
     if (!Update.end(false)) {
-        OTA_LOG("Update.end failed: %s", Update.errorString());
+        ESP_LOGE(TAG, "Update.end failed: %s", Update.errorString());
         return false;
     }
 
-    OTA_LOG("Flashed %zu bytes", totalRead);
+    ESP_LOGI(TAG, "Flashed %zu bytes", totalRead);
     return true;
 }
 
@@ -980,7 +983,7 @@ void otaCheckTask(void *arg) {
     doCheckForUpdate(owner, repo, info);
 
     UBaseType_t hwm = uxTaskGetStackHighWaterMark(nullptr);
-    OTA_LOG("ota_check HWM=%u words", hwm);
+    ESP_LOGD(TAG, "ota_check HWM=%u words", hwm);
     vTaskDelete(nullptr);
 }
 
@@ -1021,7 +1024,7 @@ void otaWorkerTask(void *arg) {
             progress.percent = 100;
             xSemaphoreGive(m);
         }
-        OTA_LOG("OTA update successful - scheduling restart in 2000ms");
+        ESP_LOGI(TAG, "OTA update successful - scheduling restart in 2000ms");
         if (s_config) s_config->requestRestart(2000);
     } else {
         SemaphoreHandle_t m = progressMutex();
@@ -1030,7 +1033,7 @@ void otaWorkerTask(void *arg) {
             progress.error_message = "flash failed";
             xSemaphoreGive(m);
         }
-        OTA_LOG("OTA update failed");
+        ESP_LOGE(TAG, "OTA update failed");
     }
 
     // If we're heading for restart (ok path), leave the show suspended. On
@@ -1042,7 +1045,7 @@ void otaWorkerTask(void *arg) {
     updateInProgress.store(false);
 
     UBaseType_t hwm = uxTaskGetStackHighWaterMark(nullptr);
-    OTA_LOG("ota_update HWM=%u words", hwm);
+    ESP_LOGD(TAG, "ota_update HWM=%u words", hwm);
     vTaskDelete(nullptr);
 }
 
@@ -1055,7 +1058,7 @@ void otaWorkerTask(void *arg) {
 bool OTAUpdater::startBackgroundCheck(const char *owner, const char *repo) {
     bool expected = false;
     if (updateInProgress.load()) {
-        OTA_LOG("startBackgroundCheck refused: updateInProgress already true");
+        ESP_LOGW(TAG, "startBackgroundCheck refused: updateInProgress already true");
         return false;
     }
     {
@@ -1063,7 +1066,7 @@ bool OTAUpdater::startBackgroundCheck(const char *owner, const char *repo) {
         if (xSemaphoreTake(m, portMAX_DELAY)) {
             if (checkState == CheckState::InProgress) {
                 xSemaphoreGive(m);
-                OTA_LOG("startBackgroundCheck refused: check already in progress");
+                ESP_LOGW(TAG, "startBackgroundCheck refused: check already in progress");
                 return false;
             }
             // We don't set checkState here - the worker task does that.
@@ -1079,7 +1082,7 @@ bool OTAUpdater::startBackgroundCheck(const char *owner, const char *repo) {
         otaCheckTask, "ota_check", OTA_CHECK_TASK_STACK, job, 1, nullptr, 1);
     if (rc != pdPASS) {
         delete job;
-        OTA_LOG("xTaskCreate for ota_check failed");
+        ESP_LOGE(TAG, "xTaskCreate for ota_check failed");
         return false;
     }
     return true;
@@ -1088,7 +1091,7 @@ bool OTAUpdater::startBackgroundCheck(const char *owner, const char *repo) {
 bool OTAUpdater::startBackgroundUpdateFromLatestCheck(bool force) {
     bool expected = false;
     if (!updateInProgress.compare_exchange_strong(expected, true)) {
-        OTA_LOG("startBackgroundUpdate refused: updateInProgress already true");
+        ESP_LOGW(TAG, "startBackgroundUpdate refused: updateInProgress already true");
         return false;
     }
 
@@ -1099,7 +1102,7 @@ bool OTAUpdater::startBackgroundUpdateFromLatestCheck(bool force) {
             if (checkState != CheckState::Done) {
                 xSemaphoreGive(m);
                 updateInProgress.store(false);
-                OTA_LOG("startBackgroundUpdate refused: no successful check");
+                ESP_LOGW(TAG, "startBackgroundUpdate refused: no successful check");
                 return false;
             }
             info = checkResult;
@@ -1112,12 +1115,12 @@ bool OTAUpdater::startBackgroundUpdateFromLatestCheck(bool force) {
 
     if (!info.isValid || info.size == 0 || info.downloadUrl.isEmpty()) {
         updateInProgress.store(false);
-        OTA_LOG("startBackgroundUpdate refused: info incomplete");
+        ESP_LOGW(TAG, "startBackgroundUpdate refused: info incomplete");
         return false;
     }
     if (!info.downloadUrl.startsWith("https://github.com/")) {
         updateInProgress.store(false);
-        OTA_LOG("startBackgroundUpdate refused: url not from github.com (%s)", info.downloadUrl.c_str());
+        ESP_LOGW(TAG, "startBackgroundUpdate refused: url not from github.com (%s)", info.downloadUrl.c_str());
         return false;
     }
 
@@ -1126,12 +1129,12 @@ bool OTAUpdater::startBackgroundUpdateFromLatestCheck(bool force) {
         const std::string current(FIRMWARE_VERSION);
         if (!ota::isNewerVersion(latest, current)) {
             updateInProgress.store(false);
-            OTA_LOG("startBackgroundUpdate refused: %s is not newer than %s (force=false)",
+            ESP_LOGW(TAG, "startBackgroundUpdate refused: %s is not newer than %s (force=false)",
                     info.version.c_str(), FIRMWARE_VERSION);
             return false;
         }
     } else {
-        OTA_LOG("Forced update: installing %s over %s", info.version.c_str(), FIRMWARE_VERSION);
+        ESP_LOGI(TAG, "Forced update: installing %s over %s", info.version.c_str(), FIRMWARE_VERSION);
     }
 
     auto *job = new OtaUpdateJob{info.downloadUrl, info.size, force};
@@ -1141,7 +1144,7 @@ bool OTAUpdater::startBackgroundUpdateFromLatestCheck(bool force) {
     if (rc != pdPASS) {
         delete job;
         updateInProgress.store(false);
-        OTA_LOG("xTaskCreate for ota_update failed");
+        ESP_LOGE(TAG, "xTaskCreate for ota_update failed");
         return false;
     }
     return true;
@@ -1214,13 +1217,13 @@ bool OTAUpdater::performUpdate(const String &downloadUrl, size_t expectedSize,
 // ---------------------------------------------------------------------------
 
 bool OTAUpdater::confirmBoot() {
-    OTA_LOG("Confirming OTA boot");
+    ESP_LOGI(TAG, "Confirming OTA boot");
     esp_err_t err = esp_ota_mark_app_valid_cancel_rollback();
     if (err != ESP_OK) {
-        OTA_LOG("Boot confirmation failed: %s", esp_err_to_name(err));
+        ESP_LOGE(TAG, "Boot confirmation failed: %s", esp_err_to_name(err));
         return false;
     }
-    OTA_LOG("Boot confirmed - rollback disabled");
+    ESP_LOGI(TAG, "Boot confirmed - rollback disabled");
     return true;
 }
 

@@ -242,12 +242,23 @@ ESP.restart();
 ### Show Selection UI Behavior
 Shows with parameters should NOT auto-start when selected from dropdown - they must wait for user to click "Apply Parameters". Add show name to `showsWithParams` array in the change event handler.
 
-### Serial Logging
-Use `Serial.printf()` for formatted debug output. Key points to log:
-- Show creation with parameters
-- Network state changes (AP/STA mode)
-- Configuration changes
-- LED task statistics (every 10 seconds)
+### Logging
+Use the `ESP_LOGx(TAG, fmt, ...)` macros from `src/Log.h` for all logging — never call `Serial.printf` directly outside `src/Log.cpp`.
+
+Each `.cpp` file that logs declares `static const char* TAG = "<shorttag>";` at file scope and uses it as the first argument to every `ESP_LOGx` call. Tags are a single short word (1–6 lowercase chars): `main`, `net`, `http`, `cfg`, `ctrl`, `show`, `timer`, `touch`, `led`, `strip`, `ota`.
+
+**Levels:**
+- `E` — something is broken, the operator needs to know now
+- `W` — something is wrong but the device recovered / is recovering
+- `I` — state changes and lifecycle (boot, connect, switch show, save config)
+- `D` — per-iteration or periodic detail useful when chasing a bug (silenced at `CORE_DEBUG_LEVEL=0`)
+- `V` — below D, currently unused in this codebase
+
+Format on Arduino: `00000123 I    net WiFi connected\r\n` (8-digit ms timestamp + level letter + 6-char tag + message). On native (test) builds all `ESP_LOGx` macros expand to empty stubs — no `Serial` reference, no Arduino dependency.
+
+`CORE_DEBUG_LEVEL` defaults to `0` (D/V compiled out). To enable debug logs at build time: `pio run -e adafruit_qtpy_esp32s3_nopsram -DCORE_DEBUG_LEVEL=4`.
+
+Key points worth logging: show creation with parameters, network state changes (AP/STA mode), configuration changes, OTA state transitions, factory reset.
 
 ## File Locations
 

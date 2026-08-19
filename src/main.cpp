@@ -1,5 +1,6 @@
 #include <memory>
 
+#include "Log.h"
 #include "Network.h"
 #include "Config.h"
 #include "WebServerManager.h"
@@ -8,6 +9,8 @@
 #include "strip/Base.h"
 #include "task/LedShow.h"
 #include "OTAUpdater.h"
+
+static const char* TAG = "main";
 
 
 TaskHandle_t networkTaskHandle = nullptr;
@@ -20,7 +23,7 @@ Network network(config, showController);
 
 void setup() {
     delay(1000);
-    Serial.println("Started");
+    Serial.println("");
     // config.reset();
     config.begin();
     OTAUpdater::setConfig(&config);
@@ -30,7 +33,7 @@ void setup() {
     Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
     uint16_t num_pixels = deviceConfig.num_pixels;
     uint8_t led_pin = deviceConfig.led_pin;
-    Serial.printf("Initializing LED strip with %u pixels on pin %u\n", num_pixels, led_pin);
+    ESP_LOGI(TAG, "Initializing LED strip with %u pixels on pin %u", num_pixels, led_pin);
 
     // Initialize base strip with configured pin and number of pixels
     try {
@@ -39,13 +42,13 @@ void setup() {
         // Set layout pointers for runtime reconfiguration
         showController.setStrip(std::move(base));
     } catch (const std::exception &e) {
-        Serial.printf("Error initializing LED strip: %s\n", e.what());
+        ESP_LOGE(TAG, "Error initializing LED strip: %s", e.what());
     } catch (...) {
-        Serial.println("Unknown error initializing LED strip");
+        ESP_LOGE(TAG, "Unknown error initializing LED strip");
     }
 #endif
 
-    
+
     // Initialize show controller
     showController.begin();
 
@@ -56,17 +59,17 @@ void setup() {
     try {
         ledShow.startTask();
     } catch (const std::exception &e) {
-        Serial.printf("Error starting LED show task: %s\n", e.what());
+        ESP_LOGE(TAG, "Error starting LED show task: %s", e.what());
     } catch (...) {
-        Serial.println("Unknown error starting LED show task");
+        ESP_LOGE(TAG, "Unknown error starting LED show task");
     }
 
     try {
         network.startTask();
     } catch (const std::exception &e) {
-        Serial.printf("Error starting network task: %s\n", e.what());
+        ESP_LOGE(TAG, "Error starting network task: %s", e.what());
     } catch (...) {
-        Serial.println("Unknown error starting network task");
+        ESP_LOGE(TAG, "Unknown error starting network task");
     }
 }
 

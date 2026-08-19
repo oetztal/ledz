@@ -88,18 +88,15 @@
 // Logging
 // ============================================================================
 
-#define OTA_DEBUG_LOGGING 1
 #define OTA_LOG_MEMORY 1
 
 // ============================================================================
 // Derived Configuration
 // ============================================================================
 
-#ifdef OTA_DEBUG_LOGGING
-#define OTA_LOG(fmt, ...) Serial.printf("[OTA] " fmt "\n", ##__VA_ARGS__)
-#else
-#define OTA_LOG(fmt, ...)
-#endif
+// OTA logging goes through the standard ESP_LOG* macros in src/Log.h
+// with TAG = "ota". Gating is via CORE_DEBUG_LEVEL (D requires >= 4).
+// See src/OTAUpdater.cpp and docs/structured-logging.
 
 // ============================================================================
 // Example: How to Use These Settings

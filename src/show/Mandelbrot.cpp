@@ -1,12 +1,15 @@
 #include <sstream>
 
 #include "Mandelbrot.h"
+#include "../Log.h"
 
 #ifdef ARDUINO
 #include <USBCDC.h>
 #endif
 
 #include "color.h"
+
+static const char* TAG = "show";
 
 namespace Show {
     std::tuple<float, float> Mandelbrot::func(float zre, float zim, float cre, float cim) {
@@ -22,9 +25,7 @@ namespace Show {
     void Mandelbrot::log_result(unsigned long long j, float cre) {
         std::stringstream ss;
         ss << j << "(" << cre << ") [" << c_im_min << ", " << c_im_max << "], " << max_iterations;
-#ifdef ARDUINO
-        Serial.println(ss.str().c_str());
-#endif
+        ESP_LOGD(TAG, "%s", ss.str().c_str());
     }
 
     void Mandelbrot::execute(Strip::Strip &strip, Iteration iteration) {

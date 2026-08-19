@@ -3,6 +3,7 @@
 .idea
 .claude
 .opencode
+.mcp.json
 
 # Auto-generated compressed web content
 src/generated/

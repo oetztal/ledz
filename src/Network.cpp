@@ -9,6 +9,7 @@
 
 #include "Network.h"
 #include "Config.h"
+#include "Log.h"
 #include "DeviceId.h"
 #include "WebServerManager.h"
 #include "OTAUpdater.h"
@@ -17,6 +18,8 @@
 #ifdef ARDUINO
 #include <set>
 #endif
+
+static const char* TAG = "net";
 
 Network::Network(Config::ConfigManager &config, ShowController &showController)
     : config(config), showController(showController), mode(NetworkMode::NONE), webServer(nullptr)
@@ -44,23 +47,19 @@ void Network::startAP() {
     // Get device ID for AP SSID
     String ap_ssid = "ledz " + DeviceId::getDeviceId();
 
-    Serial.print("Starting Access Point: ");
-    Serial.println(ap_ssid.c_str());
+    ESP_LOGI(TAG, "Starting Access Point: %s", ap_ssid.c_str());
 
     // Start open AP (no password)
     WiFi.softAP(ap_ssid.c_str());
 
     IPAddress ip_address = WiFi.softAPIP();
-    Serial.print("AP IP address: ");
-    Serial.println(ip_address);
+    ESP_LOGI(TAG, "AP IP address: %s", ip_address.toString().c_str());
 
     // Start mDNS responder
     String hostname = generateHostname();
 
     if (MDNS.begin(hostname.c_str())) {
-        Serial.print("mDNS responder started: ");
-        Serial.print(hostname);
-        Serial.println(".local");
+        ESP_LOGI(TAG, "mDNS responder started: %s.local", hostname.c_str());
 
         // Load device config for custom name
         Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
@@ -75,13 +74,12 @@ void Network::startAP() {
             instanceName = "ledz " + String(deviceConfig.device_id);
         }
         MDNS.setInstanceName(instanceName.c_str());
-        Serial.print("mDNS instance name: ");
-        Serial.println(instanceName);
+        ESP_LOGI(TAG, "mDNS instance name: %s", instanceName.c_str());
 
         // Advertise HTTP service
         MDNS.addService("http", "tcp", 80);
     } else {
-        Serial.println("Error starting mDNS responder!");
+        ESP_LOGE(TAG, "Error starting mDNS responder!");
     }
 
     // Start captive portal (redirects all DNS to this device)
@@ -110,14 +108,13 @@ void Network::startSTA(const char *ssid, const char *password) {
     // Reducing from the 19.5 dBm maximum saves significant transmitter power.
     WiFi.setTxPower(WIFI_POWER_13dBm);
 
-    Serial.println("WiFi Configuration:");
-    Serial.printf("  Power save: MIN_MODEM\n");
-    Serial.printf("  TX Power: 13dBm\n");
+    ESP_LOGI(TAG, "WiFi Configuration:");
+    ESP_LOGI(TAG, "  Power save: MIN_MODEM");
+    ESP_LOGI(TAG, "  TX Power: 13dBm");
 
     WiFi.begin(ssid, password);
 
-    Serial.print("Connecting to WiFi ...");
-    Serial.println(ssid);
+    ESP_LOGI(TAG, "Connecting to WiFi ... %s", ssid);
 
     // Wait for connection with timeout
     int attempts = 0;
@@ -129,32 +126,28 @@ void Network::startSTA(const char *ssid, const char *password) {
     }
 
     if (WiFi.status() == WL_CONNECTED) {
-        Serial.println("WiFi connected");
+        ESP_LOGI(TAG, "WiFi connected");
 
-        Serial.print("IP address: ");
-        Serial.println(WiFi.localIP());
+        ESP_LOGI(TAG, "IP address: %s", WiFi.localIP().toString().c_str());
 
-        // Print detailed WiFi diagnostics
-        Serial.println("\nWiFi Diagnostics:");
-        Serial.printf("  SSID: %s\n", WiFi.SSID().c_str());
-        Serial.printf("  BSSID: %s\n", WiFi.BSSIDstr().c_str());
-        Serial.printf("  Channel: %d\n", WiFi.channel());
-        Serial.printf("  RSSI: %d dBm\n", WiFi.RSSI());
-        Serial.printf("  MAC: %s\n", WiFi.macAddress().c_str());
-        Serial.printf("  Gateway: %s\n", WiFi.gatewayIP().toString().c_str());
-        Serial.printf("  DNS: %s\n", WiFi.dnsIP().toString().c_str());
-        Serial.printf("  TX Power: %d\n", WiFi.getTxPower());
-        Serial.printf("  Sleep Mode: %d (1=MIN_MODEM)\n", WiFi.getSleep());
-        Serial.printf("  Auto Reconnect: %d\n", WiFi.getAutoReconnect());
-        Serial.println();
+        // Print detailed WiFi diagnostics (verbose block, debug-only)
+        ESP_LOGD(TAG, "WiFi Diagnostics:");
+        ESP_LOGD(TAG, "  SSID: %s", WiFi.SSID().c_str());
+        ESP_LOGD(TAG, "  BSSID: %s", WiFi.BSSIDstr().c_str());
+        ESP_LOGD(TAG, "  Channel: %d", WiFi.channel());
+        ESP_LOGD(TAG, "  RSSI: %d dBm", WiFi.RSSI());
+        ESP_LOGD(TAG, "  MAC: %s", WiFi.macAddress().c_str());
+        ESP_LOGD(TAG, "  Gateway: %s", WiFi.gatewayIP().toString().c_str());
+        ESP_LOGD(TAG, "  DNS: %s", WiFi.dnsIP().toString().c_str());
+        ESP_LOGD(TAG, "  TX Power: %d", WiFi.getTxPower());
+        ESP_LOGD(TAG, "  Sleep Mode: %d (1=MIN_MODEM)", WiFi.getSleep());
+        ESP_LOGD(TAG, "  Auto Reconnect: %d", WiFi.getAutoReconnect());
 
         // Start mDNS responder
         String hostname = generateHostname();
 
         if (MDNS.begin(hostname.c_str())) {
-            Serial.print("mDNS responder started: ");
-            Serial.print(hostname);
-            Serial.println(".local");
+            ESP_LOGI(TAG, "mDNS responder started: %s.local", hostname.c_str());
 
             // Load device config for custom name
             Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
@@ -169,20 +162,16 @@ void Network::startSTA(const char *ssid, const char *password) {
                 instanceName = "ledz " + String(deviceConfig.device_id);
             }
             MDNS.setInstanceName(instanceName.c_str());
-            Serial.print("mDNS instance name: ");
-            Serial.println(instanceName);
+            ESP_LOGI(TAG, "mDNS instance name: %s", instanceName.c_str());
 
             // Advertise HTTP service
             MDNS.addService("http", "tcp", 80);
 
-            Serial.println("You can now access ledz at:");
-            Serial.print("  http://");
-            Serial.print(hostname);
-            Serial.println(".local/");
-            Serial.print("  or http://");
-            Serial.println(WiFi.localIP());
+            ESP_LOGI(TAG, "You can now access ledz at:");
+            ESP_LOGI(TAG, "  http://%s.local/", hostname.c_str());
+            ESP_LOGI(TAG, "  or http://%s", WiFi.localIP().toString().c_str());
         } else {
-            Serial.println("Error starting mDNS responder!");
+            ESP_LOGE(TAG, "Error starting mDNS responder!");
         }
 
         // Install public resolvers in lwIP's spare server slots, keeping the
@@ -199,7 +188,7 @@ void Network::startSTA(const char *ssid, const char *password) {
             if (existing && !ip_addr_isany(existing)) continue;  // respect DHCP-supplied
             dns_setserver(slot, &fallback);
         }
-        Serial.printf("  Resolvers: %s, %s, %s\n",
+        ESP_LOGD(TAG, "  Resolvers: %s, %s, %s",
                       WiFi.dnsIP(0).toString().c_str(),
                       WiFi.dnsIP(1).toString().c_str(),
                       WiFi.dnsIP(2).toString().c_str());
@@ -218,15 +207,14 @@ void Network::startSTA(const char *ssid, const char *password) {
         // one DNS round-trip or UDP-port-123 detour is flaky.
         configTime(0, 0, "pool.ntp.org", "time.nist.gov", "time.cloudflare.com");
 
-        Serial.print("NTP time: ");
-        Serial.println(ntpClient.getFormattedTime());
+        ESP_LOGI(TAG, "NTP time: %s", ntpClient.getFormattedTime());
 
         // Initialize timer scheduler
         timerScheduler = std::make_unique<TimerScheduler>(config, showController);
         timerScheduler->begin();
         timerScheduler->setNtpAvailable(true);
     } else {
-        Serial.println("\nConnection failed");
+        ESP_LOGW(TAG, "Connection failed");
     }
 #endif
 }
@@ -244,14 +232,14 @@ void Network::configureUsingAPMode() {
         captivePortal.handleClient(); // Handle DNS requests
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
-    Serial.println("Configuration received");
+    ESP_LOGI(TAG, "Configuration received");
 
     vTaskDelay(5000 / portTICK_PERIOD_MS);
 
-    Serial.println("Stopping captive portal");
+    ESP_LOGI(TAG, "Stopping captive portal");
     captivePortal.end();
 
-    Serial.println("Scheduling restart");
+    ESP_LOGI(TAG, "Scheduling restart");
     config.requestRestart(1000);
 
     // Stay in loop until main loop restarts us
@@ -262,7 +250,7 @@ void Network::configureUsingAPMode() {
 
 [[noreturn]] void Network::task() {
 #ifdef ARDUINO
-    Serial.println("Network task started");
+    ESP_LOGI(TAG, "Network task started");
 
     // Initialize touch controller early (works without WiFi)
     touchController = std::make_unique<TouchController>(config, showController);
@@ -270,19 +258,18 @@ void Network::configureUsingAPMode() {
 
     // Check if WiFi is configured
     if (!config.isConfigured()) {
-        Serial.println("No WiFi configuration found - starting AP mode");
+        ESP_LOGW(TAG, "No WiFi configuration found - starting AP mode");
 
         configureUsingAPMode();
     }
-    Serial.println("Network task configured");
+    ESP_LOGI(TAG, "Network task configured");
 
     // Check connection failure count
     uint8_t failures = config.getConnectionFailures();
-    Serial.print("Previous connection failures: ");
-    Serial.println(failures);
+    ESP_LOGI(TAG, "Previous connection failures: %u", failures);
 
     if (failures >= 3) {
-        Serial.println("Too many connection failures - starting AP mode for reconfiguration");
+        ESP_LOGW(TAG, "Too many connection failures - starting AP mode for reconfiguration");
         config.markUnconfigured();
         config.resetConnectionFailures();
         configureUsingAPMode();
@@ -291,19 +278,18 @@ void Network::configureUsingAPMode() {
     // Load WiFi configuration
     Config::WiFiConfig wifiConfig = config.loadWiFiConfig();
 
-    Serial.println("WiFi configured - starting STA mode");
+    ESP_LOGI(TAG, "WiFi configured - starting STA mode");
 
     // Start Station mode
     startSTA(wifiConfig.ssid, wifiConfig.password);
 
     // Check if connection succeeded
     if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("Failed to connect - incrementing failure counter");
+        ESP_LOGW(TAG, "Failed to connect - incrementing failure counter");
         uint8_t newFailures = config.incrementConnectionFailures();
-        Serial.print("New failure count: ");
-        Serial.println(newFailures);
+        ESP_LOGI(TAG, "New failure count: %u", newFailures);
 
-        Serial.println("Restarting...");
+        ESP_LOGI(TAG, "Restarting...");
         vTaskDelay(2000 / portTICK_PERIOD_MS);
         ESP.restart();
     }
@@ -315,8 +301,8 @@ void Network::configureUsingAPMode() {
     webServer = std::make_unique<OperationalWebServerManager>(config, *this, showController);
     webServer->begin();
 
-    Serial.println("Webserver started - system ready");
-    Serial.printf("Free heap: %u bytes\n", ESP.getFreeHeap());
+    ESP_LOGI(TAG, "Webserver started - system ready");
+    ESP_LOGD(TAG, "Free heap: %u bytes", ESP.getFreeHeap());
 
     // Main loop - NTP updates and touch control
     auto lastNtpUpdate = ntpClient.getEpochTime();
@@ -342,13 +328,13 @@ void Network::configureUsingAPMode() {
 
             auto wl_status = WiFi.status();
             if (now - lastCheck > 1100) {
-                Serial.printf("WiFi status: %d delayed %lu\n", wl_status, now - lastCheck);
+                ESP_LOGD(TAG, "WiFi status: %d delayed %lu", wl_status, now - lastCheck);
             }
             lastCheck = now;
 
             // Check WiFi connection
             if (wl_status != WL_CONNECTED) {
-                Serial.println("WiFi disconnected - reconnecting ...");
+                ESP_LOGW(TAG, "WiFi disconnected - reconnecting ...");
                 WiFi.reconnect();
 
                 int attempts = 0;
@@ -358,16 +344,15 @@ void Network::configureUsingAPMode() {
                 }
 
                 if (WiFi.status() == WL_CONNECTED) {
-                    Serial.printf("WiFi reconnected (%d attempts)\n", attempts);
+                    ESP_LOGI(TAG, "WiFi reconnected (%d attempts)", attempts);
                 }
             }
 
             if (ntpClient.getEpochTime() - lastNtpUpdate > 600) {
                 bool result = ntpClient.update();
-                Serial.print("NTP update: ");
-                Serial.print(ntpClient.getFormattedTime());
-                Serial.print(" - ");
-                Serial.println(result ? "success" : "failed");
+                ESP_LOGD(TAG, "NTP update: %s - %s",
+                               ntpClient.getFormattedTime(),
+                               result ? "success" : "failed");
                 lastNtpUpdate = ntpClient.getEpochTime();
             }
 
@@ -384,7 +369,7 @@ void Network::configureUsingAPMode() {
                                      (webServer && webServer->hasServedAnyRequest());
                 if (minUptime && servedRequest) {
                     if (OTAUpdater::confirmBoot()) {
-                        Serial.printf("Auto-confirmed after %lu ms uptime\n", now - bootTimeMs);
+                        ESP_LOGI(TAG, "Auto-confirmed after %lu ms uptime", now - bootTimeMs);
                     }
                 }
             }
@@ -406,7 +391,7 @@ void Network::startTask() {
 }
 
 void Network::taskWrapper(void *pvParameters) {
-    Serial.println("Network: taskWrapper()");
+    ESP_LOGI(TAG, "taskWrapper()");
     auto *instance = static_cast<Network *>(pvParameters);
     instance->task();
 }

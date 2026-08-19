@@ -3,6 +3,7 @@
 #include <cstdio>
 
 #include "Config.h"
+#include "Log.h"
 #include "Network.h"
 #include "ShowController.h"
 #include "ShowFactory.h"
@@ -45,6 +46,8 @@ static const char* JSON_KEY_SHOW_PARAMS = "show_params";
 static const char* JSON_RESPONSE_SUCCESS = "{\"success\":true}";
 static const char* JSON_RESPONSE_ERROR_INVALID_JSON = "{\"success\":false,\"error\":\"Invalid JSON\"}";
 static const char* JSON_RESPONSE_ERROR_QUEUE_FULL = "{\"success\":false,\"error\":\"Queue full\"}";
+
+static const char* TAG = "http";
 
 // API Paths
 static const char* API_PATH_WIFI = "/api/wifi";
@@ -96,13 +99,13 @@ void AccessLogger::run(AsyncWebServerRequest *request, ArMiddlewareNext next) {
 
     AsyncWebServerResponse *response = request->getResponse();
     if (response) {
-        snprintf(logBuf, sizeof(logBuf), "[HTTP] %s %s %s (%u ms) %u",
+        snprintf(logBuf, sizeof(logBuf), "%s %s %s (%u ms) %u",
                  ip, url, method, elapsed, response->code());
     } else {
-        snprintf(logBuf, sizeof(logBuf), "[HTTP] %s %s %s (%u ms) (no response)",
+        snprintf(logBuf, sizeof(logBuf), "%s %s %s (%u ms) (no response)",
                  ip, url, method, elapsed);
     }
-    _out->println(logBuf);
+    ESP_LOGD(TAG, "%s", logBuf);
 }
 
 void WebServerManager::setupCommonRoutes() {
@@ -121,7 +124,7 @@ void WebServerManager::setupCommonRoutes() {
 
 void WebServerManager::setupConfigRoutes() {
 #ifdef ARDUINO
-    Serial.println("Setting up config routes...");
+    ESP_LOGI(TAG, "Setting up config routes...");
 
     setupCommonRoutes();
 
@@ -145,7 +148,7 @@ void WebServerManager::setupConfigRoutes() {
 
 void WebServerManager::setupAPIRoutes() {
 #ifdef ARDUINO
-    Serial.println("Setting up API routes...");
+    ESP_LOGI(TAG, "Setting up API routes...");
 
     setupCommonRoutes();
 
@@ -613,7 +616,7 @@ void WebServerManager::setupAPIRoutes() {
                       wifiConfig.configured = true;
                       config.saveWiFiConfig(wifiConfig);
 
-                      Serial.printf("WiFi credentials updated: SSID=%s\n", wifiConfig.ssid);
+                      ESP_LOGI(TAG, "WiFi credentials updated: SSID=%s", wifiConfig.ssid);
 
                       // Send success response and restart
                       request->send(200, CONTENT_TYPE_JSON,
@@ -653,7 +656,7 @@ void WebServerManager::setupAPIRoutes() {
                       deviceConfig.device_name[sizeof(deviceConfig.device_name) - 1] = '\0';
                       config.saveDeviceConfig(deviceConfig);
 
-                      Serial.printf("Device name updated: %s\n", deviceConfig.device_name);
+                      ESP_LOGI(TAG, "Device name updated: %s", deviceConfig.device_name);
 
                       // Send success response (no restart needed)
                       request->send(200, CONTENT_TYPE_JSON, "{\"success\":true}");
@@ -692,7 +695,7 @@ void WebServerManager::setupAPIRoutes() {
                           }
 
                           deviceConfig.num_pixels = num_pixels;
-                          Serial.printf("Number of pixels updated: %u\n", num_pixels);
+                          ESP_LOGI(TAG, "Number of pixels updated: %u", num_pixels);
                           changed = true;
                       }
 
@@ -707,7 +710,7 @@ void WebServerManager::setupAPIRoutes() {
                           }
 
                           deviceConfig.led_pin = led_pin;
-                          Serial.printf("LED pin updated: %u\n", led_pin);
+                          ESP_LOGI(TAG, "LED pin updated: %u", led_pin);
                           changed = true;
                       }
 
@@ -722,7 +725,7 @@ void WebServerManager::setupAPIRoutes() {
                           }
 
                           deviceConfig.gamma_mode = static_cast<Config::GammaMode>(gamma_mode);
-                          Serial.printf("Gamma mode updated: %d\n", gamma_mode);
+                          ESP_LOGI(TAG, "Gamma mode updated: %d", gamma_mode);
                           changed = true;
                       }
 
@@ -737,7 +740,7 @@ void WebServerManager::setupAPIRoutes() {
                           }
 
                           deviceConfig.cycle_time = cycle_time;
-                          Serial.printf("Cycle time updated: %u ms\n", cycle_time);
+                          ESP_LOGI(TAG, "Cycle time updated: %u ms", cycle_time);
                           changed = true;
                       }
 
@@ -760,7 +763,7 @@ void WebServerManager::setupAPIRoutes() {
 
     // POST /api/settings/factory-reset - Factory reset device
     server.on("/api/settings/factory-reset", HTTP_POST, [this](AsyncWebServerRequest *request) {
-        Serial.println("Factory reset requested");
+        ESP_LOGW(TAG, "Factory reset requested");
 
         // Send success response first
         request->send(200, CONTENT_TYPE_JSON,
@@ -769,7 +772,7 @@ void WebServerManager::setupAPIRoutes() {
         // Clear all configuration
         config.reset();
 
-        Serial.println("All settings cleared");
+        ESP_LOGW(TAG, "All settings cleared");
 
         // Request deferred restart
         config.requestRestart(1000);
@@ -1414,8 +1417,7 @@ void WebServerManager::handleWiFiConfig(AsyncWebServerRequest *request, uint8_t 
         // Save configuration
         config.saveWiFiConfig(wifiConfig);
 
-        Serial.print("WiFi configured: SSID=");
-        Serial.println(wifiConfig.ssid);
+        ESP_LOGI(TAG, "WiFi configured: SSID=%s", wifiConfig.ssid);
 
         // Generate mDNS hostname for response
         String deviceId = DeviceId::getDeviceId();
@@ -1438,7 +1440,7 @@ void WebServerManager::handleWiFiConfig(AsyncWebServerRequest *request, uint8_t 
 
 void WebServerManager::begin() {
 #ifdef ARDUINO
-    Serial.println("Starting webserver...");
+    ESP_LOGI(TAG, "Starting webserver...");
 
     activeInstance = this;
 
@@ -1451,7 +1453,7 @@ void WebServerManager::begin() {
     // Start server
     server.begin();
 
-    Serial.println("Webserver started on port 80");
+    ESP_LOGI(TAG, "Webserver started on port 80");
 #endif
 }
 
@@ -1459,7 +1461,7 @@ void WebServerManager::end() {
 #ifdef ARDUINO
     server.end();
     if (activeInstance == this) activeInstance = nullptr;
-    Serial.println("Webserver stopped");
+    ESP_LOGI(TAG, "Webserver stopped");
 #endif
 }
 
@@ -1496,7 +1498,7 @@ void OperationalWebServerManager::setupRoutes() {
 
     // Add 404 handler
     server.onNotFound([](AsyncWebServerRequest *request) {
-        Serial.printf("[HTTP] 404 Not Found: %s\n", request->url().c_str());
+        ESP_LOGW(TAG, "404 Not Found: %s", request->url().c_str());
         request->send(404, "text/plain", "Not found");
     });
 #endif

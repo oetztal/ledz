@@ -1,9 +1,12 @@
 #include "ColorRanges.h"
+#include "../Log.h"
 #include "../color.h"
 
 #ifdef ARDUINO
 #include <Arduino.h>
 #endif
+
+static const char* TAG = "show";
 
 namespace Show {
     ColorRanges::ColorRanges(const std::vector<Strip::Color> &colors,
@@ -16,15 +19,16 @@ namespace Show {
         // Initialize color ranges on first run
         if (!initialized) {
 #ifdef ARDUINO
-            Serial.print("ColorRanges: colors=[");
+            // Init-time dump — debug only; silenced in production.
+            ESP_LOGD(TAG, "colors (%zu):", colors.size());
             for (auto c: colors) {
-                Serial.printf("RGB(%d,%d,%d), ", red(c), green(c), blue(c));
+                ESP_LOGD(TAG, "  RGB(%d,%d,%d)", red(c), green(c), blue(c));
             }
-            Serial.print("], ranges=[");
+            ESP_LOGD(TAG, "ranges (%zu):", ranges.size());
             for (auto range: ranges) {
-                Serial.printf("%.1f%%, ", range);
+                ESP_LOGD(TAG, "  %.1f%%", range);
             }
-            Serial.printf("], gradient=%s\n", gradient ? "true" : "false");
+            ESP_LOGD(TAG, "gradient=%s", gradient ? "true" : "false");
 #endif
 
             uint16_t num_leds = strip.length();
@@ -39,8 +43,8 @@ namespace Show {
             bool use_custom_ranges = !ranges.empty();
             if (use_custom_ranges && ranges.size() != colors.size() - 1) {
 #ifdef ARDUINO
-                Serial.printf(
-                    "ColorRanges WARNING: Expected %zu ranges for %zu colors, got %zu. Using equal distribution.\n",
+                ESP_LOGW(TAG,
+                    "Expected %zu ranges for %zu colors, got %zu. Using equal distribution.",
                     colors.size() - 1, colors.size(), ranges.size());
 #endif
                 use_custom_ranges = false;
@@ -50,7 +54,7 @@ namespace Show {
             if (!use_custom_ranges) {
                 // Equal distribution
 #ifdef ARDUINO
-                Serial.printf("ColorRanges: Using equal distribution for %zu colors\n", colors.size());
+                ESP_LOGD(TAG, "Using equal distribution for %zu colors", colors.size());
 #endif
                 for (size_t i = 1; i < colors.size(); i++) {
                     uint16_t boundary = (uint16_t)((float) num_leds * i / colors.size());
@@ -59,11 +63,10 @@ namespace Show {
             } else {
                 // Custom ranges (percentages)
 #ifdef ARDUINO
-                Serial.printf("ColorRanges: Using custom ranges for %zu colors: ", colors.size());
+                ESP_LOGD(TAG, "Using custom ranges for %zu colors:", colors.size());
                 for (size_t i = 0; i < ranges.size(); i++) {
-                    Serial.printf("%.1f%% ", ranges[i]);
+                    ESP_LOGD(TAG, "  %.1f%%", ranges[i]);
                 }
-                Serial.println();
 #endif
                 for (float range: ranges) {
                     uint16_t boundary = (uint16_t)((float) num_leds * range / 100.0f);

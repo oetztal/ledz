@@ -1,5 +1,8 @@
 #include "Base.h"
+#include "../Log.h"
 #include "../support/Gamma.h"
+
+static const char* TAG = "strip";
 
 namespace Strip {
     Base::Base(Pin pin, unsigned short length) {
@@ -76,7 +79,7 @@ namespace Strip {
 #ifdef ARDUINO
     void Base::setGammaMode(Config::GammaMode mode) {
         gammaMode = mode;
-        Serial.printf("Gamma mode set to: %d\n", mode);
+        ESP_LOGI(TAG, "Gamma mode set to: %d", mode);
     }
 
     uint32_t Base::applyGammaCorrection(uint32_t color) {

@@ -3,11 +3,14 @@
 //
 
 #include "TouchController.h"
+#include "Log.h"
 #include "ShowController.h"
 
 #ifdef ARDUINO
 #include <Arduino.h>
 #endif
+
+static const char* TAG = "touch";
 
 
 const char* SOLID_VARIANTS[] = {
@@ -77,7 +80,7 @@ TouchController::TouchController(Config::ConfigManager &config, ShowController &
 void TouchController::begin() {
     touchConfig = config.loadTouchConfig();
 #ifdef ARDUINO
-    Serial.printf("TouchController: Configuration loaded - enabled: %d, threshold: %d", touchConfig.enabled, touchConfig.threshold);
+    ESP_LOGI(TAG, "Configuration loaded - enabled: %d, threshold: %d", touchConfig.enabled, touchConfig.threshold);
 #endif
 
     // Sync currentShowIdx with the actual current show
@@ -92,13 +95,13 @@ void TouchController::begin() {
     }
 
 #ifdef ARDUINO
-    Serial.println("TouchController: Initializing touch pins");
+    ESP_LOGI(TAG, "Initializing touch pins");
     for (uint8_t i = 0; i < Config::TouchConfig::MAX_TOUCH_PINS; i++) {
         const char* action = (i == 0) ? "Switch Show" : (i == 1) ? "Switch Variant" : "Switch Layout";
-        Serial.printf("  Touch pin %u (GPIO %u) -> %s\n",
+        ESP_LOGI(TAG, "  Touch pin %u (GPIO %u) -> %s",
                       i, TOUCH_PINS[i], action);
     }
-    Serial.printf("  Enabled: %s, Threshold: %u\n",
+    ESP_LOGI(TAG, "  Enabled: %s, Threshold: %u",
                   touchConfig.enabled ? "yes" : "no", touchConfig.threshold);
 #endif
 }
@@ -132,17 +135,17 @@ void TouchController::update() {
                     const ShowVariantGroup& group = SHOW_VARIANTS[currentShowIdx];
                     const char* params = group.variants[currentVariantIdx];
 
-                    Serial.printf("TouchController: Switching show to %s with variant %d: %s\n",
+                    ESP_LOGI(TAG, "Switching show to %s with variant %d: %s",
                                   group.showName, currentVariantIdx, params);
                     showController.queueShowChange(group.showName, params);
                 } else if (i == 1) {
                     // Button 2: Switch Variant (Circulate variants of current show)
                     const ShowVariantGroup& group = SHOW_VARIANTS[currentShowIdx];
                     currentVariantIdx = (currentVariantIdx + 1) % group.numVariants;
-                    
+
                     const char* params = group.variants[currentVariantIdx];
-                    
-                    Serial.printf("TouchController: Loading variant %d for show %s: %s\n", 
+
+                    ESP_LOGI(TAG, "Loading variant %d for show %s: %s",
                                   currentVariantIdx, group.showName, params);
                     showController.queueShowChange(group.showName, params);
                 } else if (i == 2) {
@@ -174,7 +177,7 @@ void TouchController::update() {
                         // dead_leds = deviceConfig.dead_leds;
                     }
                     
-                    Serial.printf("TouchController: Switching layout to step %u (rev=%d, mir=%d, dead=%d)\n", 
+                    ESP_LOGI(TAG, "Switching layout to step %u (rev=%d, mir=%d, dead=%d)",
                                   layoutStep, reverse, mirror, dead_leds);
                     showController.queueLayoutChange(reverse, mirror, dead_leds);
                 }
@@ -189,7 +192,7 @@ void TouchController::update() {
 void TouchController::reloadConfig() {
     touchConfig = config.loadTouchConfig();
 #ifdef ARDUINO
-    Serial.println("TouchController: Configuration reloaded");
+    ESP_LOGI(TAG, "Configuration reloaded");
 #endif
 }
 
@@ -202,7 +205,7 @@ void TouchController::setEnabled(bool enabled) {
     touchConfig.enabled = enabled;
     config.saveTouchConfig(touchConfig);
 #ifdef ARDUINO
-    Serial.printf("TouchController: %s\n", enabled ? "Enabled" : "Disabled");
+    ESP_LOGI(TAG, "%s", enabled ? "Enabled" : "Disabled");
 #endif
 }
 
@@ -210,7 +213,7 @@ void TouchController::setThreshold(uint16_t threshold) {
     touchConfig.threshold = threshold;
     config.saveTouchConfig(touchConfig);
 #ifdef ARDUINO
-    Serial.printf("TouchController: Threshold set to %u\n", threshold);
+    ESP_LOGI(TAG, "Threshold set to %u", threshold);
 #endif
 }
 

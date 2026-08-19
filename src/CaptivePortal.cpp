@@ -1,8 +1,11 @@
 #include "CaptivePortal.h"
+#include "Log.h"
 
 #ifdef ARDUINO
 #include <Arduino.h>
 #endif
+
+static const char* TAG = "net";
 
 CaptivePortal::CaptivePortal() {
 }
@@ -17,8 +20,7 @@ void CaptivePortal::begin() {
 
     running = true;
 
-    Serial.print("Captive portal started, redirecting to: ");
-    Serial.println(apIP);
+    ESP_LOGI(TAG, "Captive portal started, redirecting to: %s", apIP.toString().c_str());
 #endif
 }
 
@@ -35,7 +37,7 @@ void CaptivePortal::end() {
     if (running) {
         dnsServer.stop();
         running = false;
-        Serial.println("Captive portal stopped");
+        ESP_LOGI(TAG, "Captive portal stopped");
     }
 #endif
 }

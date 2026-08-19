@@ -1,4 +1,5 @@
 #include "ShowController.h"
+#include "Log.h"
 #include "color.h"
 
 #include <cstring> // strlen, strncpy
@@ -9,6 +10,8 @@
 // Queue size for show commands between cores
 static constexpr size_t SHOW_COMMAND_QUEUE_SIZE = 5;
 #endif
+
+static const char* TAG = "ctrl";
 
 ShowController::ShowController(ShowFactory &factory, Config::ConfigManager &config)
     : factory(factory), config(config), brightness(128),
@@ -25,7 +28,7 @@ void ShowController::begin() {
     commandQueue = xQueueCreate(SHOW_COMMAND_QUEUE_SIZE, sizeof(ShowCommand));
 
     if (commandQueue == nullptr) {
-        Serial.println("ERROR: Failed to create show command queue!");
+        ESP_LOGE(TAG, "Failed to create show command queue!");
         return;
     }
 #endif
@@ -36,7 +39,7 @@ void ShowController::begin() {
     brightness = deviceConfig.brightness;
 
 #ifdef ARDUINO
-    Serial.println("ShowController: preparing show");
+    ESP_LOGI(TAG, "preparing show");
 #endif
     // Create initial show
     const char *initialShowName = showConfig.current_show;
@@ -50,24 +53,22 @@ void ShowController::begin() {
     // Load parameters if available
     const char *params = (strlen(showConfig.params_json) > 0) ? showConfig.params_json : "{}";
 #ifdef ARDUINO
-    Serial.printf("ShowController: Creating initial show %s with params %s\n", currentShowName.c_str(), params);
+    ESP_LOGI(TAG, "Creating initial show %s with params %s", currentShowName.c_str(), params);
 #endif
     currentShow = factory.createShow(currentShowName, params);
 #ifdef ARDUINO
-    Serial.printf("ShowController: Show %s created\n", currentShowName.c_str());
-    Serial.printf("ShowController: Initial show %p\n", currentShow.get());
+    ESP_LOGD(TAG, "Show %s created", currentShowName.c_str());
+    ESP_LOGD(TAG, "Initial show %p", currentShow.get());
 #endif
 
     if (currentShow) {
 #ifdef ARDUINO
-        Serial.print("ShowController: Initial show loaded: ");
-        Serial.print(currentShowName.c_str());
-        Serial.print(" with params: ");
-        Serial.println(params);
+        ESP_LOGI(TAG, "Initial show loaded: %s with params: %s",
+                       currentShowName.c_str(), params);
 #endif
     } else {
 #ifdef ARDUINO
-        Serial.println("ERROR: Failed to create initial show!");
+        ESP_LOGE(TAG, "Failed to create initial show!");
 #endif
     }
 }
@@ -92,7 +93,7 @@ bool ShowController::queueShowChange(const std::string &showName, const std::str
     free(cmd.show_name);
     free(cmd.params_json);
 
-    Serial.println("WARNING: Show command queue full!");
+    ESP_LOGW(TAG, "Show command queue full!");
     return false;
 #else
     return false;
@@ -113,7 +114,7 @@ bool ShowController::queueBrightnessChange(uint8_t brightness) {
         return true;
     }
 
-    Serial.println("WARNING: Brightness command queue full!");
+    ESP_LOGW(TAG, "Brightness command queue full!");
     return false;
 #else
     return false;
@@ -133,10 +134,8 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
                 }
 
 #ifdef ARDUINO
-                Serial.print("ShowController: Switched to show: ");
-                Serial.print(currentShowName.c_str());
-                Serial.print(" with params: ");
-                Serial.println(cmd.params_json);
+                ESP_LOGI(TAG, "Switched to show: %s with params: %s",
+                               currentShowName.c_str(), cmd.params_json);
 #endif
 
                 // Save to configuration
@@ -148,8 +147,7 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
                 config.saveShowConfig(showConfig);
             } else {
 #ifdef ARDUINO
-                Serial.print("ERROR: Failed to create show: ");
-                Serial.println(cmd.show_name);
+                ESP_LOGE(TAG, "Failed to create show: %s", cmd.show_name);
 #endif
             }
             break;
@@ -159,8 +157,7 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
             brightness.store(cmd.brightness_value);
 
 #ifdef ARDUINO
-            Serial.print("ShowController: Brightness set to: ");
-            Serial.println(brightness.load());
+            ESP_LOGI(TAG, "Brightness set to: %u", brightness.load());
 #endif
 
             // Save to configuration
@@ -177,7 +174,7 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
                 layout = std::make_unique<Strip::Layout>(*baseStrip, cmd.layout_reverse,
                                                          cmd.layout_mirror, cmd.layout_dead_leds);
 
-                Serial.printf("ShowController: Layout updated - reverse=%d, mirror=%d, dead_leds=%u\n",
+                ESP_LOGI(TAG, "Layout updated - reverse=%d, mirror=%d, dead_leds=%u",
                               cmd.layout_reverse, cmd.layout_mirror, cmd.layout_dead_leds);
 
                 // Save to configuration
@@ -192,10 +189,10 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
                 std::unique_ptr<Show::Show> newShow = factory.createShow(currentShowName, showConfig.params_json);
                 if (newShow != nullptr) {
                     currentShow = std::move(newShow);
-                    Serial.printf("ShowController: Restarted show '%s' with updated layout\n", currentShowName.c_str());
+                    ESP_LOGI(TAG, "Restarted show '%s' with updated layout", currentShowName.c_str());
                 }
             } else {
-                Serial.println("ERROR: Layout pointers not set!");
+                ESP_LOGE(TAG, "Layout pointers not set!");
             }
 #endif
             break;
@@ -203,14 +200,14 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
 
         case ShowCommandType::LOAD_PRESET: {
 #ifdef ARDUINO
-            Serial.printf("ShowController: Loading preset - show=%s\n", cmd.show_name);
+            ESP_LOGI(TAG, "Loading preset - show=%s", cmd.show_name);
 
             // 1. Update layout if we have valid strip pointers
             if (layout != nullptr && baseStrip != nullptr) {
                 layout = std::make_unique<Strip::Layout>(*baseStrip, cmd.layout_reverse,
                                                          cmd.layout_mirror, cmd.layout_dead_leds);
 
-                Serial.printf("ShowController: Preset layout - reverse=%d, mirror=%d, dead_leds=%d\n",
+                ESP_LOGD(TAG, "Preset layout - reverse=%d, mirror=%d, dead_leds=%d",
                               cmd.layout_reverse, cmd.layout_mirror, cmd.layout_dead_leds);
 
                 // Save layout config
@@ -230,7 +227,7 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
                     currentShowName = cmd.show_name;
                 }
 
-                Serial.printf("ShowController: Preset show '%s' loaded with params: %s\n",
+                ESP_LOGI(TAG, "Preset show '%s' loaded with params: %s",
                               currentShowName.c_str(), cmd.params_json);
 
                 // Save show config
@@ -239,7 +236,7 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
                 strncpy(showConfig.params_json, cmd.params_json, sizeof(showConfig.params_json) - 1);
                 config.saveShowConfig(showConfig);
             } else {
-                Serial.printf("ERROR: Failed to create preset show: %s\n", cmd.show_name);
+                ESP_LOGE(TAG, "Failed to create preset show: %s", cmd.show_name);
             }
 #endif
             break;
@@ -282,7 +279,7 @@ bool ShowController::queueLayoutChange(bool reverse, bool mirror, int16_t dead_l
         return true;
     }
 
-    Serial.println("WARNING: Layout command queue full!");
+    ESP_LOGW(TAG, "Layout command queue full!");
     return false;
 #else
     return false;
@@ -307,7 +304,7 @@ bool ShowController::queuePresetLoad(const Config::Preset &preset) {
     cmd.layout_dead_leds = preset.layout_dead_leds;
 
     if (xQueueSend(commandQueue, &cmd, 0) == pdTRUE) {
-        Serial.printf("ShowController: Queued preset load '%s'\n", preset.name);
+        ESP_LOGI(TAG, "Queued preset load '%s'", preset.name);
         return true;
     }
 
@@ -315,7 +312,7 @@ bool ShowController::queuePresetLoad(const Config::Preset &preset) {
     free(cmd.show_name);
     free(cmd.params_json);
 
-    Serial.println("WARNING: Preset load command queue full!");
+    ESP_LOGW(TAG, "Preset load command queue full!");
     return false;
 #else
     return false;
@@ -328,26 +325,26 @@ void ShowController::setStrip(std::unique_ptr<Strip::Strip> &&base) {
     if (baseStrip) {
         // Load and apply layout configuration
 #ifdef ARDUINO
-        Serial.println("ShowController: Loading layout configuration...");
+        ESP_LOGI(TAG, "Loading layout configuration...");
 #endif
         Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
         layout = std::make_unique<Strip::Layout>(*baseStrip, layoutConfig.reverse, layoutConfig.mirror,
                                                  layoutConfig.dead_leds);
 #ifdef ARDUINO
-        Serial.printf("Layout initialized: reverse=%d, mirror=%d, dead_leds=%u\n",
+        ESP_LOGI(TAG, "Layout initialized: reverse=%d, mirror=%d, dead_leds=%u",
                       layoutConfig.reverse, layoutConfig.mirror, layoutConfig.dead_leds);
 #endif
-        
+
         // Load and apply gamma configuration
         Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
         auto basePtr = static_cast<Strip::Base*>(baseStrip.get());
         basePtr->setGammaMode(deviceConfig.gamma_mode);
 #ifdef ARDUINO
-        Serial.printf("Gamma mode set to: %d\n", deviceConfig.gamma_mode);
+        ESP_LOGI(TAG, "Gamma mode set to: %d", deviceConfig.gamma_mode);
 #endif
     } else {
 #ifdef ARDUINO
-        Serial.println("ERROR: Failed to initialize layout! base strip not set");
+        ESP_LOGE(TAG, "Failed to initialize layout! base strip not set");
 #endif
     }
 }
@@ -359,7 +356,7 @@ void ShowController::clearStrip() {
         layout->fill(black);
         layout->show();
 
-        Serial.println("ShowController: Strip cleared");
+        ESP_LOGI(TAG, "Strip cleared");
     }
 #endif
 }

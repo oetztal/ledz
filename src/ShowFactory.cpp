@@ -1,4 +1,5 @@
 #include "ShowFactory.h"
+#include "Log.h"
 #include "show/Rainbow.h"
 #include "show/ColorRanges.h"
 #include "show/ColorRun.h"
@@ -16,6 +17,8 @@
 #ifdef ARDUINO
 #include <ArduinoJson.h>
 #endif
+
+static const char* TAG = "show";
 
 ShowFactory::ShowFactory() {
     // Register all available shows (in display order)
@@ -71,7 +74,7 @@ ShowFactory::ShowFactory() {
         int start_offset = doc["start_offset"] | 5;
         int spark_range = doc["spark_range"] | 5;
 #ifdef ARDUINO
-        Serial.printf("ShowFactory: Creating Fire cooling=%.2f, spread=%.2f, ignition=%.2f, spark_amount=%.2f, start_offset=%d, spark_range=%d\n",
+        ESP_LOGI(TAG, "Creating Fire cooling=%.2f, spread=%.2f, ignition=%.2f, spark_amount=%.2f, start_offset=%d, spark_range=%d",
                       cooling, spread, ignition, spark_amount, start_offset, spark_range);
 #endif
         return std::make_unique<Show::Fire>(cooling, spread, ignition, spark_amount, std::vector<float>{1.0f}, start_offset, spark_range);
@@ -85,7 +88,7 @@ ShowFactory::ShowFactory() {
         uint8_t g = doc["g"] | 180;
         uint8_t b = doc["b"] | 50;
 #ifdef ARDUINO
-        Serial.printf("ShowFactory: Creating Starlight probability=%.2f, length=%lums, fade=%lums, RGB(%d,%d,%d)\n",
+        ESP_LOGI(TAG, "Creating Starlight probability=%.2f, length=%lums, fade=%lums, RGB(%d,%d,%d)",
                       probability, length_ms, fade_ms, r, g, b);
 #endif
         return std::make_unique<Show::Starlight>(probability, length_ms, fade_ms, r, g, b);
@@ -98,7 +101,7 @@ ShowFactory::ShowFactory() {
         unsigned int on_cycles = doc["on_cycles"] | 1;
         unsigned int off_cycles = doc["off_cycles"] | 10;
 #ifdef ARDUINO
-        Serial.printf("ShowFactory: Creating Stroboscope RGB(%d,%d,%d), on=%u, off=%u\n",
+        ESP_LOGI(TAG, "Creating Stroboscope RGB(%d,%d,%d), on=%u, off=%u",
                       r, g, b, on_cycles, off_cycles);
 #endif
         return std::make_unique<Show::Stroboscope>(r, g, b, on_cycles, off_cycles);
@@ -118,7 +121,7 @@ ShowFactory::ShowFactory() {
         float time_step = doc["time_step"] | 1.0f;
         float pixel_step = doc["pixel_step"] | 1.0f;
 #ifdef ARDUINO
-        Serial.printf("ShowFactory: Creating Rainbow time_step=%.2f, pixel_step=%.2f\n",
+        ESP_LOGI(TAG, "Creating Rainbow time_step=%.2f, pixel_step=%.2f",
                       time_step, pixel_step);
 #endif
         return std::make_unique<Show::Rainbow>(time_step, pixel_step);
@@ -130,7 +133,7 @@ ShowFactory::ShowFactory() {
         float brightness_frequency = doc["brightness_frequency"] | 0.1f;
         float wavelength = doc["wavelength"] | 6.0f;
 #ifdef ARDUINO
-        Serial.printf("ShowFactory: Creating Wave speed=%.2f, decay=%.2f, freq=%.2f, wavelength=%.2f\n",
+        ESP_LOGI(TAG, "Creating Wave speed=%.2f, decay=%.2f, freq=%.2f, wavelength=%.2f",
                       wave_speed, decay_rate, brightness_frequency, wavelength);
 #endif
         return std::make_unique<Show::Wave>(wave_speed, decay_rate, brightness_frequency, wavelength);
@@ -139,7 +142,7 @@ ShowFactory::ShowFactory() {
     registerShow("TheaterChase", "Marquee-style chase with rainbow colors", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
         unsigned int num_steps_per_cycle = doc["num_steps_per_cycle"] | 21;
 #ifdef ARDUINO
-        Serial.printf("ShowFactory: Creating TheaterChase num_steps_per_cycle=%u\n",
+        ESP_LOGI(TAG, "Creating TheaterChase num_steps_per_cycle=%u",
                       num_steps_per_cycle);
 #endif
         return std::make_unique<Show::TheaterChase>(num_steps_per_cycle);
@@ -158,7 +161,7 @@ ShowFactory::ShowFactory() {
         unsigned int letter_space = doc["letter_space"] | 3;
         unsigned int word_space = doc["word_space"] | 5;
 #ifdef ARDUINO
-        Serial.printf("ShowFactory: Creating MorseCode message=\"%s\", speed=%.2f, dot=%u, dash=%u\n",
+        ESP_LOGI(TAG, "Creating MorseCode message=\"%s\", speed=%.2f, dot=%u, dash=%u",
                       message.c_str(), speed, dot_length, dash_length);
 #endif
         return std::make_unique<Show::MorseCode>(message.c_str(), speed, dot_length, dash_length,
@@ -170,7 +173,7 @@ ShowFactory::ShowFactory() {
         float Rmax = doc["Rmax"] | 4.0f;
         float Rdelta = doc["Rdelta"] | 0.0002f;
 #ifdef ARDUINO
-        Serial.printf("ShowFactory: Creating Chaos Rmin=%.4f, Rmax=%.4f, Rdelta=%.6f\n",
+        ESP_LOGI(TAG, "Creating Chaos Rmin=%.4f, Rmax=%.4f, Rdelta=%.6f",
                       Rmin, Rmax, Rdelta);
 #endif
         return std::make_unique<Show::Chaos>(Rmin, Rmax, Rdelta);
@@ -184,8 +187,8 @@ ShowFactory::ShowFactory() {
         unsigned int max_iterations = doc["max_iterations"] | 50;
         unsigned int color_scale = doc["color_scale"] | 10;
 #ifdef ARDUINO
-        Serial.printf(
-            "ShowFactory: Creating Mandelbrot Cre0=%.4f, Cim0=%.4f, Cim1=%.4f, scale=%u, max_iter=%u, color_scale=%u\n",
+        ESP_LOGI(TAG,
+            "Creating Mandelbrot Cre0=%.4f, Cim0=%.4f, Cim1=%.4f, scale=%u, max_iter=%u, color_scale=%u",
             Cre0, Cim0, Cim1, scale, max_iterations, color_scale);
 #endif
         return std::make_unique<Show::Mandelbrot>(Cre0, Cim0, Cim1, scale, max_iterations, color_scale);
@@ -206,7 +209,7 @@ std::unique_ptr<Show::Show> ShowFactory::createShow(const std::string &name, con
     auto it = showConstructors.find(name);
     if (it == showConstructors.end()) {
 #ifdef ARDUINO
-        Serial.printf("ShowFactory: show %s not found", name.c_str());
+        ESP_LOGW(TAG, "show %s not found", name.c_str());
 #endif
         return {};
     }
@@ -218,11 +221,8 @@ std::unique_ptr<Show::Show> ShowFactory::createShow(const std::string &name, con
 
     // If JSON parsing fails, log warning and use empty document (will use defaults)
     if (error) {
-        Serial.print("ShowFactory: Failed to parse params for ");
-        Serial.print(name.c_str());
-        Serial.print(": ");
-        Serial.println(error.c_str());
-        Serial.println("Using default parameters");
+        ESP_LOGW(TAG, "Failed to parse params for %s: %s; using default parameters",
+                       name.c_str(), error.c_str());
         doc.clear(); // Empty document will trigger all defaults via | operator
     }
 

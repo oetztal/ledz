@@ -1,9 +1,12 @@
 #include "TimerScheduler.h"
+#include "Log.h"
 #include "ShowController.h"
 
 #ifdef ARDUINO
 #include <Arduino.h>
 #endif
+
+static const char* TAG = "timer";
 
 TimerScheduler::TimerScheduler(Config::ConfigManager &config, ShowController &showController)
     : config(config), showController(showController) {
@@ -12,12 +15,12 @@ TimerScheduler::TimerScheduler(Config::ConfigManager &config, ShowController &sh
 void TimerScheduler::begin() {
     timersConfig = config.loadTimersConfig();
 #ifdef ARDUINO
-    Serial.printf("TimerScheduler: Loaded %d timers, timezone offset: %d hours\n",
+    ESP_LOGI(TAG, "Loaded %d timers, timezone offset: %d hours",
                   Config::TimersConfig::MAX_TIMERS, timersConfig.timezone_offset_hours);
 
     for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
         if (timersConfig.timers[i].enabled) {
-            Serial.printf("  Timer %d: type=%d, action=%d, target=%u\n",
+            ESP_LOGI(TAG, "  Timer %d: type=%d, action=%d, target=%u",
                           i, static_cast<int>(timersConfig.timers[i].type),
                           static_cast<int>(timersConfig.timers[i].action),
                           timersConfig.timers[i].target_time);
@@ -103,14 +106,14 @@ void TimerScheduler::executeTimer(uint8_t index) {
 #ifdef ARDUINO
     const Config::TimerEntry &timer = timersConfig.timers[index];
 
-    Serial.printf("TimerScheduler: Executing timer %d, action=%d\n",
+    ESP_LOGI(TAG, "Executing timer %d, action=%d",
                   index, static_cast<int>(timer.action));
 
     switch (timer.action) {
         case Config::TimerAction::TURN_OFF:
             // Turn off LEDs by switching to Solid show with black color
             showController.queueShowChange("Solid", R"({"colors":[[0,0,0]]})");
-            Serial.println("TimerScheduler: LEDs turned off");
+            ESP_LOGI(TAG, "LEDs turned off");
             break;
 
         case Config::TimerAction::LOAD_PRESET:
@@ -120,10 +123,10 @@ void TimerScheduler::executeTimer(uint8_t index) {
                 if (timer.preset_index < Config::PresetsConfig::MAX_PRESETS &&
                     presetsConfig.presets[timer.preset_index].valid) {
                     showController.queuePresetLoad(presetsConfig.presets[timer.preset_index]);
-                    Serial.printf("TimerScheduler: Loaded preset %d (%s)\n",
+                    ESP_LOGI(TAG, "Loaded preset %d (%s)",
                                   timer.preset_index, presetsConfig.presets[timer.preset_index].name);
                 } else {
-                    Serial.printf("TimerScheduler: Preset %d is invalid, cancelling timer\n",
+                    ESP_LOGW(TAG, "Preset %d is invalid, cancelling timer",
                                   timer.preset_index);
                 }
             }
@@ -150,7 +153,7 @@ bool TimerScheduler::setCountdown(uint8_t index, uint32_t durationSeconds,
     config.saveTimersConfig(timersConfig);
 
 #ifdef ARDUINO
-    Serial.printf("TimerScheduler: Set countdown timer %d for %u seconds\n", index, durationSeconds);
+    ESP_LOGI(TAG, "Set countdown timer %d for %u seconds", index, durationSeconds);
 #endif
 
     return true;
@@ -179,7 +182,7 @@ bool TimerScheduler::setDailyAlarm(uint8_t index, uint32_t secondsSinceMidnight,
 #ifdef ARDUINO
     uint8_t hours = secondsSinceMidnight / 3600;
     uint8_t minutes = (secondsSinceMidnight % 3600) / 60;
-    Serial.printf("TimerScheduler: Set daily alarm %d for %02d:%02d\n", index, hours, minutes);
+    ESP_LOGI(TAG, "Set daily alarm %d for %02d:%02d", index, hours, minutes);
 #endif
 
     return true;
@@ -194,7 +197,7 @@ bool TimerScheduler::cancelTimer(uint8_t index) {
     config.saveTimersConfig(timersConfig);
 
 #ifdef ARDUINO
-    Serial.printf("TimerScheduler: Cancelled timer %d\n", index);
+    ESP_LOGI(TAG, "Cancelled timer %d", index);
 #endif
 
     return true;
@@ -243,6 +246,6 @@ void TimerScheduler::setTimezoneOffset(int8_t offsetHours) {
     config.saveTimersConfig(timersConfig);
 
 #ifdef ARDUINO
-    Serial.printf("TimerScheduler: Set timezone offset to %d hours\n", offsetHours);
+    ESP_LOGI(TAG, "Set timezone offset to %d hours", offsetHours);
 #endif
 }

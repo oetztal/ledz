@@ -1,6 +1,9 @@
 #include "LedShow.h"
+#include "../Log.h"
 
 #include "Timer.h"
+
+static const char* TAG = "led";
 
 namespace Task {
     void LedShow::startTask() {
@@ -19,7 +22,7 @@ namespace Task {
 
 #ifdef ARDUINO
     void LedShow::taskWrapper(void *pvParameters) {
-        Serial.println("LedShow: taskWrapper()");
+        ESP_LOGI(TAG, "taskWrapper()");
         auto *instance = static_cast<LedShow *>(pvParameters);
         instance->task();
     }
@@ -59,10 +62,10 @@ namespace Task {
 
             // Log power save state transitions
             if (show_is_complete && !in_power_save) {
-                Serial.println("LedShow: Entering power save mode (static display)");
+                ESP_LOGI(TAG, "Entering power save mode (static display)");
                 in_power_save = true;
             } else if (!show_is_complete && in_power_save) {
-                Serial.println("LedShow: Exiting power save mode");
+                ESP_LOGI(TAG, "Exiting power save mode");
                 in_power_save = false;
             }
 
@@ -79,8 +82,8 @@ namespace Task {
 
             // Log stats every 60 seconds to reduce Serial blocking
             if (timer.start_time - last_show_stats > 60000) {
-                Serial.printf(
-                    "Durations: execution %lu ms (avg: %lu ms), show %lu ms (avg: %lu ms), avg. cycle %lu ms, delay %lu ms%s\n",
+                ESP_LOGD(TAG,
+                    "Durations: execution %lu ms (avg: %lu ms), show %lu ms (avg: %lu ms), avg. cycle %lu ms, delay %lu ms%s",
                     execution_time, total_execution_time / iteration,
                     show_time, total_show_time / iteration,
                     (timer.start_time - start_time) / iteration, delay,

@@ -50,7 +50,6 @@ namespace Show {
         auto old_color = color;
         color = colors.front();
         colors.pop();
-        // Serial.printf("swap color %x -> %x, period: %d, next: %d\n", old_color, color, period, next);
     }
 
     bool Jump::Ball::is_next() {

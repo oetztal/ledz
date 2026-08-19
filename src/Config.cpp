@@ -1,8 +1,11 @@
 #include "Config.h"
+#include "Log.h"
 
 #ifdef ARDUINO
 #include <esp_system.h>
 #endif
+
+static const char* TAG = "cfg";
 
 namespace Config {
     ConfigManager::ConfigManager() {
@@ -11,12 +14,12 @@ namespace Config {
     void ConfigManager::requestRestart(uint32_t delayMs) {
         restartAt = millis() + delayMs;
         restartRequested = true;
-        Serial.printf("Config: Restart requested in %u ms\n", delayMs);
+        ESP_LOGW(TAG, "Restart requested in %u ms", delayMs);
     }
 
     void ConfigManager::checkRestart() {
         if (restartRequested && millis() >= restartAt) {
-            Serial.println("Config: Performing scheduled restart...");
+            ESP_LOGI(TAG, "Performing scheduled restart...");
 #ifdef ARDUINO
             ESP.restart();
 #endif
@@ -239,7 +242,7 @@ namespace Config {
         prefs.putUShort("layout_dead", config.dead_leds);
         prefs.end();
 
-        Serial.printf("Config: Saved layout - reverse=%d, mirror=%d, dead_leds=%u\n",
+        ESP_LOGD(TAG, "Saved layout - reverse=%d, mirror=%d, dead_leds=%u",
                       config.reverse, config.mirror, config.dead_leds);
 #endif
     }
@@ -315,7 +318,7 @@ namespace Config {
 
         prefs.end();
 
-        Serial.printf("Config: Saved preset %u '%s'\n", index, preset.name);
+        ESP_LOGD(TAG, "Saved preset %u '%s'", index, preset.name);
         return true;
 #else
         return false;
@@ -338,7 +341,7 @@ namespace Config {
 
         prefs.end();
 
-        Serial.printf("Config: Deleted preset %u\n", index);
+        ESP_LOGD(TAG, "Deleted preset %u", index);
         return true;
 #else
         return false;
@@ -456,7 +459,7 @@ namespace Config {
 
         prefs.end();
 
-        Serial.println("Config: Saved timers configuration");
+        ESP_LOGD(TAG, "Saved timers configuration");
 #endif
     }
 
@@ -471,7 +474,7 @@ namespace Config {
 
         prefs.end();
 
-        Serial.printf("TouchConfig: Loaded - enabled=%d, threshold=%u\n",
+        ESP_LOGD(TAG, "TouchConfig: Loaded - enabled=%d, threshold=%u",
                       touchConfig.enabled, touchConfig.threshold);
 #endif
 
@@ -487,7 +490,7 @@ namespace Config {
 
         prefs.end();
 
-        Serial.printf("TouchConfig: Saved - enabled=%d, threshold=%u\n",
+        ESP_LOGD(TAG, "TouchConfig: Saved - enabled=%d, threshold=%u",
                       config.enabled, config.threshold);
 #endif
     }
