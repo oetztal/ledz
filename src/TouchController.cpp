@@ -37,8 +37,16 @@ const char* TWOCOLORBLEND_VARIANTS[] = {
 };
 const char* COLORRUN_VARIANTS[] = {"{}"};
 const char* JUMP_VARIANTS[] = {"{}"};
-const char* RAINBOW_VARIANTS[] = {"{}"};
+const char* RAINBOW_VARIANTS[] = {
+    "{}",
+    R"({"time_step":0.3,"pixel_step":1.0})",
+    R"({"time_step":0.05,"pixel_step":0})"
+};
 const char* WAVE_VARIANTS[] = {"{}"};
+const char* FIRE_VARIANTS[] = {
+    R"({})",
+    R"({"cooling":0.05})"
+};
 const char* STARLIGHT_VARIANTS[] = {
     R"({"probability":0.1,"length":0,"fade":250})",
     R"({"probability":0.02,"length":5000,"fade":1000})"
@@ -59,8 +67,9 @@ const TouchController::ShowVariantGroup TouchController::SHOW_VARIANTS[] = {
     {"Solid", TWOCOLORBLEND_VARIANTS, 3},
     {"ColorRun", COLORRUN_VARIANTS, 1},
     {"Jump", JUMP_VARIANTS, 1},
-    {"Rainbow", RAINBOW_VARIANTS, 1},
+    {"Rainbow", RAINBOW_VARIANTS, 3},
     {"Wave", WAVE_VARIANTS, 1},
+    {"Fire", FIRE_VARIANTS, 2},
     {"Starlight", STARLIGHT_VARIANTS, 2},
     {"TheaterChase", THEATERCHASE_VARIANTS, 3},
     {"MorseCode", MORSECODE_VARIANTS, 2}
