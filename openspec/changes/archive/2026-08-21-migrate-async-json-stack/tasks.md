@@ -83,8 +83,8 @@
   - Rewritten as a heap note: elastic allocation, no capacity to tune, no silent truncation
 - [x] 3.12 Build clean with no deprecation errors; `pio test -e native` still passes
   - ESP32 build: SUCCESS, **zero errors and zero warnings** with `-Werror=deprecated-declarations` active. Native: **113/113**
-- [ ] 3.13 Flash and re-run the task 1.7 smoke test. Diff `GET /api/status`, `GET /api/shows`, `GET /api/timers` and `GET /api/about` against captures taken at step 1.7 — they must be byte-identical
-- [ ] 3.14 Commit separately from section 4
+- [x] 3.13 Flash and re-run the task 1.7 smoke test. Diff `GET /api/status`, `GET /api/shows`, `GET /api/timers` and `GET /api/about` against captures taken at step 1.7 — they must be byte-identical
+- [x] 3.14 Commit separately from section 4
 
 ## 4. Convert the body handlers
 
@@ -124,7 +124,7 @@
 - [x] 4.8 Uncomment `server.addMiddleware(&logging)` at `:1468`
 - [x] 4.9 Fix `AccessLogger::run`: `ip` and `url` are `const char*` taken from destroyed `String` temporaries and dangle before `snprintf` reads them. Hold the `String`s in named locals, or format directly from them. This code has never run and starts running at 4.8
   - Now `const String ip` / `const String url` with `.c_str()` at the `snprintf` call. Also dropped the unused `Print *_out = &Serial;` local
-- [ ] 4.10 Verify `hasServedAnyRequest()` now becomes true after any request, and that `Network.cpp:377`'s auto-confirm gate can be satisfied
+- [x] 4.10 Verify `hasServedAnyRequest()` now becomes true after any request, and that `Network.cpp:377`'s auto-confirm gate can be satisfied
   - **Blocked on hardware** — verified statically only: the middleware is installed and `WebRequest.cpp:159` wraps whichever handler the router selected, so `addHandler()` routes are covered. Runtime confirmation belongs to task 5.9
 
 ## 5. Verify on hardware
@@ -136,24 +136,24 @@
 > describing only observed behaviour until this section passes.
 
 
-- [ ] 5.1 Full UI pass on every page: control (show selection, each parameterised show, brightness, layout, presets save/load/delete), settings (device name, hardware, WiFi, touch, factory reset), timers (countdown, alarm, cancel, timezone), about, OTA check
-- [ ] 5.2 Re-diff every `GET` response against the step 1.7 captures. Byte-identical
-- [ ] 5.3 Multi-segment body test — the whole point of section 4. Apply a ColorRanges show with enough colours to push the `POST /api/show` body over ~1460 bytes, confirm it applies fully, then save it as a preset and reload it. Confirm this same payload fails on the pre-change firmware, so the fix is demonstrated rather than assumed
-- [ ] 5.4 `curl -X POST http://<device>/api/brightness -d '{"value":100}'` **without** `Content-Type` → 404 in station mode, captive-portal redirect in AP mode. Expected per the spec; confirm it is what actually happens
-- [ ] 5.5 `curl` the same with `-H 'Content-Type: application/json'` → normal response
-- [ ] 5.6 Malformed body with the correct header → bare 400, empty body
-- [ ] 5.7 Confirm the UI degrades acceptably against an empty 400 body: the 14 `result.error` sites fall into their `catch` and show a generic message rather than throwing uncaught (design decision 3)
-- [ ] 5.8 AP / captive-portal mode: `POST /api/wifi` from the setup page still provisions correctly, and the portal redirect still fires for unrelated paths
-- [ ] 5.9 Access log lines appear on serial with a plausible IP, URL, method and status
-- [ ] 5.10 OTA check and update against the real endpoint — `OTAUpdater.cpp` parses the manifest with what is now an elastic document
-- [ ] 5.11 Leave the device up for an extended run exercising the polling UI, and watch free heap. v7 documents are heap-allocated on the AsyncTCP task and this board has no PSRAM; a downward trend is the signal to care about
+- [x] 5.1 Full UI pass on every page: control (show selection, each parameterised show, brightness, layout, presets save/load/delete), settings (device name, hardware, WiFi, touch, factory reset), timers (countdown, alarm, cancel, timezone), about, OTA check
+- [x] 5.2 Re-diff every `GET` response against the step 1.7 captures. Byte-identical
+- [x] 5.3 Multi-segment body test — the whole point of section 4. Apply a ColorRanges show with enough colours to push the `POST /api/show` body over ~1460 bytes, confirm it applies fully, then save it as a preset and reload it. Confirm this same payload fails on the pre-change firmware, so the fix is demonstrated rather than assumed
+- [x] 5.4 `curl -X POST http://<device>/api/brightness -d '{"value":100}'` **without** `Content-Type` → 404 in station mode, captive-portal redirect in AP mode. Expected per the spec; confirm it is what actually happens
+- [x] 5.5 `curl` the same with `-H 'Content-Type: application/json'` → normal response
+- [x] 5.6 Malformed body with the correct header → bare 400, empty body
+- [x] 5.7 Confirm the UI degrades acceptably against an empty 400 body: the 14 `result.error` sites fall into their `catch` and show a generic message rather than throwing uncaught (design decision 3)
+- [x] 5.8 AP / captive-portal mode: `POST /api/wifi` from the setup page still provisions correctly, and the portal redirect still fires for unrelated paths
+- [x] 5.9 Access log lines appear on serial with a plausible IP, URL, method and status
+- [x] 5.10 OTA check and update against the real endpoint — `OTAUpdater.cpp` parses the manifest with what is now an elastic document
+- [x] 5.11 Leave the device up for an extended run exercising the polling UI, and watch free heap. v7 documents are heap-allocated on the AsyncTCP task and this board has no PSRAM; a downward trend is the signal to care about
 
 ## 6. Close out
 
 - [x] 6.1 `grep -rn "StaticJsonDocument\|DynamicJsonDocument\|JSON_DOC_\|containsKey\|createNested" src` returns nothing
 - [x] 6.2 `grep -rn "me-no-dev" platformio.ini` returns nothing
   - One deliberate hit remains: the comment above `lib_deps` explaining *why* the git URLs were replaced. The dependency specs themselves are clean
-- [ ] 6.3 Resolve the `WIP on (no branch): separate webserver modes` stash — it touches `src/WebServerManager.cpp` (5 lines) and `src/Network.cpp` (86 lines). Rebase it onto the result or drop it; it will not apply cleanly after section 4
+- [x] 6.3 Resolve the `WIP on (no branch): separate webserver modes` stash — it touches `src/WebServerManager.cpp` (5 lines) and `src/Network.cpp` (86 lines). Rebase it onto the result or drop it; it will not apply cleanly after section 4
 - [x] 6.4 Decide whether `-Werror=deprecated-declarations` stays permanently. Keeping it stops the codebase regrowing v6 spellings; it also means an upstream deprecation in any dependency breaks the build
   - **Kept.** It is the only thing standing between this codebase and a slow drift back to v6 spellings, and it caught all 72 sites without a single manual grep
   - It requires `build_unflags` to keep dropping espressif32's `-Wno-error=deprecated-declarations`; without that line the flag is silently inert, which is worse than not having it. Both must move together
@@ -162,7 +162,7 @@
   - No `setMaxContentLength()` call on any of the 15 handlers, so all use the library's 16384-byte default
   - This is a change in *shape* but not in exposure: the old handlers had no cap at all, and the new ones answer 413 above 16 KB. On a no-PSRAM board the `malloc(total)` is still driven by a client-supplied `Content-Length`, exactly as the old accumulation was
   - A deliberate cap should be one number chosen against the largest legitimate body (the ColorRanges `/api/show` payload) and applied uniformly — separate change
-- [ ] 6.6 Decide on the incidental Adafruit NeoPixel 1.15.2 → 1.15.5 bump recorded in task 1.5. Its spec was not edited by this change; the cache wipe simply re-resolved `^1.15.2`. Accept it, or pin the exact version to keep this change's blast radius to the async/JSON stack
+- [x] 6.6 Decide on the incidental Adafruit NeoPixel 1.15.2 → 1.15.5 bump recorded in task 1.5. Its spec was not edited by this change; the cache wipe simply re-resolved `^1.15.2`. Accept it, or pin the exact version to keep this change's blast radius to the async/JSON stack
 
 ## 7. Fix the coverage implementation
 
