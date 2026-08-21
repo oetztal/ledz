@@ -71,11 +71,18 @@
 // Task Stack Sizes
 // ============================================================================
 
+// Both workers open a TLS connection verified against the full CA bundle.
+// The mbedtls handshake plus esp_crt_bundle's X.509 chain walk needs ~6 KB of
+// stack on its own, on top of whatever our own frames hold, so these budgets
+// must stay well clear of that floor — an overflow here shows up as
+// "Stack canary watchpoint triggered (ota_check)" the moment the user clicks
+// "Check for updates", not as a clean error.
+
 // Stack size for the OTA check worker (FreeRTOS words, i.e. bytes on ESP32).
-#define OTA_CHECK_TASK_STACK 7168
+#define OTA_CHECK_TASK_STACK 12288
 
 // Stack size for the OTA update worker (TLS + Update.write working set).
-#define OTA_UPDATE_TASK_STACK 10240
+#define OTA_UPDATE_TASK_STACK 12288
 
 // ============================================================================
 // Memory and Heap Budgets

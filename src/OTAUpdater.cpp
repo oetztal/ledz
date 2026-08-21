@@ -18,6 +18,8 @@
 #include "support/SemVer.h"
 
 #include <atomic>
+#include <memory>
+#include <new>
 
 static const char* TAG = "ota";
 
@@ -554,6 +556,12 @@ bool logTcpProbe(uint32_t ip4, uint16_t port, const char *label) {
 // Probe the network after a failed request and print one actionable verdict.
 // Runs only on the failure path — the probes cost up to ~35 s, which is fine
 // when the check has already failed but must never delay a working update.
+//
+// `noinline` is load-bearing, not a hint: inlined into doCheckForUpdate this
+// function's probe buffers and log scratch space become part of that frame and
+// stay live for the whole call, stealing ~1.5 KB from the mbedtls handshake
+// that runs long before any of this code is reached.
+__attribute__((noinline))
 void explainNetworkFailure(const char *host) {
     // Force IPv4 rather than AF_UNSPEC: AF_UNSPEC makes lwIP walk an
     // A-then-AAAA sequence, so a plain IPv4 probe isolates the A lookup. If
@@ -906,21 +914,29 @@ bool doPerformUpdate(const String &downloadUrl, size_t expectedSize,
     mbedtls_sha256_starts(&verify.ctx, 0); // SHA-256 (not SHA-224)
 #endif
 
-    uint8_t buffer[DOWNLOAD_CHUNK_SIZE];
+    // Heap, not stack: a 4 KB automatic buffer here would sit in this frame for
+    // the whole download, and the TLS session it shares the task stack with
+    // needs that headroom more than we do.
+    std::unique_ptr<uint8_t[]> buffer(new (std::nothrow) uint8_t[DOWNLOAD_CHUNK_SIZE]);
+    if (!buffer) {
+        ESP_LOGE(TAG, "download buffer allocation failed (heap=%u)", ESP.getFreeHeap());
+        Update.abort();
+        return false;
+    }
     size_t totalRead = 0;
     unsigned long lastDataReceived = millis();
 
     while (totalRead < expectedSize) {
-        int n = esp_http_client_read(client.handle, reinterpret_cast<char *>(buffer), DOWNLOAD_CHUNK_SIZE);
+        int n = esp_http_client_read(client.handle, reinterpret_cast<char *>(buffer.get()), DOWNLOAD_CHUNK_SIZE);
         if (n > 0) {
-            size_t written = Update.write(buffer, n);
+            size_t written = Update.write(buffer.get(), n);
             if (written != static_cast<size_t>(n)) {
                 ESP_LOGE(TAG, "Flash write failed: %d vs %d (%s)", written, n, Update.errorString());
                 Update.abort();
                 return false;
             }
 #if OTA_ENABLE_SHA256_VERIFICATION
-            verify.update(buffer, n);
+            verify.update(buffer.get(), n);
 #endif
             totalRead += written;
             lastDataReceived = millis();
@@ -982,8 +998,11 @@ void otaCheckTask(void *arg) {
     FirmwareInfo info;
     doCheckForUpdate(owner, repo, info);
 
+    // Logged at I, not D: CORE_DEBUG_LEVEL is 0 in the release build, so a D
+    // line would be compiled out — and this is the one number that tells us
+    // whether the stack budget is still sound.
     UBaseType_t hwm = uxTaskGetStackHighWaterMark(nullptr);
-    ESP_LOGD(TAG, "ota_check HWM=%u words", hwm);
+    ESP_LOGI(TAG, "ota_check stack headroom left: %u bytes of %u", hwm, OTA_CHECK_TASK_STACK);
     vTaskDelete(nullptr);
 }
 
@@ -1045,7 +1064,7 @@ void otaWorkerTask(void *arg) {
     updateInProgress.store(false);
 
     UBaseType_t hwm = uxTaskGetStackHighWaterMark(nullptr);
-    ESP_LOGD(TAG, "ota_update HWM=%u words", hwm);
+    ESP_LOGI(TAG, "ota_update stack headroom left: %u bytes of %u", hwm, OTA_UPDATE_TASK_STACK);
     vTaskDelete(nullptr);
 }
 
