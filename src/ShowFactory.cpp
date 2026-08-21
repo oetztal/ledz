@@ -21,7 +21,7 @@ ShowFactory::ShowFactory() {
     // Register all available shows (in display order)
     // Each lambda receives a JsonDocument and uses defaults via | operator
 
-    registerShow("Solid", "Solid color or color sections (flags, patterns, gradients)", [](const JsonDocument &doc) {
+    registerShow("Solid", "Static light: one color, or the strip split into sections with optional gradient blending (flags, patterns)", [](const JsonDocument &doc) {
         std::vector<Strip::Color> colors;
         std::vector<float> ranges;
 
@@ -64,7 +64,7 @@ ShowFactory::ShowFactory() {
         return std::make_unique<Show::ColorRanges>(colors, ranges, gradient);
     });
 
-    registerShow("Fire", "Burning flames", [](const JsonDocument &doc) {
+    registerShow("Fire", "Flickering flames rising from one end, fed by random sparks and cooling into embers", [](const JsonDocument &doc) {
         float cooling = doc["cooling"] | 0.1f;
         float spread = doc["spread"] | 10.0f;
         float ignition = doc["ignition"] | 0.5f;
@@ -76,7 +76,7 @@ ShowFactory::ShowFactory() {
         return std::make_unique<Show::Fire>(cooling, spread, ignition, spark_amount, std::vector<float>{1.0f}, start_offset, spark_range);
     });
 
-    registerShow("Starlight", "Twinkling stars effect", [](const JsonDocument &doc) {
+    registerShow("Starlight", "Single pixels light up at random and slowly fade away, like stars in a night sky", [](const JsonDocument &doc) {
         float probability = doc["probability"] | 0.1f;
         unsigned long length_ms = doc["length"] | 5000;
         unsigned long fade_ms = doc["fade"] | 1000;
@@ -88,7 +88,7 @@ ShowFactory::ShowFactory() {
         return std::make_unique<Show::Starlight>(probability, length_ms, fade_ms, r, g, b);
     });
 
-    registerShow("Stroboscope", "Flashing strobe effect", [](const JsonDocument &doc) {
+    registerShow("Stroboscope", "Hard on/off flashes of a single color at an adjustable rhythm", [](const JsonDocument &doc) {
         uint8_t r = doc["r"] | 255;
         uint8_t g = doc["g"] | 255;
         uint8_t b = doc["b"] | 255;
@@ -99,17 +99,17 @@ ShowFactory::ShowFactory() {
         return std::make_unique<Show::Stroboscope>(r, g, b, on_cycles, off_cycles);
     });
 
-    registerShow("ColorRun", "Running colors", [](const JsonDocument &doc) {
+    registerShow("ColorRun", "Colored dots appear at random and race along the strip at their own speed", [](const JsonDocument &doc) {
         // ColorRun has no parameters yet
         return std::make_unique<Show::ColorRun>();
     });
 
-    registerShow("Jump", "Jumping lights", [](const JsonDocument &doc) {
+    registerShow("Jump", "Several balls bounce along the strip at different heights and speeds, swapping colors at each bounce", [](const JsonDocument &doc) {
         // Jump has no parameters yet
         return std::make_unique<Show::Jump>();
     });
 
-    registerShow("Rainbow", "Rainbow color cycle", [](const JsonDocument &doc) {
+    registerShow("Rainbow", "The full color spectrum drifting smoothly along the strip", [](const JsonDocument &doc) {
         float time_step = doc["time_step"] | 1.0f;
         float pixel_step = doc["pixel_step"] | 1.0f;
         ESP_LOGI(TAG, "Creating Rainbow time_step=%.2f, pixel_step=%.2f",
@@ -117,7 +117,7 @@ ShowFactory::ShowFactory() {
         return std::make_unique<Show::Rainbow>(time_step, pixel_step);
     });
 
-    registerShow("Wave", "Propagating wave with rainbow colors", [](const JsonDocument &doc) {
+    registerShow("Wave", "Rainbow waves roll out from one end and fade as they travel, with a pulsing source", [](const JsonDocument &doc) {
         float wave_speed = doc["wave_speed"] | 1.0f;
         float decay_rate = doc["decay_rate"] | 2.0f;
         float brightness_frequency = doc["brightness_frequency"] | 0.1f;
@@ -127,14 +127,14 @@ ShowFactory::ShowFactory() {
         return std::make_unique<Show::Wave>(wave_speed, decay_rate, brightness_frequency, wavelength);
     });
 
-    registerShow("TheaterChase", "Marquee-style chase with rainbow colors", [](const JsonDocument &doc) {
+    registerShow("TheaterChase", "Evenly spaced rainbow dots march along the strip, like lights around a theater marquee", [](const JsonDocument &doc) {
         unsigned int num_steps_per_cycle = doc["num_steps_per_cycle"] | 21;
         ESP_LOGI(TAG, "Creating TheaterChase num_steps_per_cycle=%u",
                       num_steps_per_cycle);
         return std::make_unique<Show::TheaterChase>(num_steps_per_cycle);
     });
 
-    registerShow("MorseCode", "Scrolling Morse code text display", [](const JsonDocument &doc) {
+    registerShow("MorseCode", "Your own message spelled out in Morse code, scrolling across the strip as dots and dashes", [](const JsonDocument &doc) {
         // MorseCode takes a const std::string& and copies, so handing it the
         // document's own pointer is safe for the duration of the call.
         const char *message = doc["message"] | "HELLO";
@@ -150,7 +150,7 @@ ShowFactory::ShowFactory() {
                                                  symbol_space, letter_space, word_space);
     });
 
-    registerShow("Chaos", "Chaotic pattern", [](const JsonDocument &doc) {
+    registerShow("Chaos", "The logistic map drawn live: steady points split again and again until they dissolve into chaos", [](const JsonDocument &doc) {
         float Rmin = doc["Rmin"] | 2.95f;
         float Rmax = doc["Rmax"] | 4.0f;
         float Rdelta = doc["Rdelta"] | 0.0002f;
@@ -159,7 +159,7 @@ ShowFactory::ShowFactory() {
         return std::make_unique<Show::Chaos>(Rmin, Rmax, Rdelta);
     });
 
-    registerShow("Mandelbrot", "Mandelbrot fractal zoom", [](const JsonDocument &doc) {
+    registerShow("Mandelbrot", "A slow scan across the Mandelbrot set, one fractal slice at a time, colored by escape time", [](const JsonDocument &doc) {
         float Cre0 = doc["Cre0"] | -1.05f;
         float Cim0 = doc["Cim0"] | -0.3616f;
         float Cim1 = doc["Cim1"] | -0.3156f;
