@@ -1,5 +1,7 @@
 .pio
 
+__pycache__
+
 .idea
 .claude
 .opencode

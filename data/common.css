@@ -68,7 +68,9 @@ body {
     font-weight: 600;
 }
 
-.form-group input {
+/* Scoped by container, so it must exclude the boolean controls explicitly.
+   Not deletable: input[type="time"] in timers.html has no type-specific rule. */
+.form-group input:not([type="checkbox"]):not([type="radio"]) {
     width: 100%;
     padding: 12px;
     border: 2px solid #e9ecef;
@@ -76,9 +78,37 @@ body {
     font-size: 16px;
 }
 
-.form-group input:focus {
+.form-group input:not([type="checkbox"]):not([type="radio"]):focus {
     outline: none;
     border-color: #667eea;
+}
+
+/* Boolean controls: checkbox rows.
+   The .form-group variant is listed explicitly so it outranks ".form-group label"
+   (display:block) on specificity rather than on source order. */
+label.checkbox-row,
+.form-group label.checkbox-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-height: 44px;
+    padding: 12px 0;
+    margin-bottom: 0;
+    cursor: pointer;
+}
+
+.checkbox-row input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    flex: none;
+    accent-color: #667eea;
+}
+
+.field-hint {
+    display: block;
+    margin-top: 4px;
+    color: #666;
 }
 
 /* Buttons */
@@ -341,6 +371,23 @@ input[type="color"] {
     transform: translateX(26px);
 }
 
+/* The real input is opacity:0, so focus has to be drawn on the slider. */
+.toggle-switch input:focus-visible + .slider {
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.4);
+}
+
+.toggle-switch input:disabled + .slider {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .toggle-switch .slider,
+    .toggle-switch .slider:before {
+        transition: none;
+    }
+}
+
 /* Misc */
 .device-id {
     font-size: 14px;
@@ -354,10 +401,18 @@ input[type="color"] {
     margin-top: 5px;
 }
 
-.auto-cycle-row {
+/* Label left, control right — used for toggle-switch settings rows. */
+.setting-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
+    min-height: 44px;
+}
+
+.setting-row label {
+    margin-bottom: 0;
+    cursor: pointer;
 }
 
 .show-description {

@@ -1,0 +1,62 @@
+## Why
+
+`common.css:71` styles form inputs by container rather than by type:
+
+```css
+.form-group input {          /* specificity (0,1,1) — matches checkboxes too */
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 16px;
+}
+```
+
+The rules that follow narrow by type — `input[type="number"|"text"|"password"|"color"|"range"]` (`common.css:242-296`) — but nothing ever un-does the generic rule for `checkbox`. So the three checkboxes on the settings page are stretched to the full width of their container, with the label text pushed onto the line below:
+
+```
+┌─ .form-group ──────────────────────────────────────────┐
+│  ┌────────────────────────────────────────────────┐    │  ← the checkbox,
+│  │ ▣                                              │    │    width:100%
+│  └────────────────────────────────────────────────┘    │
+│  Enable touch control                                  │  ← text wrapped below
+└────────────────────────────────────────────────────────┘
+```
+
+The fourth checkbox, `#colorRangesLinearBlend` in `control.html:142`, sits in a `.param-row` instead of a `.form-group`, escapes the rule, and renders as a normal inline checkbox with an inline `style="margin-right: 6px"`. The same control renders two different ways on two pages, and neither way was designed.
+
+Underneath the styling defect there is a semantic one. `common.css` already contains a complete, animated toggle switch (`.toggle-switch`, `:298-342`) and the flex row it belongs in (`.auto-cycle-row`, `:357-361`). **Neither is used anywhere** — grep finds zero references in `data/*.html`. A matched pair of components was built and never landed, and in the meantime every boolean setting became a checkbox regardless of whether it acts immediately on the device or merely arms a later Apply button.
+
+## What Changes
+
+- **`.form-group input` is narrowed to exclude checkboxes and radios.** The rule is *not* deleted: `timers.html:110` is an `input[type="time"]` inside a `.form-group`, and the generic rule is the only thing styling it.
+- **Boolean controls are split by whether they take effect immediately.** `#touchEnabled` POSTs to the device on change and reverts on failure (`settings.html:772-787`), so it becomes a **toggle switch**. `#wifiOpenNetwork`, `#forceUpdateCheckbox` and `#colorRangesLinearBlend` only stage state for a later Update/Apply button, so they stay **checkboxes**.
+- **The dead `.toggle-switch` component is adopted and finished.** It ships three defects that must be fixed before use: keyboard focus is completely invisible (`input { opacity: 0 }` with no `:focus-visible` rule on the slider), there is no disabled state, and the `.4s` transitions have no `prefers-reduced-motion` guard.
+- **A `.checkbox-row` component replaces the ad-hoc label wrapping.** Native checkbox tinted with `accent-color: #667eea`, sized 20px, laid out in a flex row with a ≥44px touch target and `cursor: pointer`.
+- **`.auto-cycle-row` is generalised to `.setting-row`** and used for the toggle row, retiring the second dead class.
+- **A `.field-hint` class is defined and applied at the three checkbox sites only.** The inline `style="display:block; margin-top:4px; color:#666"` hint is repeated **34 times** across `settings.html` and `control.html` — and already inconsistently, since `settings.html:136` omits the `margin-top`. Converting all 34 is a mechanical sweep unrelated to checkboxes that would swamp review of the actual fix, so this change defines the class, uses it where it is already editing the markup, and leaves the remaining 31 for a follow-up.
+
+## Capabilities
+
+### New Capabilities
+- `web-ui-controls`: Describes how boolean controls are presented across the device web UI — when a setting is a toggle switch versus a checkbox, how each is laid out, sized and focused, and the container-versus-type rule for form input styling.
+
+### Modified Capabilities
+- *(none)* — `settings-page` covers the behaviour of the settings controls, not their presentation. Its requirements survive unchanged: `touchEnabled` is still prefilled from `/api/touch`, and "Open network can be configured explicitly" still holds because `#wifiOpenNetwork` remains a checkbox that disables the password input.
+
+## Impact
+
+- `data/common.css` — narrow `.form-group input` by `:not([type="checkbox"]):not([type="radio"])`; add `.checkbox-row` and `.field-hint`; add focus-visible, disabled and reduced-motion rules to `.toggle-switch`; rename `.auto-cycle-row` to `.setting-row`
+- `data/settings.html` — `#touchEnabled` (`:86-91`) becomes a `.setting-row` toggle; `#forceUpdateCheckbox` (`:131-138`) and `#wifiOpenNetwork` (`:176-183`) become `.checkbox-row` checkboxes; `<small>` hints become `.field-hint`
+- `data/control.html` — `#colorRangesLinearBlend` (`:140-148`) becomes a `.checkbox-row`, dropping its inline margin
+- `src/generated/common_gz.h`, `settings_gz.h`, `control_gz.h` — regenerated by `scripts/compress_web.py` during the PlatformIO pre-build step
+- No C++ changes, no HTTP API changes, no persisted state changes
+
+Low risk. All fourteen JavaScript touchpoints reach these controls through `document.getElementById(id).checked` or an inline `onchange` — nothing traverses the surrounding DOM — so the markup can be restructured freely as long as each `<input type="checkbox">` keeps its `id` and handler.
+
+## Non-goals
+
+- Restyling anything other than boolean controls and their immediate hint text
+- Converting the other 31 inline `<small>` hints to `.field-hint` — the class is introduced here, the sweep is a separate change
+- Adding `aria-*` attributes across the UI (the UI currently has none; native inputs with real `<label for>` associations are accessible without them, and this change improves that association rather than papering over it)
+- A dark mode, a design-token pass, or splitting `common.css` into per-component files

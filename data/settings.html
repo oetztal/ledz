@@ -83,11 +83,12 @@
             <h2>Touch Control</h2>
             <p>Configure capacitive touch pins to load presets. Touch pins GPIO 5, 7, 9 can each trigger a preset.</p>
 
-            <div class="form-group">
-                <label>
+            <div class="form-group setting-row">
+                <label for="touchEnabled">Enable touch control</label>
+                <span class="toggle-switch">
                     <input type="checkbox" id="touchEnabled" onchange="updateTouchEnabled()">
-                    Enable touch control
-                </label>
+                    <span class="slider"></span>
+                </span>
             </div>
 
             <div class="form-group">
@@ -129,11 +130,11 @@
                     <pre id="releaseNotes" class="release-notes"></pre>
                 </div>
                 <div class="form-group" id="forceGroup" style="display:none;">
-                    <label>
+                    <label class="checkbox-row">
                         <input type="checkbox" id="forceUpdateCheckbox">
-                        Allow installing older or equal version
+                        <span>Allow installing older or equal version</span>
                     </label>
-                    <small style="display:block; color:#666;">Enable only if you intend to downgrade. The device will
+                    <small class="field-hint">Enable only if you intend to downgrade. The device will
                         install the latest available release even if it is not newer than the running one.</small>
                 </div>
                 <button class="btn btn-primary" onclick="performUpdate()" id="installUpdateBtn">Install Update</button>
@@ -174,11 +175,11 @@
             </div>
 
             <div class="form-group">
-                <label>
+                <label class="checkbox-row">
                     <input type="checkbox" id="wifiOpenNetwork" onchange="updateOpenNetworkState()">
-                    Open network (no password)
+                    <span>Open network (no password)</span>
                 </label>
-                <small style="display:block; margin-top:4px; color:#666;">Check this only to connect to a network with
+                <small class="field-hint">Check this only to connect to a network with
                     no password. It clears the stored password.</small>
             </div>
 
