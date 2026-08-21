@@ -12,6 +12,7 @@
 #include "OTAConfig.h"
 #include "TimerScheduler.h"
 #include "TouchController.h"
+#include "support/WiFiCredentials.h"
 
 #ifdef ARDUINO
 #include <ArduinoJson.h>
@@ -159,7 +160,9 @@ void WebServerManager::setupAPIRoutes() {
 
     // GET /api/status - Get device status
     server.on(API_PATH_STATUS, HTTP_GET, [this](AsyncWebServerRequest *request) {
-        StaticJsonDocument<Config::JSON_DOC_LARGE> doc;
+        // XLARGE, not LARGE: show_params is deep-copied from a MEDIUM parse
+        // buffer and ArduinoJson overflows silently, truncating the response.
+        StaticJsonDocument<Config::JSON_DOC_XLARGE> doc;
 
         // Device info
         Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
@@ -197,6 +200,10 @@ void WebServerManager::setupAPIRoutes() {
             doc["ip_address"] = WiFi.localIP().toString();
             doc["wifi_ssid"] = WiFi.SSID();
         }
+        // Configured SSID, independent of connection state: the settings page
+        // prefills from this, and needs it in AP mode too.
+        Config::WiFiConfig wifiConfig = config.loadWiFiConfig();
+        doc["wifi_configured_ssid"] = wifiConfig.ssid;
 
         String response;
         serializeJson(doc, response);
@@ -594,26 +601,25 @@ void WebServerManager::setupAPIRoutes() {
                       }
 
                       const char *ssid = doc["ssid"];
-                      const char *password = doc["password"];
 
                       if (ssid == nullptr || strlen(ssid) == 0) {
                           request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"SSID required"})");
                           return;
                       }
 
-                      // Create and save WiFi config
-                      Config::WiFiConfig wifiConfig;
-                      strncpy(wifiConfig.ssid, ssid, sizeof(wifiConfig.ssid) - 1);
-                      wifiConfig.ssid[sizeof(wifiConfig.ssid) - 1] = '\0';
+                      // An absent "password" key preserves the stored password; a present
+                      // one (including "") overwrites it. The settings page prefills the
+                      // SSID but can never prefill the password, so a blank field must not
+                      // wipe working credentials. Rule lives in support/WiFiCredentials so
+                      // it can be unit-tested natively - keep it there.
+                      Support::WiFiCredentialUpdate update;
+                      update.ssid = ssid;
+                      update.password = doc.containsKey("password")
+                                            ? static_cast<const char *>(doc["password"])
+                                            : nullptr;
 
-                      if (password != nullptr) {
-                          strncpy(wifiConfig.password, password, sizeof(wifiConfig.password) - 1);
-                          wifiConfig.password[sizeof(wifiConfig.password) - 1] = '\0';
-                      } else {
-                          wifiConfig.password[0] = '\0';
-                      }
-
-                      wifiConfig.configured = true;
+                      Config::WiFiConfig wifiConfig =
+                          Support::mergeWiFiCredentials(config.loadWiFiConfig(), update);
                       config.saveWiFiConfig(wifiConfig);
 
                       ESP_LOGI(TAG, "WiFi credentials updated: SSID=%s", wifiConfig.ssid);

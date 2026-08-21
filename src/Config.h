@@ -1,6 +1,12 @@
 #ifndef LEDZ_CONFIG_H
 #define LEDZ_CONFIG_H
 
+// The config structs below are used by native unit tests, which do not get
+// size_t / the fixed-width integer types from Arduino.h.
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+
 #ifdef ARDUINO
 #include <Preferences.h>
 #include <Arduino.h>
@@ -170,15 +176,19 @@ namespace Config {
         }
     };
 
+// ConfigManager is backed by ESP32 Preferences (NVS) and has no native
+// implementation (Config.cpp is excluded from the native build_src_filter),
+// so it is Arduino-only. The config structs above stay available natively
+// for unit tests.
+#ifdef ARDUINO
+
     /**
      * Configuration Manager
      * Handles persistent storage using ESP32 Preferences (NVS)
      */
     class ConfigManager {
     private:
-#ifdef ARDUINO
         Preferences prefs;
-#endif
         static constexpr const char *NAMESPACE = "ledz";
 
         bool restartRequested = false;
@@ -356,6 +366,8 @@ namespace Config {
          */
         void saveTouchConfig(const TouchConfig &config);
     };
+
+#endif // ARDUINO
 } // namespace Config
 
 #endif //LEDZ_CONFIG_H

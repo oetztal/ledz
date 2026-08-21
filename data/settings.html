@@ -28,8 +28,8 @@
 
             <button class="btn btn-primary" onclick="updateDeviceName()">Update Name</button>
 
-            <div class="info-box">
-                <strong>Current: </strong><span id="currentDeviceName">Loading...</span>
+            <div class="info-box" id="deviceNameStatus" style="display:none;">
+                <strong id="deviceNameStatusLabel">Modified: </strong><span id="deviceNameSaved"></span>
             </div>
         </div>
 
@@ -73,9 +73,8 @@
             <button class="btn btn-primary" onclick="updateHardwareSettings()">Update Hardware Settings</button>
 
             <div class="info-box">
-                <strong>Current: </strong><span id="currentNumPixels">Loading...</span> LEDs on pin <span
-                    id="currentLedPin">Loading...</span> with cycle time <span id="currentCycleTime">Loading...</span>
-                ms and gamma mode <span id="currentGammaMode">Loading...</span><br>
+                <span id="hardwareStatus" style="display:none;"><strong
+                        id="hardwareStatusLabel">Modified: </strong><span id="hardwareSaved"></span><br></span>
                 <strong>Note: </strong>The device will restart after updating these settings.
             </div>
         </div>
@@ -169,12 +168,25 @@
 
             <div class="form-group">
                 <label for="wifiPassword">WiFi Password</label>
-                <input type="password" id="wifiPassword" placeholder="Enter WiFi password">
+                <input type="password" id="wifiPassword" placeholder="Leave blank to keep current password">
+                <small style="display:block; margin-top:4px; color:#666;">The stored password is never shown. Leave
+                    this blank to keep it unchanged.</small>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="wifiOpenNetwork" onchange="updateOpenNetworkState()">
+                    Open network (no password)
+                </label>
+                <small style="display:block; margin-top:4px; color:#666;">Check this only to connect to a network with
+                    no password. It clears the stored password.</small>
             </div>
 
             <button class="btn btn-primary" onclick="updateWiFi()">Update WiFi</button>
 
             <div class="info-box">
+                <span id="wifiStatus" style="display:none;"><strong
+                        id="wifiStatusLabel">Modified: </strong><span id="wifiSaved"></span><br></span>
                 <strong>Note: </strong>The device will restart after updating WiFi credentials. You will need to
                 reconnect to the new network to access the device.
             </div>
@@ -202,49 +214,169 @@
 </div>
 
 <script>
-    // Load current device name
-    async function loadDeviceName() {
+    // Snapshot of what is currently stored on the device. The inputs are
+    // prefilled from this, so "empty" no longer means "leave unchanged" -
+    // every submit diffs the controls against this object instead.
+    const savedSettings = {};
+
+    // The three /api/status-backed sections, in one place so the modified
+    // indicator and the load-error state can walk them uniformly.
+    const SECTIONS = [
+        {status: 'deviceNameStatus', label: 'deviceNameStatusLabel', saved: 'deviceNameSaved'},
+        {status: 'hardwareStatus', label: 'hardwareStatusLabel', saved: 'hardwareSaved'},
+        {status: 'wifiStatus', label: 'wifiStatusLabel', saved: 'wifiSaved'}
+    ];
+
+    // Controls whose edits should refresh the modified indicators.
+    const WATCHED_INPUTS = ['deviceName', 'numPixels', 'ledPin', 'gammaMode', 'cycleTime', 'wifiSSID'];
+
+    // Load every /api/status-backed section in one request. Device name,
+    // hardware and WiFi all read the same endpoint, so they share a fetch.
+    async function loadSettings() {
         try {
             const response = await fetch('/api/status');
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
             const data = await response.json();
-            document.getElementById('currentDeviceName').textContent = data.device_name || data.device_id;
+
+            savedSettings.device_name = data.device_name || data.device_id || '';
+            savedSettings.num_pixels = data.num_pixels;
+            savedSettings.led_pin = data.led_pin;
+            savedSettings.cycle_time = data.cycle_time;
+            savedSettings.gamma_mode = data.gamma_mode;
+            savedSettings.wifi_configured_ssid = data.wifi_configured_ssid || '';
+
+            populateFromSnapshot();
+            refreshModified();
         } catch (error) {
-            console.error('Failed to load device name:', error);
-            document.getElementById('currentDeviceName').textContent = 'Error loading';
+            console.error('Failed to load settings:', error);
+            showLoadError();
         }
     }
 
-    // Load current hardware settings from /api/status endpoint
-    async function loadHardwareSettings() {
-        try {
-            const response = await fetch('/api/status');
-            const data = await response.json();
-            const numPixels = data.num_pixels || 300;
-            const ledPin = data.led_pin || 35;
-            const cycleTime = data.cycle_time || 10;
-            const gammaMode = data.gamma_mode || 0;
-            document.getElementById('currentNumPixels').textContent = numPixels;
-            document.getElementById('currentLedPin').textContent = ledPin;
-            document.getElementById('currentCycleTime').textContent = cycleTime;
+    // Prefill every control from the snapshot. Fields the device did not
+    // report are left empty so their placeholder shows.
+    function populateFromSnapshot() {
+        setInputValue('deviceName', savedSettings.device_name);
+        setInputValue('numPixels', savedSettings.num_pixels);
+        setInputValue('ledPin', savedSettings.led_pin);
+        setInputValue('cycleTime', savedSettings.cycle_time);
+        setInputValue('gammaMode', savedSettings.gamma_mode);
+        setInputValue('wifiSSID', savedSettings.wifi_configured_ssid);
+    }
 
-            // Set the select values
-            const cycleTimeSelect = document.getElementById('cycleTime');
-            if (cycleTimeSelect) {
-                cycleTimeSelect.value = cycleTime.toString();
-            }
-            
-            const gammaModeSelect = document.getElementById('gammaMode');
-            if (gammaModeSelect) {
-                gammaModeSelect.value = gammaMode.toString();
-                document.getElementById('currentGammaMode').textContent = getGammaModeName(gammaMode);
-            }
-        } catch (error) {
-            console.error('Failed to load hardware settings:', error);
-            document.getElementById('currentNumPixels').textContent = 'Error';
-            document.getElementById('currentLedPin').textContent = 'Error';
-            document.getElementById('currentCycleTime').textContent = 'Error';
-            document.getElementById('currentGammaMode').textContent = 'Error';
+    function setInputValue(id, value) {
+        const element = document.getElementById(id);
+        if (!element) {
+            return;
         }
+        element.value = (value === undefined || value === null) ? '' : value.toString();
+    }
+
+    // Leaves the inputs empty on their placeholders, and says so rather than
+    // presenting blank fields as though they were the device's values.
+    function showLoadError() {
+        SECTIONS.forEach((section) => {
+            const status = document.getElementById(section.status);
+            if (!status) {
+                return;
+            }
+            status.style.display = '';
+            document.getElementById(section.label).textContent = 'Error: ';
+            document.getElementById(section.saved).textContent =
+                'could not load the current settings. Reload the page to try again.';
+        });
+    }
+
+    function watchInputs() {
+        WATCHED_INPUTS.forEach((id) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('input', refreshModified);
+                element.addEventListener('change', refreshModified);
+            }
+        });
+    }
+
+    // Show, per section, that it differs from what is stored - and what the
+    // stored value was. Prefilling removes the user's only other view of it.
+    function refreshModified() {
+        if (savedSettings.device_name === undefined) {
+            return; // load failed; leave the error state in place
+        }
+
+        setSectionModified(SECTIONS[0],
+            document.getElementById('deviceName').value !== savedSettings.device_name,
+            `saved name is "${savedSettings.device_name}"`);
+
+        setSectionModified(SECTIONS[1], hardwareChanges().length > 0,
+            `saved is ${savedSettings.num_pixels} LEDs on pin ${savedSettings.led_pin}, ` +
+            `cycle ${savedSettings.cycle_time} ms, ${getGammaModeName(savedSettings.gamma_mode)}`);
+
+        setSectionModified(SECTIONS[2],
+            document.getElementById('wifiSSID').value !== savedSettings.wifi_configured_ssid,
+            savedSettings.wifi_configured_ssid
+                ? `saved network is "${savedSettings.wifi_configured_ssid}"`
+                : 'no network is currently configured');
+    }
+
+    function setSectionModified(section, isModified, savedText) {
+        const status = document.getElementById(section.status);
+        if (!status) {
+            return;
+        }
+        status.style.display = isModified ? '' : 'none';
+        if (isModified) {
+            document.getElementById(section.label).textContent = 'Modified: ';
+            // textContent, not innerHTML: the device name and SSID are
+            // user-supplied and must not be interpreted as markup.
+            document.getElementById(section.saved).textContent = savedText;
+        }
+    }
+
+    // The hardware controls that differ from the snapshot. `value` is null
+    // when the field is empty or unparseable, so callers can reject it
+    // instead of silently treating a cleared field as "leave unchanged".
+    function hardwareChanges() {
+        const fields = [
+            {
+                id: 'numPixels', key: 'num_pixels', min: 1, max: 1000,
+                error: 'Please enter a valid number of LEDs (1-1000)',
+                describe: (v) => `${v} LEDs`
+            },
+            {
+                id: 'ledPin', key: 'led_pin', min: 0, max: 48,
+                error: 'Please enter a valid GPIO pin (0-48)',
+                describe: (v) => `pin ${v}`
+            },
+            {
+                id: 'cycleTime', key: 'cycle_time',
+                error: 'Please choose a cycle time',
+                describe: (v) => `${v}ms cycle time`
+            },
+            {
+                id: 'gammaMode', key: 'gamma_mode',
+                error: 'Please choose a gamma correction mode',
+                describe: (v) => getGammaModeName(v)
+            }
+        ];
+
+        return fields.reduce((changes, field) => {
+            const raw = document.getElementById(field.id).value;
+            const parsed = parseInt(raw, 10);
+            const value = (raw.trim() === '' || isNaN(parsed)) ? null : parsed;
+            if (value !== savedSettings[field.key]) {
+                changes.push({...field, value});
+            }
+            return changes;
+        }, []);
+    }
+
+    // First entry that is empty, unparseable or out of range.
+    function firstInvalid(changes) {
+        return changes.find((change) => change.value === null ||
+            (change.min !== undefined && (change.value < change.min || change.value > change.max)));
     }
 
     // Update device name
@@ -253,6 +385,11 @@
 
         if (!name || name.trim() === '') {
             alert('Please enter a device name');
+            return;
+        }
+
+        if (name === savedSettings.device_name) {
+            alert('The device name is unchanged.');
             return;
         }
 
@@ -265,8 +402,11 @@
 
             if (response.ok) {
                 alert('Device name updated successfully!');
-                document.getElementById('deviceName').value = '';
-                loadDeviceName();
+                // No restart here, so the snapshot has to move forward or the
+                // section would stay flagged as modified.
+                savedSettings.device_name = name.trim();
+                setInputValue('deviceName', savedSettings.device_name);
+                refreshModified();
             } else {
                 const data = await response.json();
                 alert('Failed to update device name: ' + (data.error || 'Unknown error'));
@@ -277,51 +417,28 @@
         }
     }
 
-    // Update hardware settings (num_pixels and/or led_pin)
+    // Update hardware settings - sends only the fields the user changed.
     async function updateHardwareSettings() {
-        const numPixels = parseInt(document.getElementById('numPixels').value);
-        const ledPin = parseInt(document.getElementById('ledPin').value);
-        const cycleTime = parseInt(document.getElementById('cycleTime').value);
-
-        const updates = {};
-        let changes = [];
-
-        if (!isNaN(numPixels)) {
-            if (numPixels < 1 || numPixels > 1000) {
-                alert('Please enter a valid number of LEDs (1-1000)');
-                return;
-            }
-            updates.num_pixels = numPixels;
-            changes.push(`${numPixels} LEDs`);
-        }
-
-        if (!isNaN(ledPin)) {
-            if (ledPin < 0 || ledPin > 48) {
-                alert('Please enter a valid GPIO pin (0-48)');
-                return;
-            }
-            updates.led_pin = ledPin;
-            changes.push(`pin ${ledPin}`);
-        }
-
-        if (!isNaN(cycleTime)) {
-            updates.cycle_time = cycleTime;
-            changes.push(`${cycleTime}ms cycle time`);
-        }
-
-        // Add gamma mode if selected
-        const gammaMode = parseInt(document.getElementById('gammaMode').value);
-        if (!isNaN(gammaMode)) {
-            updates.gamma_mode = gammaMode;
-            changes.push(getGammaModeName(gammaMode));
-        }
+        const changes = hardwareChanges();
 
         if (changes.length === 0) {
-            alert('Please enter at least one value to update');
+            alert('Hardware settings are unchanged.');
             return;
         }
 
-        if (!confirm(`Update hardware settings to ${changes.join(' and ')}?\n\nDevice will restart to apply changes.`)) {
+        const invalid = firstInvalid(changes);
+        if (invalid) {
+            alert(invalid.error);
+            return;
+        }
+
+        const updates = {};
+        changes.forEach((change) => {
+            updates[change.key] = change.value;
+        });
+        const summary = changes.map((change) => change.describe(change.value)).join(' and ');
+
+        if (!confirm(`Update hardware settings to ${summary}?\n\nDevice will restart to apply changes.`)) {
             return;
         }
 
@@ -334,8 +451,6 @@
 
             if (response.ok) {
                 alert('Hardware settings updated!\n\nDevice is restarting...\n\nPlease wait a moment and refresh the page.');
-                document.getElementById('numPixels').value = '';
-                document.getElementById('ledPin').value = '';
             } else {
                 const data = await response.json();
                 alert('Failed to update hardware settings: ' + (data.error || 'Unknown error'));
@@ -346,17 +461,41 @@
         }
     }
 
+    // The open-network checkbox is the only way to clear a stored password,
+    // now that a blank field means "keep the current one".
+    function updateOpenNetworkState() {
+        const isOpen = document.getElementById('wifiOpenNetwork').checked;
+        const passwordInput = document.getElementById('wifiPassword');
+        passwordInput.disabled = isOpen;
+        if (isOpen) {
+            passwordInput.value = '';
+        }
+    }
+
     // Update WiFi credentials
     async function updateWiFi() {
         const ssid = document.getElementById('wifiSSID').value;
         const password = document.getElementById('wifiPassword').value;
+        const isOpenNetwork = document.getElementById('wifiOpenNetwork').checked;
 
         if (!ssid || ssid.trim() === '') {
             alert('Please enter a WiFi SSID');
             return;
         }
 
-        if (!confirm(`Update WiFi credentials to network "${ssid}"?\n\nDevice will restart and connect to the new network.`)) {
+        // Omitting the key preserves the stored password; sending "" clears
+        // it. A blank field must never wipe working credentials.
+        const body = {ssid};
+        let passwordNote = '\n\nThe stored password will be kept.';
+        if (isOpenNetwork) {
+            body.password = '';
+            passwordNote = '\n\nThe stored password will be cleared (open network).';
+        } else if (password !== '') {
+            body.password = password;
+            passwordNote = '\n\nThe password will be replaced.';
+        }
+
+        if (!confirm(`Update WiFi credentials to network "${ssid}"?${passwordNote}\n\nDevice will restart and connect to the new network.`)) {
             return;
         }
 
@@ -364,13 +503,11 @@
             const response = await fetch('/api/settings/wifi', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ssid, password})
+                body: JSON.stringify(body)
             });
 
             if (response.ok) {
                 alert('WiFi updated successfully!\n\nDevice is restarting...\n\nPlease reconnect to the new WiFi network and access the device at its new IP address or hostname.');
-                document.getElementById('wifiSSID').value = '';
-                document.getElementById('wifiPassword').value = '';
             } else {
                 const data = await response.json();
                 alert('Failed to update WiFi: ' + (data.error || 'Unknown error'));
@@ -677,8 +814,8 @@
     }
 
     // Load device info on page load
-    loadDeviceName();
-    loadHardwareSettings();
+    watchInputs();
+    loadSettings();
     loadOTAStatus();
     loadTouchConfig();
 </script>
