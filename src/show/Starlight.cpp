@@ -86,9 +86,9 @@ namespace Show {
 
             // Calculate brightness and apply to LED
             float brightness = calculateBrightness(elapsed);
-            uint8_t r = (uint8_t)(red(star_color) * brightness);
-            uint8_t g = (uint8_t)(green(star_color) * brightness);
-            uint8_t b = (uint8_t)(blue(star_color) * brightness);
+            auto r = (uint8_t)(red(star_color) * brightness);
+            auto g = (uint8_t)(green(star_color) * brightness);
+            auto b = (uint8_t)(blue(star_color) * brightness);
 
             strip.setPixelColor(led, color(r, g, b));
             ++it;

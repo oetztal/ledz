@@ -10,9 +10,13 @@
 #include <memory>
 #include <string>
 
+// ArduinoJson is unconditional: ShowConstructor names JsonDocument in this
+// header's public interface, so guarding the include never made the header
+// self-contained on non-Arduino builds — it only deferred the error.
+#include <ArduinoJson.h>
+
 #ifdef ARDUINO
 #include <Arduino.h>
-#include <ArduinoJson.h>
 #endif
 
 #include "show/Show.h"
@@ -28,7 +32,7 @@ public:
     /**
      * Show constructor function type that takes JSON parameters
      */
-    using ShowConstructor = std::function<std::unique_ptr<Show::Show>(const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &)>;
+    using ShowConstructor = std::function<std::unique_ptr<Show::Show>(const JsonDocument &)>;
 
     /**
      * Show metadata for listing available shows
@@ -41,17 +45,6 @@ public:
 private:
     std::map<std::string, ShowConstructor> showConstructors;
     std::vector<ShowInfo> showList;
-
-    /**
-     * Parse colors from JSON and ensure exactly n colors are returned
-     * @param doc JSON document containing "colors" array
-     * @param count Number of colors to return
-     * @param defaultColor Default color if none provided
-     * @return Vector with exactly n colors
-     */
-    static std::vector<uint32_t> parseColors(const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc,
-                                              size_t count,
-                                              uint32_t defaultColor);
 
 public:
     ShowFactory();

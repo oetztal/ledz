@@ -432,7 +432,7 @@ Parameters are automatically saved to NVS when a show is changed. On restart:
 
 - **ShowCommand**: 256 bytes for `params_json` (stored in queue)
 - **ShowConfig**: 256 bytes for `params_json` (stored in NVS)
-- **Stack usage**: ~512 bytes during JSON parsing (StaticJsonDocument<512>)
+- **Heap usage**: ArduinoJson 7 `JsonDocument` grows on demand, so parsing allocates roughly what the payload needs rather than a fixed buffer. There is no compile-time capacity to tune and no silent truncation when a payload outgrows one.
 
 Total overhead: ~1KB RAM when queue is full (5 commands × 256 bytes)
 

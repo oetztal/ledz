@@ -14,23 +14,21 @@
 #include "show/Fire.h"
 #include "color.h"
 
-#ifdef ARDUINO
-#include <ArduinoJson.h>
-#endif
 
 static const char* TAG = "show";
 
 ShowFactory::ShowFactory() {
     // Register all available shows (in display order)
-    // Each lambda receives a StaticJsonDocument and uses defaults via | operator
+    // Each lambda receives a JsonDocument and uses defaults via | operator
 
-    registerShow("Solid", "Solid color or color sections (flags, patterns, gradients)", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
+    registerShow("Solid", "Solid color or color sections (flags, patterns, gradients)", [](const JsonDocument &doc) {
         std::vector<Strip::Color> colors;
         std::vector<float> ranges;
 
         // Parse colors array (supports 1 or more colors)
-        // Note: Must use JsonArrayConst for StaticJsonDocument (not JsonArray)
-        if (doc.containsKey("colors")) {
+        // JsonArrayConst, not JsonArray: doc is a const reference, so its
+        // subscripts are JsonVariantConst and only convert to the const views.
+        if (!doc["colors"].isNull()) {
             JsonArrayConst colorsArray = doc["colors"].as<JsonArrayConst>();
             if (!colorsArray.isNull() && colorsArray.size() > 0) {
                 for (JsonVariantConst colorVariant: colorsArray) {
@@ -46,7 +44,7 @@ ShowFactory::ShowFactory() {
         }
 
         // Parse ranges array (optional)
-        if (doc.containsKey("ranges")) {
+        if (!doc["ranges"].isNull()) {
             JsonArrayConst rangesArray = doc["ranges"].as<JsonArrayConst>();
             if (!rangesArray.isNull() && rangesArray.size() > 0) {
                 for (JsonVariantConst rangeVariant: rangesArray) {
@@ -66,131 +64,111 @@ ShowFactory::ShowFactory() {
         return std::make_unique<Show::ColorRanges>(colors, ranges, gradient);
     });
 
-    registerShow("Fire", "Burning flames", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
+    registerShow("Fire", "Burning flames", [](const JsonDocument &doc) {
         float cooling = doc["cooling"] | 0.1f;
         float spread = doc["spread"] | 10.0f;
         float ignition = doc["ignition"] | 0.5f;
         float spark_amount = doc["spark_amount"] | 0.5f;
         int start_offset = doc["start_offset"] | 5;
         int spark_range = doc["spark_range"] | 5;
-#ifdef ARDUINO
         ESP_LOGI(TAG, "Creating Fire cooling=%.2f, spread=%.2f, ignition=%.2f, spark_amount=%.2f, start_offset=%d, spark_range=%d",
                       cooling, spread, ignition, spark_amount, start_offset, spark_range);
-#endif
         return std::make_unique<Show::Fire>(cooling, spread, ignition, spark_amount, std::vector<float>{1.0f}, start_offset, spark_range);
     });
 
-    registerShow("Starlight", "Twinkling stars effect", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
+    registerShow("Starlight", "Twinkling stars effect", [](const JsonDocument &doc) {
         float probability = doc["probability"] | 0.1f;
         unsigned long length_ms = doc["length"] | 5000;
         unsigned long fade_ms = doc["fade"] | 1000;
         uint8_t r = doc["r"] | 255;
         uint8_t g = doc["g"] | 180;
         uint8_t b = doc["b"] | 50;
-#ifdef ARDUINO
         ESP_LOGI(TAG, "Creating Starlight probability=%.2f, length=%lums, fade=%lums, RGB(%d,%d,%d)",
                       probability, length_ms, fade_ms, r, g, b);
-#endif
         return std::make_unique<Show::Starlight>(probability, length_ms, fade_ms, r, g, b);
     });
 
-    registerShow("Stroboscope", "Flashing strobe effect", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
+    registerShow("Stroboscope", "Flashing strobe effect", [](const JsonDocument &doc) {
         uint8_t r = doc["r"] | 255;
         uint8_t g = doc["g"] | 255;
         uint8_t b = doc["b"] | 255;
         unsigned int on_cycles = doc["on_cycles"] | 1;
         unsigned int off_cycles = doc["off_cycles"] | 10;
-#ifdef ARDUINO
         ESP_LOGI(TAG, "Creating Stroboscope RGB(%d,%d,%d), on=%u, off=%u",
                       r, g, b, on_cycles, off_cycles);
-#endif
         return std::make_unique<Show::Stroboscope>(r, g, b, on_cycles, off_cycles);
     });
 
-    registerShow("ColorRun", "Running colors", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
+    registerShow("ColorRun", "Running colors", [](const JsonDocument &doc) {
         // ColorRun has no parameters yet
         return std::make_unique<Show::ColorRun>();
     });
 
-    registerShow("Jump", "Jumping lights", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
+    registerShow("Jump", "Jumping lights", [](const JsonDocument &doc) {
         // Jump has no parameters yet
         return std::make_unique<Show::Jump>();
     });
 
-    registerShow("Rainbow", "Rainbow color cycle", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
+    registerShow("Rainbow", "Rainbow color cycle", [](const JsonDocument &doc) {
         float time_step = doc["time_step"] | 1.0f;
         float pixel_step = doc["pixel_step"] | 1.0f;
-#ifdef ARDUINO
         ESP_LOGI(TAG, "Creating Rainbow time_step=%.2f, pixel_step=%.2f",
                       time_step, pixel_step);
-#endif
         return std::make_unique<Show::Rainbow>(time_step, pixel_step);
     });
 
-    registerShow("Wave", "Propagating wave with rainbow colors", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
+    registerShow("Wave", "Propagating wave with rainbow colors", [](const JsonDocument &doc) {
         float wave_speed = doc["wave_speed"] | 1.0f;
         float decay_rate = doc["decay_rate"] | 2.0f;
         float brightness_frequency = doc["brightness_frequency"] | 0.1f;
         float wavelength = doc["wavelength"] | 6.0f;
-#ifdef ARDUINO
         ESP_LOGI(TAG, "Creating Wave speed=%.2f, decay=%.2f, freq=%.2f, wavelength=%.2f",
                       wave_speed, decay_rate, brightness_frequency, wavelength);
-#endif
         return std::make_unique<Show::Wave>(wave_speed, decay_rate, brightness_frequency, wavelength);
     });
 
-    registerShow("TheaterChase", "Marquee-style chase with rainbow colors", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
+    registerShow("TheaterChase", "Marquee-style chase with rainbow colors", [](const JsonDocument &doc) {
         unsigned int num_steps_per_cycle = doc["num_steps_per_cycle"] | 21;
-#ifdef ARDUINO
         ESP_LOGI(TAG, "Creating TheaterChase num_steps_per_cycle=%u",
                       num_steps_per_cycle);
-#endif
         return std::make_unique<Show::TheaterChase>(num_steps_per_cycle);
     });
 
-    registerShow("MorseCode", "Scrolling Morse code text display", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
-#ifdef ARDUINO
-        String message = doc["message"] | "HELLO";
-#else
-        const char *message = "HELLO";
-#endif
+    registerShow("MorseCode", "Scrolling Morse code text display", [](const JsonDocument &doc) {
+        // MorseCode takes a const std::string& and copies, so handing it the
+        // document's own pointer is safe for the duration of the call.
+        const char *message = doc["message"] | "HELLO";
         float speed = doc["speed"] | 0.5f;
         unsigned int dot_length = doc["dot_length"] | 2;
         unsigned int dash_length = doc["dash_length"] | 4;
         unsigned int symbol_space = doc["symbol_space"] | 2;
         unsigned int letter_space = doc["letter_space"] | 3;
         unsigned int word_space = doc["word_space"] | 5;
-#ifdef ARDUINO
         ESP_LOGI(TAG, "Creating MorseCode message=\"%s\", speed=%.2f, dot=%u, dash=%u",
-                      message.c_str(), speed, dot_length, dash_length);
-#endif
-        return std::make_unique<Show::MorseCode>(message.c_str(), speed, dot_length, dash_length,
+                      message, speed, dot_length, dash_length);
+        return std::make_unique<Show::MorseCode>(message, speed, dot_length, dash_length,
                                                  symbol_space, letter_space, word_space);
     });
 
-    registerShow("Chaos", "Chaotic pattern", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
+    registerShow("Chaos", "Chaotic pattern", [](const JsonDocument &doc) {
         float Rmin = doc["Rmin"] | 2.95f;
         float Rmax = doc["Rmax"] | 4.0f;
         float Rdelta = doc["Rdelta"] | 0.0002f;
-#ifdef ARDUINO
         ESP_LOGI(TAG, "Creating Chaos Rmin=%.4f, Rmax=%.4f, Rdelta=%.6f",
                       Rmin, Rmax, Rdelta);
-#endif
         return std::make_unique<Show::Chaos>(Rmin, Rmax, Rdelta);
     });
 
-    registerShow("Mandelbrot", "Mandelbrot fractal zoom", [](const StaticJsonDocument<Config::JSON_DOC_MEDIUM> &doc) {
+    registerShow("Mandelbrot", "Mandelbrot fractal zoom", [](const JsonDocument &doc) {
         float Cre0 = doc["Cre0"] | -1.05f;
         float Cim0 = doc["Cim0"] | -0.3616f;
         float Cim1 = doc["Cim1"] | -0.3156f;
         unsigned int scale = doc["scale"] | 5;
         unsigned int max_iterations = doc["max_iterations"] | 50;
         unsigned int color_scale = doc["color_scale"] | 10;
-#ifdef ARDUINO
         ESP_LOGI(TAG,
             "Creating Mandelbrot Cre0=%.4f, Cim0=%.4f, Cim1=%.4f, scale=%u, max_iter=%u, color_scale=%u",
             Cre0, Cim0, Cim1, scale, max_iterations, color_scale);
-#endif
         return std::make_unique<Show::Mandelbrot>(Cre0, Cim0, Cim1, scale, max_iterations, color_scale);
     });
 }
@@ -208,15 +186,11 @@ std::unique_ptr<Show::Show> ShowFactory::createShow(const std::string &name, con
     // Check if show exists
     auto it = showConstructors.find(name);
     if (it == showConstructors.end()) {
-#ifdef ARDUINO
         ESP_LOGW(TAG, "show %s not found", name.c_str());
-#endif
         return {};
     }
 
-#ifdef ARDUINO
-    // Parse JSON parameters (increased buffer for ColorRanges with many colors and nested arrays)
-    StaticJsonDocument<Config::JSON_DOC_LARGE> doc;
+    JsonDocument doc;
     DeserializationError error = deserializeJson(doc, paramsJson.c_str());
 
     // If JSON parsing fails, log warning and use empty document (will use defaults)
@@ -228,11 +202,6 @@ std::unique_ptr<Show::Show> ShowFactory::createShow(const std::string &name, con
 
     // Call the stored factory function with the parsed (or empty) JSON document
     return it->second(doc);
-#else
-    // Non-Arduino builds: use empty document (defaults)
-    StaticJsonDocument<Config::JSON_DOC_MEDIUM> doc;
-    return std::move(it->second(doc));
-#endif
 }
 
 const std::vector<ShowFactory::ShowInfo> &ShowFactory::listShows() const {

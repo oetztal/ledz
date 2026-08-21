@@ -138,16 +138,29 @@ pio test -e native
 ### Test Coverage
 
 To track test coverage, you need `lcov` installed (on macOS: `brew install lcov`).
-The coverage report is automatically generated after running tests if the `--coverage` flag is present in `platformio.ini`.
+
+Generating the report is a separate step from running the tests. PlatformIO
+builds and runs each test directory in turn, so there is no build hook that
+fires after the *last* test binary has exited — and that is the only point at
+which the coverage data is complete.
 
 1. Run tests:
    ```bash
    pio test -e native
    ```
-2. Open the report:
+2. Build the report:
+   ```bash
+   pio run -e native -t coverage      # or: python3 scripts/coverage_report.py
+   ```
+3. Open it:
    ```bash
    open coverage_report/index.html
    ```
+
+The report covers `src/` only, excluding the generated web-asset headers. Stale
+coverage data from recompiled objects is discarded automatically after each
+link; without that, editing a test makes the coverage runtime fail its merge
+and, on macOS, segfault at exit *after* every test has already passed.
 
 ### Web Assets
 

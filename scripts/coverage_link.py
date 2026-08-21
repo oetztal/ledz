@@ -1,3 +1,11 @@
+#
+# Pre-script: coverage link flags only.
+#
+# This has to run *before* the main build script constructs the program node,
+# which is why it is registered with the `pre:` prefix. Anything that needs the
+# program node to exist -- post-actions, custom targets -- lives in
+# coverage_post.py instead; registering those from here silently does nothing.
+#
 Import("env")
 import sys
 

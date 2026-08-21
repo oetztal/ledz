@@ -9,3 +9,8 @@ __pycache__
 
 # Auto-generated compressed web content
 src/generated/
+
+# Coverage output (scripts/coverage_report.py)
+coverage.info
+coverage_filtered.info
+coverage_report/

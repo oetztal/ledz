@@ -17,6 +17,7 @@
 
 #ifdef ARDUINO
 #include <ArduinoJson.h>
+#include <AsyncJson.h>
 #include <esp_ota_ops.h>
 // Include compressed web content
 #include "generated/config_gz.h"
@@ -46,7 +47,6 @@ static const char* JSON_KEY_SHOW_PARAMS = "show_params";
 
 // Common JSON Responses
 static const char* JSON_RESPONSE_SUCCESS = "{\"success\":true}";
-static const char* JSON_RESPONSE_ERROR_INVALID_JSON = "{\"success\":false,\"error\":\"Invalid JSON\"}";
 static const char* JSON_RESPONSE_ERROR_QUEUE_FULL = "{\"success\":false,\"error\":\"Queue full\"}";
 
 static const char* TAG = "http";
@@ -89,11 +89,13 @@ void AccessLogger::run(AsyncWebServerRequest *request, ArMiddlewareNext next) {
         WebServerManager::activeInstance->markServedRequest();
     }
 
-    Print *_out = &Serial;
     char logBuf[128];
-    const char* ip = request->client()->remoteIP().toString().c_str();
-    const char* url = request->url().c_str();
-    const char* method = request->methodToString();
+    // Named locals, not const char*: remoteIP().toString() and url() both
+    // return String temporaries that would be destroyed at the end of the
+    // declaration, leaving c_str() dangling before snprintf reads it.
+    const String ip = request->client()->remoteIP().toString();
+    const String url = request->url();
+    const char *method = request->methodToString();
 
     uint32_t elapsed = millis();
     next();
@@ -102,10 +104,10 @@ void AccessLogger::run(AsyncWebServerRequest *request, ArMiddlewareNext next) {
     AsyncWebServerResponse *response = request->getResponse();
     if (response) {
         snprintf(logBuf, sizeof(logBuf), "%s %s %s (%u ms) %u",
-                 ip, url, method, elapsed, response->code());
+                 ip.c_str(), url.c_str(), method, elapsed, response->code());
     } else {
         snprintf(logBuf, sizeof(logBuf), "%s %s %s (%u ms) (no response)",
-                 ip, url, method, elapsed);
+                 ip.c_str(), url.c_str(), method, elapsed);
     }
     ESP_LOGD(TAG, "%s", logBuf);
 }
@@ -136,15 +138,15 @@ void WebServerManager::setupConfigRoutes() {
     });
 
     // Handle WiFi configuration POST
-    server.on(API_PATH_WIFI, HTTP_POST,
-              []([[maybe_unused]] AsyncWebServerRequest *request) {
-                  // This callback is called after body processing
-              },
-              nullptr,
-              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-                  this->handleWiFiConfig(request, data, len, index, total);
-              }
-    );
+    {
+        auto *handler = new AsyncCallbackJsonWebHandler(
+            AsyncURIMatcher::exact(API_PATH_WIFI),
+            [this](AsyncWebServerRequest *request, JsonVariant &doc) {
+                this->handleWiFiConfig(request, doc);
+            });
+        handler->setMethod(HTTP_POST);
+        server.addHandler(handler);
+    }
 #endif
 }
 
@@ -161,9 +163,7 @@ void WebServerManager::setupAPIRoutes() {
 
     // GET /api/status - Get device status
     server.on(API_PATH_STATUS, HTTP_GET, [this](AsyncWebServerRequest *request) {
-        // XLARGE, not LARGE: show_params is deep-copied from a MEDIUM parse
-        // buffer and ArduinoJson overflows silently, truncating the response.
-        StaticJsonDocument<Config::JSON_DOC_XLARGE> doc;
+        JsonDocument doc;
 
         // Device info
         Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
@@ -189,7 +189,7 @@ void WebServerManager::setupAPIRoutes() {
         Config::ShowConfig showConfig = config.loadShowConfig();
         if (strlen(showConfig.params_json) > 0) {
             // Parse the params_json and include it
-            StaticJsonDocument<Config::JSON_DOC_MEDIUM> paramsDoc;
+            JsonDocument paramsDoc;
             if (DeserializationError error = deserializeJson(paramsDoc, showConfig.params_json); !error) {
                 doc[JSON_KEY_SHOW_PARAMS] = paramsDoc.as<JsonObject>();
             }
@@ -213,12 +213,12 @@ void WebServerManager::setupAPIRoutes() {
 
     // GET /api/shows - List available shows
     server.on(API_PATH_SHOWS, HTTP_GET, [this](AsyncWebServerRequest *request) {
-        StaticJsonDocument<Config::JSON_DOC_LARGE> doc;
-        JsonArray shows = doc.createNestedArray("shows");
+        JsonDocument doc;
+        JsonArray shows = doc["shows"].to<JsonArray>();
 
         const std::vector<ShowFactory::ShowInfo> &showList = showController.listShows();
         for (const auto &showInfo: showList) {
-            JsonObject show = shows.createNestedObject();
+            JsonObject show = shows.add<JsonObject>();
             show[JSON_KEY_NAME] = showInfo.name;
             show["description"] = showInfo.description;
         }
@@ -229,120 +229,93 @@ void WebServerManager::setupAPIRoutes() {
     });
 
     // POST /api/show - Change current show
-    server.on(API_PATH_SHOW, HTTP_POST,
-              []([[maybe_unused]] AsyncWebServerRequest *request) {
-              },
-              nullptr,
-              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, [[maybe_unused]] size_t total) {
-                  if (index == 0) {
-                      StaticJsonDocument<Config::JSON_DOC_MEDIUM> doc;
-                      DeserializationError error = deserializeJson(doc, data, len);
+    {
+        auto *handler = new AsyncCallbackJsonWebHandler(
+            AsyncURIMatcher::exact(API_PATH_SHOW),
+            [this](AsyncWebServerRequest *request, JsonVariant &doc) {
+                const char *showName = doc[JSON_KEY_NAME];
+                if (showName == nullptr) {
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Show name required"})");
+                    return;
+                }
 
-                      if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
-                          return;
-                      }
+                // Get parameters if provided
+                String paramsJson;
+                if (!doc[JSON_KEY_PARAMS].isNull()) {
+                    JsonObject params = doc[JSON_KEY_PARAMS];
+                    serializeJson(params, paramsJson);
+                } else {
+                    paramsJson = "{}";
+                }
 
-                      const char *showName = doc[JSON_KEY_NAME];
-                      if (showName == nullptr) {
-                          request->send(400, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Show name required"})");
-                          return;
-                      }
-
-                      // Get parameters if provided
-                      String paramsJson;
-                      if (doc.containsKey(JSON_KEY_PARAMS)) {
-                          JsonObject params = doc[JSON_KEY_PARAMS];
-                          serializeJson(params, paramsJson);
-                      } else {
-                          paramsJson = "{}";
-                      }
-
-                      if (showController.queueShowChange(showName, paramsJson.c_str())) {
-                          request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
-                      } else {
-                          request->send(503, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_QUEUE_FULL);
-                      }
-                  }
-              }
-    );
+                if (showController.queueShowChange(showName, paramsJson.c_str())) {
+                    request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
+                } else {
+                    request->send(503, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_QUEUE_FULL);
+                }
+            });
+        handler->setMethod(HTTP_POST);
+        server.addHandler(handler);
+    }
 
     // POST /api/brightness - Change brightness
-    server.on(API_PATH_BRIGHTNESS, HTTP_POST,
-              []([[maybe_unused]] AsyncWebServerRequest *request) {
-              },
-              nullptr,
-              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, [[maybe_unused]] size_t total) {
-                  if (index == 0) {
-                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
+    {
+        auto *handler = new AsyncCallbackJsonWebHandler(
+            AsyncURIMatcher::exact(API_PATH_BRIGHTNESS),
+            [this](AsyncWebServerRequest *request, JsonVariant &doc) {
+                if (doc["value"].isNull()) {
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Brightness value required"})");
+                    return;
+                }
 
-                      if (deserializeJson(doc, data, len)) {
-                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
-                          return;
-                      }
-
-                      if (!doc.containsKey("value")) {
-                          request->send(400, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Brightness value required"})");
-                          return;
-                      }
-
-                      uint8_t brightness = doc[JSON_KEY_VALUE];
-                      if (showController.queueBrightnessChange(brightness)) {
-                          request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
-                      } else {
-                          request->send(503, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_QUEUE_FULL);
-                      }
-                  }
-              }
-    );
+                uint8_t brightness = doc[JSON_KEY_VALUE];
+                if (showController.queueBrightnessChange(brightness)) {
+                    request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
+                } else {
+                    request->send(503, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_QUEUE_FULL);
+                }
+            });
+        handler->setMethod(HTTP_POST);
+        server.addHandler(handler);
+    }
 
     // POST /api/layout - Change strip layout configuration
-    server.on(API_PATH_LAYOUT, HTTP_POST,
-              []([[maybe_unused]] AsyncWebServerRequest *request) {
-              },
-              nullptr,
-              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
-                     [[maybe_unused]] size_t total) {
-                  if (index == 0) {
-                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
-                      DeserializationError error = deserializeJson(doc, data, len);
+    {
+        auto *handler = new AsyncCallbackJsonWebHandler(
+            AsyncURIMatcher::exact(API_PATH_LAYOUT),
+            [this](AsyncWebServerRequest *request, JsonVariant &doc) {
+                Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
 
-                      if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
-                          return;
-                      }
+                // Update fields if provided
+                if (!doc["reverse"].isNull()) {
+                    layoutConfig.reverse = doc["reverse"];
+                }
+                if (!doc["mirror"].isNull()) {
+                    layoutConfig.mirror = doc["mirror"];
+                }
+                if (!doc["dead_leds"].isNull()) {
+                    layoutConfig.dead_leds = doc["dead_leds"];
+                }
 
-                      Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
-
-                      // Update fields if provided
-                      if (doc.containsKey("reverse")) {
-                          layoutConfig.reverse = doc["reverse"];
-                      }
-                      if (doc.containsKey("mirror")) {
-                          layoutConfig.mirror = doc["mirror"];
-                      }
-                      if (doc.containsKey("dead_leds")) {
-                          layoutConfig.dead_leds = doc["dead_leds"];
-                      }
-
-                      // Queue the layout change for thread-safe execution
-                      if (showController.queueLayoutChange(layoutConfig.reverse, layoutConfig.mirror,
-                                                           layoutConfig.dead_leds)) {
-                          request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
-                      } else {
-                          request->send(503, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_QUEUE_FULL);
-                      }
-                  }
-              }
-    );
+                // Queue the layout change for thread-safe execution
+                if (showController.queueLayoutChange(layoutConfig.reverse, layoutConfig.mirror,
+                                                     layoutConfig.dead_leds)) {
+                    request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
+                } else {
+                    request->send(503, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_QUEUE_FULL);
+                }
+            });
+        handler->setMethod(HTTP_POST);
+        server.addHandler(handler);
+    }
 
     // GET /api/layout - Get current layout configuration
     server.on(API_PATH_LAYOUT, HTTP_GET, [this](AsyncWebServerRequest *request) {
         Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
 
-        StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
+        JsonDocument doc;
         doc["reverse"] = layoutConfig.reverse;
         doc["mirror"] = layoutConfig.mirror;
         doc["dead_leds"] = layoutConfig.dead_leds;
@@ -356,12 +329,12 @@ void WebServerManager::setupAPIRoutes() {
     server.on(API_PATH_PRESETS, HTTP_GET, [this](AsyncWebServerRequest *request) {
         Config::PresetsConfig presetsConfig = config.loadPresetsConfig();
 
-        StaticJsonDocument<Config::JSON_DOC_XLARGE> doc;
-        JsonArray presets = doc.createNestedArray("presets");
+        JsonDocument doc;
+        JsonArray presets = doc["presets"].to<JsonArray>();
 
         for (uint8_t i = 0; i < Config::PresetsConfig::MAX_PRESETS; i++) {
             if (presetsConfig.presets[i].valid) {
-                JsonObject preset = presets.createNestedObject();
+                JsonObject preset = presets.add<JsonObject>();
                 preset[JSON_KEY_INDEX] = i;
                 preset[JSON_KEY_NAME] = presetsConfig.presets[i].name;
                 preset[JSON_KEY_SHOW_NAME] = presetsConfig.presets[i].show_name;
@@ -370,7 +343,7 @@ void WebServerManager::setupAPIRoutes() {
                 preset["layout_dead_leds"] = presetsConfig.presets[i].layout_dead_leds;
 
                 // Parse and include params_json
-                StaticJsonDocument<Config::JSON_DOC_MEDIUM> paramsDoc;
+                JsonDocument paramsDoc;
                 if (!deserializeJson(paramsDoc, presetsConfig.presets[i].params_json)) {
                     preset[JSON_KEY_PARAMS] = paramsDoc.as<JsonObject>();
                 }
@@ -384,201 +357,171 @@ void WebServerManager::setupAPIRoutes() {
 
     // POST /api/presets/load - Load a preset by index or name
     // NOTE: Must be registered BEFORE /api/presets POST to avoid route conflict
-    server.on(API_PATH_PRESETS_LOAD, HTTP_POST,
-              []([[maybe_unused]] AsyncWebServerRequest *request) {
-              },
-              nullptr,
-              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
-                     [[maybe_unused]] size_t total) {
-                  if (index == 0) {
-                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
-                      DeserializationError error = deserializeJson(doc, data, len);
+    {
+        auto *handler = new AsyncCallbackJsonWebHandler(
+            AsyncURIMatcher::exact(API_PATH_PRESETS_LOAD),
+            [this](AsyncWebServerRequest *request, JsonVariant &doc) {
+                int presetIndex = -1;
 
-                      if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
-                          return;
-                      }
+                // Find preset by index or name
+                if (!doc[JSON_KEY_INDEX].isNull()) {
+                    presetIndex = doc[JSON_KEY_INDEX];
+                    if (presetIndex < 0 || presetIndex >= Config::PresetsConfig::MAX_PRESETS) {
+                        request->send(400, CONTENT_TYPE_JSON,
+                                      R"({"success":false,"error":"Invalid preset index"})");
+                        return;
+                    }
+                } else if (!doc[JSON_KEY_NAME].isNull()) {
+                    const char *presetName = doc[JSON_KEY_NAME];
+                    presetIndex = config.findPresetByName(presetName);
+                    if (presetIndex < 0) {
+                        request->send(404, CONTENT_TYPE_JSON,
+                                      R"({"success":false,"error":"Preset not found"})");
+                        return;
+                    }
+                } else {
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Index or name required"})");
+                    return;
+                }
 
-                      int presetIndex = -1;
+                // Load the preset
+                Config::PresetsConfig presetsConfig = config.loadPresetsConfig();
+                const Config::Preset &preset = presetsConfig.presets[presetIndex];
 
-                      // Find preset by index or name
-                      if (doc.containsKey(JSON_KEY_INDEX)) {
-                          presetIndex = doc[JSON_KEY_INDEX];
-                          if (presetIndex < 0 || presetIndex >= Config::PresetsConfig::MAX_PRESETS) {
-                              request->send(400, CONTENT_TYPE_JSON,
-                                            R"({"success":false,"error":"Invalid preset index"})");
-                              return;
-                          }
-                      } else if (doc.containsKey(JSON_KEY_NAME)) {
-                          const char *presetName = doc[JSON_KEY_NAME];
-                          presetIndex = config.findPresetByName(presetName);
-                          if (presetIndex < 0) {
-                              request->send(404, CONTENT_TYPE_JSON,
-                                            R"({"success":false,"error":"Preset not found"})");
-                              return;
-                          }
-                      } else {
-                          request->send(400, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Index or name required"})");
-                          return;
-                      }
+                if (!preset.valid) {
+                    request->send(404, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Preset slot is empty"})");
+                    return;
+                }
 
-                      // Load the preset
-                      Config::PresetsConfig presetsConfig = config.loadPresetsConfig();
-                      const Config::Preset &preset = presetsConfig.presets[presetIndex];
+                // Queue preset load through ShowController for thread safety
+                if (showController.queuePresetLoad(preset)) {
+                    JsonDocument responseDoc;
+                    responseDoc["success"] = true;
+                    responseDoc["name"] = preset.name;
+                    responseDoc["show_name"] = preset.show_name;
 
-                      if (!preset.valid) {
-                          request->send(404, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Preset slot is empty"})");
-                          return;
-                      }
-
-                      // Queue preset load through ShowController for thread safety
-                      if (showController.queuePresetLoad(preset)) {
-                          StaticJsonDocument<Config::JSON_DOC_TINY> responseDoc;
-                          responseDoc["success"] = true;
-                          responseDoc["name"] = preset.name;
-                          responseDoc["show_name"] = preset.show_name;
-
-                          String response;
-                          serializeJson(responseDoc, response);
-                          request->send(200, CONTENT_TYPE_JSON, response);
-                      } else {
-                          request->send(503, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Queue full"})");
-                      }
-                  }
-              }
-    );
+                    String response;
+                    serializeJson(responseDoc, response);
+                    request->send(200, CONTENT_TYPE_JSON, response);
+                } else {
+                    request->send(503, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Queue full"})");
+                }
+            });
+        handler->setMethod(HTTP_POST);
+        server.addHandler(handler);
+    }
 
     // POST /api/presets - Save current state as preset
-    server.on(API_PATH_PRESETS, HTTP_POST,
-              []([[maybe_unused]] AsyncWebServerRequest *request) {
-              },
-              nullptr,
-              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
-                     [[maybe_unused]] size_t total) {
-                  if (index == 0) {
-                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
-                      DeserializationError error = deserializeJson(doc, data, len);
+    {
+        auto *handler = new AsyncCallbackJsonWebHandler(
+            AsyncURIMatcher::exact(API_PATH_PRESETS),
+            [this](AsyncWebServerRequest *request, JsonVariant &doc) {
+                const char *presetName = doc[JSON_KEY_NAME];
+                if (presetName == nullptr || strlen(presetName) == 0) {
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Preset name required"})");
+                    return;
+                }
 
-                      if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
-                          return;
-                      }
+                // Check if preset with this name already exists
+                int existingIndex = config.findPresetByName(presetName);
+                int slotIndex;
 
-                      const char *presetName = doc[JSON_KEY_NAME];
-                      if (presetName == nullptr || strlen(presetName) == 0) {
-                          request->send(400, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Preset name required"})");
-                          return;
-                      }
+                if (existingIndex >= 0) {
+                    // Overwrite existing preset
+                    slotIndex = existingIndex;
+                } else {
+                    // Find next available slot
+                    slotIndex = config.getNextPresetSlot();
+                    if (slotIndex < 0) {
+                        request->send(400, CONTENT_TYPE_JSON,
+                                      R"({"success":false,"error":"All preset slots are full"})");
+                        return;
+                    }
+                }
 
-                      // Check if preset with this name already exists
-                      int existingIndex = config.findPresetByName(presetName);
-                      int slotIndex;
+                // Load current state to save
+                Config::ShowConfig showConfig = config.loadShowConfig();
+                Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
 
-                      if (existingIndex >= 0) {
-                          // Overwrite existing preset
-                          slotIndex = existingIndex;
-                      } else {
-                          // Find next available slot
-                          slotIndex = config.getNextPresetSlot();
-                          if (slotIndex < 0) {
-                              request->send(400, CONTENT_TYPE_JSON,
-                                            R"({"success":false,"error":"All preset slots are full"})");
-                              return;
-                          }
-                      }
+                // Create preset from current state
+                Config::Preset preset;
+                preset.valid = true;
 
-                      // Load current state to save
-                      Config::ShowConfig showConfig = config.loadShowConfig();
-                      Config::LayoutConfig layoutConfig = config.loadLayoutConfig();
+                strncpy(preset.name, presetName, sizeof(preset.name) - 1);
+                preset.name[sizeof(preset.name) - 1] = '\0';
 
-                      // Create preset from current state
-                      Config::Preset preset;
-                      preset.valid = true;
+                strncpy(preset.show_name, showConfig.current_show, sizeof(preset.show_name) - 1);
+                preset.show_name[sizeof(preset.show_name) - 1] = '\0';
 
-                      strncpy(preset.name, presetName, sizeof(preset.name) - 1);
-                      preset.name[sizeof(preset.name) - 1] = '\0';
+                strncpy(preset.params_json, showConfig.params_json, sizeof(preset.params_json) - 1);
+                preset.params_json[sizeof(preset.params_json) - 1] = '\0';
 
-                      strncpy(preset.show_name, showConfig.current_show, sizeof(preset.show_name) - 1);
-                      preset.show_name[sizeof(preset.show_name) - 1] = '\0';
+                preset.layout_reverse = layoutConfig.reverse;
+                preset.layout_mirror = layoutConfig.mirror;
+                preset.layout_dead_leds = layoutConfig.dead_leds;
 
-                      strncpy(preset.params_json, showConfig.params_json, sizeof(preset.params_json) - 1);
-                      preset.params_json[sizeof(preset.params_json) - 1] = '\0';
+                if (config.savePreset(slotIndex, preset)) {
+                    JsonDocument responseDoc;
+                    responseDoc["success"] = true;
+                    responseDoc["index"] = slotIndex;
+                    responseDoc["name"] = preset.name;
 
-                      preset.layout_reverse = layoutConfig.reverse;
-                      preset.layout_mirror = layoutConfig.mirror;
-                      preset.layout_dead_leds = layoutConfig.dead_leds;
-
-                      if (config.savePreset(slotIndex, preset)) {
-                          StaticJsonDocument<Config::JSON_DOC_TINY> responseDoc;
-                          responseDoc["success"] = true;
-                          responseDoc["index"] = slotIndex;
-                          responseDoc["name"] = preset.name;
-
-                          String response;
-                          serializeJson(responseDoc, response);
-                          request->send(200, CONTENT_TYPE_JSON, response);
-                      } else {
-                          request->send(500, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Failed to save preset"})");
-                      }
-                  }
-              }
-    );
+                    String response;
+                    serializeJson(responseDoc, response);
+                    request->send(200, CONTENT_TYPE_JSON, response);
+                } else {
+                    request->send(500, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Failed to save preset"})");
+                }
+            });
+        handler->setMethod(HTTP_POST);
+        server.addHandler(handler);
+    }
 
     // DELETE /api/presets - Delete a preset by index or name
-    server.on(API_PATH_PRESETS, HTTP_DELETE,
-              []([[maybe_unused]] AsyncWebServerRequest *request) {
-              },
-              nullptr,
-              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
-                     [[maybe_unused]] size_t total) {
-                  if (index == 0) {
-                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
-                      DeserializationError error = deserializeJson(doc, data, len);
+    {
+        auto *handler = new AsyncCallbackJsonWebHandler(
+            AsyncURIMatcher::exact(API_PATH_PRESETS),
+            [this](AsyncWebServerRequest *request, JsonVariant &doc) {
+                int presetIndex = -1;
 
-                      if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
-                          return;
-                      }
+                // Find preset by index or name
+                if (!doc[JSON_KEY_INDEX].isNull()) {
+                    presetIndex = doc[JSON_KEY_INDEX];
+                    if (presetIndex < 0 || presetIndex >= Config::PresetsConfig::MAX_PRESETS) {
+                        request->send(400, CONTENT_TYPE_JSON,
+                                      R"({"success":false,"error":"Invalid preset index"})");
+                        return;
+                    }
+                } else if (!doc[JSON_KEY_NAME].isNull()) {
+                    const char *presetName = doc[JSON_KEY_NAME];
+                    presetIndex = config.findPresetByName(presetName);
+                    if (presetIndex < 0) {
+                        request->send(404, CONTENT_TYPE_JSON,
+                                      R"({"success":false,"error":"Preset not found"})");
+                        return;
+                    }
+                } else {
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Index or name required"})");
+                    return;
+                }
 
-                      int presetIndex = -1;
-
-                      // Find preset by index or name
-                      if (doc.containsKey(JSON_KEY_INDEX)) {
-                          presetIndex = doc[JSON_KEY_INDEX];
-                          if (presetIndex < 0 || presetIndex >= Config::PresetsConfig::MAX_PRESETS) {
-                              request->send(400, CONTENT_TYPE_JSON,
-                                            R"({"success":false,"error":"Invalid preset index"})");
-                              return;
-                          }
-                      } else if (doc.containsKey(JSON_KEY_NAME)) {
-                          const char *presetName = doc[JSON_KEY_NAME];
-                          presetIndex = config.findPresetByName(presetName);
-                          if (presetIndex < 0) {
-                              request->send(404, CONTENT_TYPE_JSON,
-                                            R"({"success":false,"error":"Preset not found"})");
-                              return;
-                          }
-                      } else {
-                          request->send(400, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Index or name required"})");
-                          return;
-                      }
-
-                      // Delete the preset
-                      if (config.deletePreset(presetIndex)) {
-                          request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
-                      } else {
-                          request->send(500, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Failed to delete preset"})");
-                      }
-                  }
-              }
-    );
+                // Delete the preset
+                if (config.deletePreset(presetIndex)) {
+                    request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
+                } else {
+                    request->send(500, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Failed to delete preset"})");
+                }
+            });
+        handler->setMethod(HTTP_DELETE);
+        server.addHandler(handler);
+    }
 
     // POST /api/restart - Restart the device
     server.on(API_PATH_RESTART, HTTP_POST, [](AsyncWebServerRequest *request) {
@@ -588,185 +531,158 @@ void WebServerManager::setupAPIRoutes() {
     });
 
     // POST /api/settings/wifi - Update WiFi credentials
-    server.on("/api/settings/wifi", HTTP_POST,
-              []([[maybe_unused]] AsyncWebServerRequest *request) {
-              },
-              nullptr,
-              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, [[maybe_unused]] size_t total) {
-                  if (index == 0) {
-                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
+    {
+        auto *handler = new AsyncCallbackJsonWebHandler(
+            AsyncURIMatcher::exact("/api/settings/wifi"),
+            [this](AsyncWebServerRequest *request, JsonVariant &doc) {
+                const char *ssid = doc["ssid"];
 
-                      if (deserializeJson(doc, data, len)) {
-                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
-                          return;
-                      }
+                if (ssid == nullptr || strlen(ssid) == 0) {
+                    request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"SSID required"})");
+                    return;
+                }
 
-                      const char *ssid = doc["ssid"];
+                // An absent "password" key preserves the stored password; a present
+                // one (including "") overwrites it. The settings page prefills the
+                // SSID but can never prefill the password, so a blank field must not
+                // wipe working credentials. Rule lives in support/WiFiCredentials so
+                // it can be unit-tested natively - keep it there.
+                Support::WiFiCredentialUpdate update;
+                update.ssid = ssid;
+                update.password = !doc["password"].isNull()
+                                      ? static_cast<const char *>(doc["password"])
+                                      : nullptr;
 
-                      if (ssid == nullptr || strlen(ssid) == 0) {
-                          request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"SSID required"})");
-                          return;
-                      }
+                Config::WiFiConfig wifiConfig =
+                    Support::mergeWiFiCredentials(config.loadWiFiConfig(), update);
+                config.saveWiFiConfig(wifiConfig);
 
-                      // An absent "password" key preserves the stored password; a present
-                      // one (including "") overwrites it. The settings page prefills the
-                      // SSID but can never prefill the password, so a blank field must not
-                      // wipe working credentials. Rule lives in support/WiFiCredentials so
-                      // it can be unit-tested natively - keep it there.
-                      Support::WiFiCredentialUpdate update;
-                      update.ssid = ssid;
-                      update.password = doc.containsKey("password")
-                                            ? static_cast<const char *>(doc["password"])
-                                            : nullptr;
+                ESP_LOGI(TAG, "WiFi credentials updated: SSID=%s", wifiConfig.ssid);
 
-                      Config::WiFiConfig wifiConfig =
-                          Support::mergeWiFiCredentials(config.loadWiFiConfig(), update);
-                      config.saveWiFiConfig(wifiConfig);
-
-                      ESP_LOGI(TAG, "WiFi credentials updated: SSID=%s", wifiConfig.ssid);
-
-                      // Send success response and restart
-                      request->send(200, CONTENT_TYPE_JSON,
-                                    R"({"success":true,"message":"WiFi updated, restarting..."})");
-                      delay(1000); // Give time for response to send
-                      ESP.restart();
-                  }
-              }
-    );
+                // Send success response and restart
+                request->send(200, CONTENT_TYPE_JSON,
+                              R"({"success":true,"message":"WiFi updated, restarting..."})");
+                delay(1000); // Give time for response to send
+                ESP.restart();
+            });
+        handler->setMethod(HTTP_POST);
+        server.addHandler(handler);
+    }
 
     // POST /api/settings/device-name - Update device name
-    server.on("/api/settings/device-name", HTTP_POST,
-              []([[maybe_unused]] AsyncWebServerRequest *request) {
-              },
-              nullptr,
-              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, [[maybe_unused]] size_t total) {
-                  if (index == 0) {
-                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
-                      DeserializationError error = deserializeJson(doc, data, len);
+    {
+        auto *handler = new AsyncCallbackJsonWebHandler(
+            AsyncURIMatcher::exact("/api/settings/device-name"),
+            [this](AsyncWebServerRequest *request, JsonVariant &doc) {
+                const char *name = doc[JSON_KEY_NAME];
 
-                      if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
-                          return;
-                      }
+                if (name == nullptr || strlen(name) == 0) {
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Device name required"})");
+                    return;
+                }
 
-                      const char *name = doc[JSON_KEY_NAME];
+                // Load current config, update name, and save
+                Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
+                strncpy(deviceConfig.device_name, name, sizeof(deviceConfig.device_name) - 1);
+                deviceConfig.device_name[sizeof(deviceConfig.device_name) - 1] = '\0';
+                config.saveDeviceConfig(deviceConfig);
 
-                      if (name == nullptr || strlen(name) == 0) {
-                          request->send(400, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Device name required"})");
-                          return;
-                      }
+                ESP_LOGI(TAG, "Device name updated: %s", deviceConfig.device_name);
 
-                      // Load current config, update name, and save
-                      Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
-                      strncpy(deviceConfig.device_name, name, sizeof(deviceConfig.device_name) - 1);
-                      deviceConfig.device_name[sizeof(deviceConfig.device_name) - 1] = '\0';
-                      config.saveDeviceConfig(deviceConfig);
-
-                      ESP_LOGI(TAG, "Device name updated: %s", deviceConfig.device_name);
-
-                      // Send success response (no restart needed)
-                      request->send(200, CONTENT_TYPE_JSON, "{\"success\":true}");
-                  }
-              }
-    );
+                // Send success response (no restart needed)
+                request->send(200, CONTENT_TYPE_JSON, "{\"success\":true}");
+            });
+        handler->setMethod(HTTP_POST);
+        server.addHandler(handler);
+    }
 
     // POST /api/settings/device - Update device hardware settings (num_pixels, led_pin)
-    server.on("/api/settings/device", HTTP_POST,
-              []([[maybe_unused]] AsyncWebServerRequest *request) {
-              },
-              nullptr,
-              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
-                     [[maybe_unused]] size_t total) {
-                  if (index == 0) {
-                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
-                      DeserializationError error = deserializeJson(doc, data, len);
+    {
+        auto *handler = new AsyncCallbackJsonWebHandler(
+            AsyncURIMatcher::exact("/api/settings/device"),
+            [this](AsyncWebServerRequest *request, JsonVariant &doc) {
+                // Load current config
+                Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
+                bool changed = false;
 
-                      if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
-                          return;
-                      }
+                // Update num_pixels if provided
+                if (!doc["num_pixels"].isNull()) {
+                    uint16_t num_pixels = doc["num_pixels"];
 
-                      // Load current config
-                      Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
-                      bool changed = false;
+                    if (num_pixels < 1 || num_pixels > 1000) {
+                        request->send(400, CONTENT_TYPE_JSON,
+                                      R"({"success":false,"error":"Number of pixels must be between 1 and 1000"})");
+                        return;
+                    }
 
-                      // Update num_pixels if provided
-                      if (doc.containsKey("num_pixels")) {
-                          uint16_t num_pixels = doc["num_pixels"];
+                    deviceConfig.num_pixels = num_pixels;
+                    ESP_LOGI(TAG, "Number of pixels updated: %u", num_pixels);
+                    changed = true;
+                }
 
-                          if (num_pixels < 1 || num_pixels > 1000) {
-                              request->send(400, CONTENT_TYPE_JSON,
-                                            R"({"success":false,"error":"Number of pixels must be between 1 and 1000"})");
-                              return;
-                          }
+                // Update led_pin if provided
+                if (!doc["led_pin"].isNull()) {
+                    uint8_t led_pin = doc["led_pin"];
 
-                          deviceConfig.num_pixels = num_pixels;
-                          ESP_LOGI(TAG, "Number of pixels updated: %u", num_pixels);
-                          changed = true;
-                      }
+                    if (led_pin > 48) {
+                        request->send(400, CONTENT_TYPE_JSON,
+                                      R"({"success":false,"error":"LED pin must be between 0 and 48"})");
+                        return;
+                    }
 
-                      // Update led_pin if provided
-                      if (doc.containsKey("led_pin")) {
-                          uint8_t led_pin = doc["led_pin"];
+                    deviceConfig.led_pin = led_pin;
+                    ESP_LOGI(TAG, "LED pin updated: %u", led_pin);
+                    changed = true;
+                }
 
-                          if (led_pin > 48) {
-                              request->send(400, CONTENT_TYPE_JSON,
-                                            R"({"success":false,"error":"LED pin must be between 0 and 48"})");
-                              return;
-                          }
+                // Update gamma_mode if provided
+                if (!doc["gamma_mode"].isNull()) {
+                    int gamma_mode = doc["gamma_mode"];
 
-                          deviceConfig.led_pin = led_pin;
-                          ESP_LOGI(TAG, "LED pin updated: %u", led_pin);
-                          changed = true;
-                      }
+                    if (gamma_mode < 0 || gamma_mode > 2) {
+                        request->send(400, CONTENT_TYPE_JSON,
+                                      "{\"success\":false,\"error\":\"Gamma mode must be 0 (default), 1 (NeoPixel), or 2 (none)\"}");
+                        return;
+                    }
 
-                      // Update gamma_mode if provided
-                      if (doc.containsKey("gamma_mode")) {
-                          int gamma_mode = doc["gamma_mode"];
+                    deviceConfig.gamma_mode = static_cast<Config::GammaMode>(gamma_mode);
+                    ESP_LOGI(TAG, "Gamma mode updated: %d", gamma_mode);
+                    changed = true;
+                }
 
-                          if (gamma_mode < 0 || gamma_mode > 2) {
-                              request->send(400, CONTENT_TYPE_JSON,
-                                            "{\"success\":false,\"error\":\"Gamma mode must be 0 (default), 1 (NeoPixel), or 2 (none)\"}");
-                              return;
-                          }
+                // Update cycle_time if provided
+                if (!doc["cycle_time"].isNull()) {
+                    uint16_t cycle_time = doc["cycle_time"];
 
-                          deviceConfig.gamma_mode = static_cast<Config::GammaMode>(gamma_mode);
-                          ESP_LOGI(TAG, "Gamma mode updated: %d", gamma_mode);
-                          changed = true;
-                      }
+                    if (cycle_time < 1 || cycle_time > 1000) {
+                        request->send(400, CONTENT_TYPE_JSON,
+                                      R"({"success":false,"error":"Cycle time must be between 1 and 1000"})");
+                        return;
+                    }
 
-                      // Update cycle_time if provided
-                      if (doc.containsKey("cycle_time")) {
-                          uint16_t cycle_time = doc["cycle_time"];
+                    deviceConfig.cycle_time = cycle_time;
+                    ESP_LOGI(TAG, "Cycle time updated: %u ms", cycle_time);
+                    changed = true;
+                }
 
-                          if (cycle_time < 1 || cycle_time > 1000) {
-                              request->send(400, CONTENT_TYPE_JSON,
-                                            R"({"success":false,"error":"Cycle time must be between 1 and 1000"})");
-                              return;
-                          }
+                if (!changed) {
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"No valid parameters provided"})");
+                    return;
+                }
 
-                          deviceConfig.cycle_time = cycle_time;
-                          ESP_LOGI(TAG, "Cycle time updated: %u ms", cycle_time);
-                          changed = true;
-                      }
+                // Save config
+                config.saveDeviceConfig(deviceConfig);
 
-                      if (!changed) {
-                          request->send(400, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"No valid parameters provided"})");
-                          return;
-                      }
-
-                      // Save config
-                      config.saveDeviceConfig(deviceConfig);
-
-                      // Send success response and request deferred restart
-                      request->send(200, CONTENT_TYPE_JSON,
-                                    R"({"success":true,"message":"Device settings updated, restarting..."})");
-                      config.requestRestart(1000);
-                  }
-              }
-    );
+                // Send success response and request deferred restart
+                request->send(200, CONTENT_TYPE_JSON,
+                              R"({"success":true,"message":"Device settings updated, restarting..."})");
+                config.requestRestart(1000);
+            });
+        handler->setMethod(HTTP_POST);
+        server.addHandler(handler);
+    }
 
     // POST /api/settings/factory-reset - Factory reset device
     server.on("/api/settings/factory-reset", HTTP_POST, [this](AsyncWebServerRequest *request) {
@@ -787,7 +703,7 @@ void WebServerManager::setupAPIRoutes() {
 
     // GET /api/about - Device information
     server.on("/api/about", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        StaticJsonDocument<Config::JSON_DOC_LARGE> doc;
+        JsonDocument doc;
 
         // Device info
         Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
@@ -798,7 +714,7 @@ void WebServerManager::setupAPIRoutes() {
 
         // Show statistics
         ShowStats stats = showController.getStats();
-        JsonObject statsJson = doc.createNestedObject("stats");
+        JsonObject statsJson = doc["stats"].to<JsonObject>();
         statsJson["avg_execution_time"] = stats.avg_execution_time;
         statsJson["avg_show_time"] = stats.avg_show_time;
         statsJson["avg_cycle_time"] = stats.avg_cycle_time;
@@ -857,7 +773,7 @@ void WebServerManager::setupAPIRoutes() {
         uint32_t currentEpoch = network.getCurrentEpoch();
         const Config::TimersConfig &timersConfig = scheduler->getTimersConfig();
 
-        StaticJsonDocument<Config::JSON_DOC_LARGE> doc;
+        JsonDocument doc;
         doc["timezone"] = timersConfig.timezone;
         doc["current_epoch"] = currentEpoch;
 
@@ -879,10 +795,10 @@ void WebServerManager::setupAPIRoutes() {
             doc["local_seconds_since_midnight"] = 0;
         }
 
-        JsonArray timers = doc.createNestedArray("timers");
+        JsonArray timers = doc["timers"].to<JsonArray>();
         for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
             const Config::TimerEntry &timer = timersConfig.timers[i];
-            JsonObject timerObj = timers.createNestedObject();
+            JsonObject timerObj = timers.add<JsonObject>();
             timerObj["index"] = i;
             timerObj["enabled"] = timer.enabled;
 
@@ -912,262 +828,227 @@ void WebServerManager::setupAPIRoutes() {
     });
 
     // POST /api/timers/countdown - Set a countdown timer
-    server.on("/api/timers/countdown", HTTP_POST,
-              []([[maybe_unused]] AsyncWebServerRequest *request) {
-              },
-              nullptr,
-              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
-                     [[maybe_unused]] size_t total) {
-                  if (index == 0) {
-                      TimerScheduler *scheduler = network.getTimerScheduler();
-                      if (!scheduler) {
-                          request->send(503, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Timer scheduler not available"})");
-                          return;
-                      }
+    {
+        auto *handler = new AsyncCallbackJsonWebHandler(
+            AsyncURIMatcher::exact("/api/timers/countdown"),
+            [this](AsyncWebServerRequest *request, JsonVariant &doc) {
+                TimerScheduler *scheduler = network.getTimerScheduler();
+                if (!scheduler) {
+                    request->send(503, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Timer scheduler not available"})");
+                    return;
+                }
 
-                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
-                      DeserializationError error = deserializeJson(doc, data, len);
 
-                      if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
-                          return;
-                      }
 
-                      // Required: duration in seconds
-                      if (!doc.containsKey("duration")) {
-                          request->send(400, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Duration required"})");
-                          return;
-                      }
+                // Required: duration in seconds
+                if (doc["duration"].isNull()) {
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Duration required"})");
+                    return;
+                }
 
-                      uint32_t duration = doc["duration"];
-                      if (duration == 0 || duration > 86400 * 7) { // Max 7 days
-                          request->send(400, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Invalid duration"})");
-                          return;
-                      }
+                uint32_t duration = doc["duration"];
+                if (duration == 0 || duration > 86400 * 7) { // Max 7 days
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Invalid duration"})");
+                    return;
+                }
 
-                      // Optional: index (defaults to first available slot)
-                      int timerIndex = doc[JSON_KEY_INDEX] | -1;
-                      if (timerIndex == -1) {
-                          // Find first available slot
-                          const Config::TimersConfig &timersConfig = scheduler->getTimersConfig();
-                          for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
-                              if (!timersConfig.timers[i].enabled) {
-                                  timerIndex = i;
-                                  break;
-                              }
-                          }
-                          if (timerIndex == -1) {
-                              request->send(400, CONTENT_TYPE_JSON,
-                                            R"({"success":false,"error":"All timer slots are full"})");
-                              return;
-                          }
-                      }
+                // Optional: index (defaults to first available slot)
+                int timerIndex = doc[JSON_KEY_INDEX] | -1;
+                if (timerIndex == -1) {
+                    // Find first available slot
+                    const Config::TimersConfig &timersConfig = scheduler->getTimersConfig();
+                    for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
+                        if (!timersConfig.timers[i].enabled) {
+                            timerIndex = i;
+                            break;
+                        }
+                    }
+                    if (timerIndex == -1) {
+                        request->send(400, CONTENT_TYPE_JSON,
+                                      R"({"success":false,"error":"All timer slots are full"})");
+                        return;
+                    }
+                }
 
-                      // Optional: action (defaults to TURN_OFF)
-                      Config::TimerAction action = Config::TimerAction::TURN_OFF;
-                      if (doc.containsKey("action")) {
-                          int actionInt = doc["action"];
-                          if (actionInt == 0) action = Config::TimerAction::LOAD_PRESET;
-                          else action = Config::TimerAction::TURN_OFF;
-                      }
+                // Optional: action (defaults to TURN_OFF)
+                Config::TimerAction action = Config::TimerAction::TURN_OFF;
+                if (!doc["action"].isNull()) {
+                    int actionInt = doc["action"];
+                    if (actionInt == 0) action = Config::TimerAction::LOAD_PRESET;
+                    else action = Config::TimerAction::TURN_OFF;
+                }
 
-                      // Optional: preset_index (only used if action is LOAD_PRESET)
-                      uint8_t presetIndex = doc["preset_index"] | 0;
+                // Optional: preset_index (only used if action is LOAD_PRESET)
+                uint8_t presetIndex = doc["preset_index"] | 0;
 
-                      uint32_t currentEpoch = network.getCurrentEpoch();
-                      if (scheduler->setCountdown(timerIndex, duration, action, presetIndex, currentEpoch)) {
-                          StaticJsonDocument<Config::JSON_DOC_TINY> responseDoc;
-                          responseDoc["success"] = true;
-                          responseDoc["index"] = timerIndex;
-                          responseDoc["remaining_seconds"] = duration;
+                uint32_t currentEpoch = network.getCurrentEpoch();
+                if (scheduler->setCountdown(timerIndex, duration, action, presetIndex, currentEpoch)) {
+                    JsonDocument responseDoc;
+                    responseDoc["success"] = true;
+                    responseDoc["index"] = timerIndex;
+                    responseDoc["remaining_seconds"] = duration;
 
-                          String response;
-                          serializeJson(responseDoc, response);
-                          request->send(200, CONTENT_TYPE_JSON, response);
-                      } else {
-                          request->send(500, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Failed to set timer"})");
-                      }
-                  }
-              }
-    );
+                    String response;
+                    serializeJson(responseDoc, response);
+                    request->send(200, CONTENT_TYPE_JSON, response);
+                } else {
+                    request->send(500, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Failed to set timer"})");
+                }
+            });
+        handler->setMethod(HTTP_POST);
+        server.addHandler(handler);
+    }
 
     // POST /api/timers/alarm - Set a daily recurring alarm
-    server.on("/api/timers/alarm", HTTP_POST,
-              []([[maybe_unused]] AsyncWebServerRequest *request) {
-              },
-              nullptr,
-              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
-                     [[maybe_unused]] size_t total) {
-                  if (index == 0) {
-                      TimerScheduler *scheduler = network.getTimerScheduler();
-                      if (!scheduler) {
-                          request->send(503, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Timer scheduler not available"})");
-                          return;
-                      }
+    {
+        auto *handler = new AsyncCallbackJsonWebHandler(
+            AsyncURIMatcher::exact("/api/timers/alarm"),
+            [this](AsyncWebServerRequest *request, JsonVariant &doc) {
+                TimerScheduler *scheduler = network.getTimerScheduler();
+                if (!scheduler) {
+                    request->send(503, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Timer scheduler not available"})");
+                    return;
+                }
 
-                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
-                      DeserializationError error = deserializeJson(doc, data, len);
 
-                      if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
-                          return;
-                      }
 
-                      // Required: hour and minute for the alarm time
-                      if (!doc.containsKey("hour") || !doc.containsKey("minute")) {
-                          request->send(400, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Hour and minute required"})");
-                          return;
-                      }
+                // Required: hour and minute for the alarm time
+                if (doc["hour"].isNull() || doc["minute"].isNull()) {
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Hour and minute required"})");
+                    return;
+                }
 
-                      uint8_t hour = doc["hour"];
-                      uint8_t minute = doc["minute"];
-                      if (hour > 23 || minute > 59) {
-                          request->send(400, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Invalid time"})");
-                          return;
-                      }
+                uint8_t hour = doc["hour"];
+                uint8_t minute = doc["minute"];
+                if (hour > 23 || minute > 59) {
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Invalid time"})");
+                    return;
+                }
 
-                      // Optional: index (defaults to first available slot)
-                      int timerIndex = doc[JSON_KEY_INDEX] | -1;
-                      if (timerIndex == -1) {
-                          const Config::TimersConfig &timersConfig = scheduler->getTimersConfig();
-                          for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
-                              if (!timersConfig.timers[i].enabled) {
-                                  timerIndex = i;
-                                  break;
-                              }
-                          }
-                          if (timerIndex == -1) {
-                              request->send(400, CONTENT_TYPE_JSON,
-                                            R"({"success":false,"error":"All timer slots are full"})");
-                              return;
-                          }
-                      }
+                // Optional: index (defaults to first available slot)
+                int timerIndex = doc[JSON_KEY_INDEX] | -1;
+                if (timerIndex == -1) {
+                    const Config::TimersConfig &timersConfig = scheduler->getTimersConfig();
+                    for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
+                        if (!timersConfig.timers[i].enabled) {
+                            timerIndex = i;
+                            break;
+                        }
+                    }
+                    if (timerIndex == -1) {
+                        request->send(400, CONTENT_TYPE_JSON,
+                                      R"({"success":false,"error":"All timer slots are full"})");
+                        return;
+                    }
+                }
 
-                      // Optional: action (defaults to TURN_OFF)
-                      Config::TimerAction action = Config::TimerAction::TURN_OFF;
-                      if (doc.containsKey("action")) {
-                          int actionInt = doc["action"];
-                          if (actionInt == 0) action = Config::TimerAction::LOAD_PRESET;
-                          else action = Config::TimerAction::TURN_OFF;
-                      }
+                // Optional: action (defaults to TURN_OFF)
+                Config::TimerAction action = Config::TimerAction::TURN_OFF;
+                if (!doc["action"].isNull()) {
+                    int actionInt = doc["action"];
+                    if (actionInt == 0) action = Config::TimerAction::LOAD_PRESET;
+                    else action = Config::TimerAction::TURN_OFF;
+                }
 
-                      uint8_t presetIndex = doc["preset_index"] | 0;
+                uint8_t presetIndex = doc["preset_index"] | 0;
 
-                      uint32_t secondsSinceMidnight = hour * 3600 + minute * 60;
-                      bool success = scheduler->setDailyAlarm(timerIndex, secondsSinceMidnight, action, presetIndex);
+                uint32_t secondsSinceMidnight = hour * 3600 + minute * 60;
+                bool success = scheduler->setDailyAlarm(timerIndex, secondsSinceMidnight, action, presetIndex);
 
-                      if (success) {
-                          StaticJsonDocument<Config::JSON_DOC_TINY> responseDoc;
-                          responseDoc["success"] = true;
-                          responseDoc["index"] = timerIndex;
+                if (success) {
+                    JsonDocument responseDoc;
+                    responseDoc["success"] = true;
+                    responseDoc["index"] = timerIndex;
 
-                          String response;
-                          serializeJson(responseDoc, response);
-                          request->send(200, CONTENT_TYPE_JSON, response);
-                      } else {
-                          request->send(500, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Failed to set alarm"})");
-                      }
-                  }
-              }
-    );
+                    String response;
+                    serializeJson(responseDoc, response);
+                    request->send(200, CONTENT_TYPE_JSON, response);
+                } else {
+                    request->send(500, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Failed to set alarm"})");
+                }
+            });
+        handler->setMethod(HTTP_POST);
+        server.addHandler(handler);
+    }
 
     // DELETE /api/timers - Cancel a timer by index
-    server.on(API_PATH_TIMERS, HTTP_DELETE,
-              []([[maybe_unused]] AsyncWebServerRequest *request) {
-              },
-              nullptr,
-              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
-                     [[maybe_unused]] size_t total) {
-                  if (index == 0) {
-                      TimerScheduler *scheduler = network.getTimerScheduler();
-                      if (!scheduler) {
-                          request->send(503, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Timer scheduler not available"})");
-                          return;
-                      }
+    {
+        auto *handler = new AsyncCallbackJsonWebHandler(
+            AsyncURIMatcher::exact(API_PATH_TIMERS),
+            [this](AsyncWebServerRequest *request, JsonVariant &doc) {
+                TimerScheduler *scheduler = network.getTimerScheduler();
+                if (!scheduler) {
+                    request->send(503, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Timer scheduler not available"})");
+                    return;
+                }
 
-                      StaticJsonDocument<Config::JSON_DOC_TINY> doc;
-                      DeserializationError error = deserializeJson(doc, data, len);
 
-                      if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
-                          return;
-                      }
 
-                      if (!doc.containsKey(JSON_KEY_INDEX)) {
-                          request->send(400, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Timer index required"})");
-                          return;
-                      }
+                if (doc[JSON_KEY_INDEX].isNull()) {
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Timer index required"})");
+                    return;
+                }
 
-                      int timerIndex = doc[JSON_KEY_INDEX];
-                      if (timerIndex < 0 || timerIndex >= Config::TimersConfig::MAX_TIMERS) {
-                          request->send(400, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Invalid timer index"})");
-                          return;
-                      }
+                int timerIndex = doc[JSON_KEY_INDEX];
+                if (timerIndex < 0 || timerIndex >= Config::TimersConfig::MAX_TIMERS) {
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Invalid timer index"})");
+                    return;
+                }
 
-                      if (scheduler->cancelTimer(timerIndex)) {
-                          request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
-                      } else {
-                          request->send(500, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Failed to cancel timer"})");
-                      }
-                  }
-              }
-    );
+                if (scheduler->cancelTimer(timerIndex)) {
+                    request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
+                } else {
+                    request->send(500, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Failed to cancel timer"})");
+                }
+            });
+        handler->setMethod(HTTP_DELETE);
+        server.addHandler(handler);
+    }
 
     // POST /api/timers/timezone - Set the POSIX TZ string
-    server.on("/api/timers/timezone", HTTP_POST,
-              []([[maybe_unused]] AsyncWebServerRequest *request) {
-              },
-              nullptr,
-              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
-                     [[maybe_unused]] size_t total) {
-                  if (index == 0) {
-                      TimerScheduler *scheduler = network.getTimerScheduler();
-                      if (!scheduler) {
-                          request->send(503, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Timer scheduler not available"})");
-                          return;
-                      }
+    {
+        auto *handler = new AsyncCallbackJsonWebHandler(
+            AsyncURIMatcher::exact("/api/timers/timezone"),
+            [this](AsyncWebServerRequest *request, JsonVariant &doc) {
+                TimerScheduler *scheduler = network.getTimerScheduler();
+                if (!scheduler) {
+                    request->send(503, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Timer scheduler not available"})");
+                    return;
+                }
 
-                      // JSON_DOC_SMALL rather than TINY: a POSIX TZ string
-                      // runs to 44 characters for Chatham, and the object
-                      // overhead on top of that leaves too little margin.
-                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
-                      DeserializationError error = deserializeJson(doc, data, len);
 
-                      if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
-                          return;
-                      }
 
-                      if (!doc.containsKey("tz")) {
-                          request->send(400, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Timezone string required"})");
-                          return;
-                      }
+                if (doc["tz"].isNull()) {
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Timezone string required"})");
+                    return;
+                }
 
-                      const char *tz = doc["tz"];
-                      if (!scheduler->setTimezone(tz)) {
-                          request->send(400, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Invalid POSIX timezone string"})");
-                          return;
-                      }
+                const char *tz = doc["tz"];
+                if (!scheduler->setTimezone(tz)) {
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Invalid POSIX timezone string"})");
+                    return;
+                }
 
-                      request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
-                  }
-              }
-    );
+                request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
+            });
+        handler->setMethod(HTTP_POST);
+        server.addHandler(handler);
+    }
 
     // GET /api/touch - Get touch configuration and current values
     server.on("/api/touch", HTTP_GET, [this](AsyncWebServerRequest *request) {
@@ -1178,16 +1059,16 @@ void WebServerManager::setupAPIRoutes() {
             return;
         }
 
-        StaticJsonDocument<Config::JSON_DOC_MEDIUM> doc;
+        JsonDocument doc;
         const Config::TouchConfig &touchConfig = touch->getTouchConfig();
 
         doc["enabled"] = touchConfig.enabled;
         doc["threshold"] = touchConfig.threshold;
 
         // Pin mappings
-        JsonArray pins = doc.createNestedArray("pins");
+        JsonArray pins = doc["pins"].to<JsonArray>();
         for (uint8_t i = 0; i < Config::TouchConfig::MAX_TOUCH_PINS; i++) {
-            JsonObject pin = pins.createNestedObject();
+            JsonObject pin = pins.add<JsonObject>();
             pin["index"] = i;
             pin["gpio"] = TouchController::getGpioPin(i);
             pin["action"] = (i == 0) ? "Switch Show" : (i == 1) ? "Switch Variant" : "Switch Layout";
@@ -1196,7 +1077,7 @@ void WebServerManager::setupAPIRoutes() {
         // Current touch values for debugging/calibration
         uint32_t touchValues[Config::TouchConfig::MAX_TOUCH_PINS];
         touch->getTouchValues(touchValues);
-        JsonArray values = doc.createNestedArray("values");
+        JsonArray values = doc["values"].to<JsonArray>();
         for (uint8_t i = 0; i < Config::TouchConfig::MAX_TOUCH_PINS; i++) {
             values.add(touchValues[i]);
         }
@@ -1207,49 +1088,41 @@ void WebServerManager::setupAPIRoutes() {
     });
 
     // POST /api/touch - Update touch configuration
-    server.on("/api/touch", HTTP_POST,
-              []([[maybe_unused]] AsyncWebServerRequest *request) {
-              },
-              nullptr,
-              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
-                     [[maybe_unused]] size_t total) {
-                  if (index == 0) {
-                      TouchController *touch = network.getTouchController();
-                      if (!touch) {
-                          request->send(503, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Touch controller not available"})");
-                          return;
-                      }
+    {
+        auto *handler = new AsyncCallbackJsonWebHandler(
+            AsyncURIMatcher::exact("/api/touch"),
+            [this](AsyncWebServerRequest *request, JsonVariant &doc) {
+                TouchController *touch = network.getTouchController();
+                if (!touch) {
+                    request->send(503, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Touch controller not available"})");
+                    return;
+                }
 
-                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
-                      DeserializationError error = deserializeJson(doc, data, len);
 
-                      if (error) {
-                          request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
-                          return;
-                      }
 
-                      Config::TouchConfig touchConfig = touch->getTouchConfig();
+                Config::TouchConfig touchConfig = touch->getTouchConfig();
 
-                      // Update enabled state if provided
-                      if (doc.containsKey("enabled")) {
-                          touchConfig.enabled = doc["enabled"];
-                      }
+                // Update enabled state if provided
+                if (!doc["enabled"].isNull()) {
+                    touchConfig.enabled = doc["enabled"];
+                }
 
-                      // Update threshold if provided
-                      if (doc.containsKey("threshold")) {
-                          touchConfig.threshold = doc["threshold"];
-                      }
+                // Update threshold if provided
+                if (!doc["threshold"].isNull()) {
+                    touchConfig.threshold = doc["threshold"];
+                }
 
-                      touch->setTouchConfig(touchConfig);
-                      request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
-                  }
-              }
-    );
+                touch->setTouchConfig(touchConfig);
+                request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
+            });
+        handler->setMethod(HTTP_POST);
+        server.addHandler(handler);
+    }
 
     // GET /api/ota/check - kick off a background check on Core 1
     server.on(API_PATH_OTA_CHECK, HTTP_GET, [](AsyncWebServerRequest *request) {
-        StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
+        JsonDocument doc;
         bool started = OTAUpdater::startBackgroundCheck(OTA_GITHUB_OWNER, OTA_GITHUB_REPO);
         if (started) {
             doc["started"] = true;
@@ -1282,7 +1155,7 @@ void WebServerManager::setupAPIRoutes() {
             } else if (cs == CheckState::Failed) {
                 reason = "Latest check failed; retry";
             }
-            StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
+            JsonDocument doc;
             doc["started"] = false;
             doc["error"] = reason;
             String body;
@@ -1293,7 +1166,7 @@ void WebServerManager::setupAPIRoutes() {
 
     // GET /api/ota/status - state-machine snapshot for the UI to poll
     server.on("/api/ota/status", HTTP_GET, [](AsyncWebServerRequest *request) {
-        StaticJsonDocument<Config::JSON_DOC_LARGE> doc;
+        JsonDocument doc;
 
         doc["firmware_version"] = FIRMWARE_VERSION;
         doc["build_date"] = FIRMWARE_BUILD_DATE;
@@ -1316,7 +1189,7 @@ void WebServerManager::setupAPIRoutes() {
 
         // check sub-object
         {
-            JsonObject chk = doc.createNestedObject("check");
+            JsonObject chk = doc["check"].to<JsonObject>();
             CheckState cs = OTAUpdater::getCheckState();
             switch (cs) {
                 case CheckState::Idle:       chk["state"] = "idle"; break;
@@ -1338,7 +1211,7 @@ void WebServerManager::setupAPIRoutes() {
 
         // update sub-object
         {
-            JsonObject upd = doc.createNestedObject("update");
+            JsonObject upd = doc["update"].to<JsonObject>();
             Progress p = OTAUpdater::getProgress();
             switch (p.state) {
                 case UpdateState::Idle:        upd["state"] = "idle"; break;
@@ -1362,7 +1235,7 @@ void WebServerManager::setupAPIRoutes() {
     // POST /api/ota/confirm - manual boot confirmation (escape hatch)
     server.on("/api/ota/confirm", HTTP_POST, [](AsyncWebServerRequest *request) {
         bool success = OTAUpdater::confirmBoot();
-        StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
+        JsonDocument doc;
         doc[JSON_KEY_SUCCESS] = success;
         doc["message"] = success ? "Boot confirmed, rollback disabled" : "Failed to confirm boot";
         String response;
@@ -1398,63 +1271,50 @@ WebServerManager::WebServerManager(Config::ConfigManager &config, Network &netwo
 }
 
 #ifdef ARDUINO
-void WebServerManager::handleWiFiConfig(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
-                                        [[maybe_unused]] size_t total) {
-    // Only process the first chunk (index == 0)
-    if (index == 0) {
-        // Parse JSON body
-        StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
-        DeserializationError error = deserializeJson(doc, data, len);
+void WebServerManager::handleWiFiConfig(AsyncWebServerRequest *request, JsonVariant &doc) {
+    // Extract SSID and password
+    const char *ssid = doc["ssid"];
+    const char *password = doc["password"];
 
-        if (error) {
-            request->send(400, CONTENT_TYPE_JSON, JSON_RESPONSE_ERROR_INVALID_JSON);
-            return;
-        }
-
-        // Extract SSID and password
-        const char *ssid = doc["ssid"];
-        const char *password = doc["password"];
-
-        if (ssid == nullptr || strlen(ssid) == 0) {
-            request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"SSID required"})");
-            return;
-        }
-
-        // Create WiFi config
-        Config::WiFiConfig wifiConfig;
-        strncpy(wifiConfig.ssid, ssid, sizeof(wifiConfig.ssid) - 1);
-        wifiConfig.ssid[sizeof(wifiConfig.ssid) - 1] = '\0';
-
-        if (password != nullptr) {
-            strncpy(wifiConfig.password, password, sizeof(wifiConfig.password) - 1);
-            wifiConfig.password[sizeof(wifiConfig.password) - 1] = '\0';
-        } else {
-            wifiConfig.password[0] = '\0';
-        }
-
-        wifiConfig.configured = true;
-
-        // Save configuration
-        config.saveWiFiConfig(wifiConfig);
-
-        ESP_LOGI(TAG, "WiFi configured: SSID=%s", wifiConfig.ssid);
-
-        // Generate mDNS hostname for response
-        String deviceId = DeviceId::getDeviceId();
-        String hostname = "ledz-" + deviceId;
-        hostname.toLowerCase();
-
-        // Send success response with hostname
-        StaticJsonDocument<Config::JSON_DOC_TINY> responseDoc;
-        responseDoc["success"] = true;
-        responseDoc["hostname"] = hostname + ".local";
-
-        String response;
-        serializeJson(responseDoc, response);
-        request->send(200, CONTENT_TYPE_JSON, response);
-
-        // Note: The Network task will detect config.isConfigured() and restart the device
+    if (ssid == nullptr || strlen(ssid) == 0) {
+        request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"SSID required"})");
+        return;
     }
+
+    // Create WiFi config
+    Config::WiFiConfig wifiConfig;
+    strncpy(wifiConfig.ssid, ssid, sizeof(wifiConfig.ssid) - 1);
+    wifiConfig.ssid[sizeof(wifiConfig.ssid) - 1] = '\0';
+
+    if (password != nullptr) {
+        strncpy(wifiConfig.password, password, sizeof(wifiConfig.password) - 1);
+        wifiConfig.password[sizeof(wifiConfig.password) - 1] = '\0';
+    } else {
+        wifiConfig.password[0] = '\0';
+    }
+
+    wifiConfig.configured = true;
+
+    // Save configuration
+    config.saveWiFiConfig(wifiConfig);
+
+    ESP_LOGI(TAG, "WiFi configured: SSID=%s", wifiConfig.ssid);
+
+    // Generate mDNS hostname for response
+    String deviceId = DeviceId::getDeviceId();
+    String hostname = "ledz-" + deviceId;
+    hostname.toLowerCase();
+
+    // Send success response with hostname
+    JsonDocument responseDoc;
+    responseDoc["success"] = true;
+    responseDoc["hostname"] = hostname + ".local";
+
+    String response;
+    serializeJson(responseDoc, response);
+    request->send(200, CONTENT_TYPE_JSON, response);
+
+    // Note: The Network task will detect config.isConfigured() and restart the device
 }
 #endif
 
@@ -1464,8 +1324,12 @@ void WebServerManager::begin() {
 
     activeInstance = this;
 
-    // Add access logging middleware for all requests
-    // server.addMiddleware(&logging);
+    // Add access logging middleware for all requests. This is also the only
+    // caller of markServedRequest(), so OTA_AUTO_CONFIRM_REQUIRE_REQUEST
+    // cannot be satisfied while it is not installed. The chain wraps whichever
+    // handler the router picked, so AsyncCallbackJsonWebHandler routes
+    // registered via addHandler() are covered identically to server.on() ones.
+    server.addMiddleware(&logging);
 
     // Setup routes (implemented by subclass)
     setupRoutes();

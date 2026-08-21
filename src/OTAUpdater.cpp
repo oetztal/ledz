@@ -789,7 +789,7 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
         return false;
     }
 
-    DynamicJsonDocument doc(Config::JSON_DOC_OTA);
+    JsonDocument doc;
     {
         EspHttpReader reader(client.handle);
         DeserializationError err = deserializeJson(doc, reader);
