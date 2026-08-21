@@ -6,6 +6,7 @@
 
 #include <vector>
 #include "Show.h"
+#include "support/Random.h"
 
 namespace Show {
     class FireState {
@@ -37,7 +38,7 @@ namespace Show {
 
     class Fire : public Show {
         std::unique_ptr<FireState> state;
-        std::mt19937 gen;
+        Support::Random gen;
         std::uniform_real_distribution<float> randomFloat;
 
         float cooling;

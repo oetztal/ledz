@@ -6,6 +6,7 @@
 
 #include "strip/Strip.h"
 #include "Show.h"
+#include "support/Random.h"
 
 namespace Show {
     class ColorRun : public Show {
@@ -41,7 +42,7 @@ namespace Show {
     private:
         std::vector<Strip::Color> phases;
         std::vector<State> states;
-        std::mt19937 gen;
+        Support::Random gen;
     };
 } // Show
 

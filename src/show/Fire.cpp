@@ -1,7 +1,6 @@
 #include "Fire.h"
 
 #include <algorithm>
-#include <random>
 #include <utility>
 
 #include "support/color.h"
@@ -103,8 +102,7 @@ namespace Show {
         start_offset(start_offset),
         spark_range(spark_range),
         randomFloat(0.0f, 1.0f) {
-        std::random_device rd;
-        gen = std::mt19937(rd());
+        gen.seed(Support::randomSeed());
     }
 
     void Fire::ensureState(Strip::Strip &strip) {

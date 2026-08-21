@@ -1,7 +1,6 @@
 #include "ColorRun.h"
 
 #include <algorithm>
-#include <random>
 #include <sstream>
 #ifdef ARDUINO
 #include <USBCDC.h>
@@ -17,8 +16,7 @@ namespace Show {
 
         this->randomPhase = std::uniform_int_distribution<>(0, phases.size() - 1);
 
-        std::random_device rd;
-        this->gen = std::mt19937(rd());
+        gen.seed(Support::randomSeed());
     }
 
     void ColorRun::update_state(Iteration iteration) {
