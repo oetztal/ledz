@@ -1,5 +1,6 @@
 #include "Config.h"
 #include "Log.h"
+#include "support/LocalTime.h"
 
 #ifdef ARDUINO
 #include <esp_system.h>
@@ -397,7 +398,24 @@ namespace Config {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, true); // Read-only mode
 
-        timersConfig.timezone_offset_hours = prefs.getChar("tz_offset", 0);
+        // Timezone migration, keyed on key presence rather than a schema
+        // version: the old and new keys are disjoint, so the absence of "tz"
+        // is an unambiguous "not migrated yet". A legacy whole-hour offset
+        // becomes a fixed-offset POSIX string so the device keeps exactly
+        // the time it kept before; the user opts into DST by picking a
+        // region on the timers page.
+        bool migrated = false;
+        const bool legacyKeyPresent = prefs.isKey("tz_offset");
+        if (prefs.isKey("tz")) {
+            prefs.getString("tz", timersConfig.timezone, sizeof(timersConfig.timezone));
+        } else {
+            const int8_t legacyOffsetHours = prefs.getChar("tz_offset", 0);
+            LocalTime::legacyOffsetToPosix(legacyOffsetHours, timersConfig.timezone,
+                                           sizeof(timersConfig.timezone));
+            migrated = true;
+            ESP_LOGI(TAG, "Migrating timezone: legacy offset %d hours -> \"%s\"",
+                          legacyOffsetHours, timersConfig.timezone);
+        }
 
         char key[20];
         for (uint8_t i = 0; i < TimersConfig::MAX_TIMERS; i++) {
@@ -419,10 +437,37 @@ namespace Config {
 
                 snprintf(key, sizeof(key), "timer_%u_dur", i);
                 timersConfig.timers[i].duration_seconds = prefs.getULong(key, 0);
+
+                snprintf(key, sizeof(key), "timer_%u_lfd", i);
+                timersConfig.timers[i].last_fired_yday = prefs.getUShort(key, ALARM_NEVER_FIRED);
+
+                // Firmware before the POSIX-timezone change used
+                // duration_seconds as a "last triggered epoch minute"
+                // marker for daily alarms, so a migrated entry has a number
+                // around 29 million where a duration belongs.
+                if (migrated && timersConfig.timers[i].type == TimerType::ALARM_DAILY) {
+                    timersConfig.timers[i].duration_seconds = 0;
+                }
             }
         }
 
         prefs.end();
+
+        // The write-back needs its own read-write session: the read above
+        // opened the namespace read-only. Losing power before this point
+        // leaves tz_offset in place and simply repeats the migration next
+        // boot, with the same result. Losing it between the save and the
+        // remove leaves a harmless orphan, which is why the removal is
+        // driven by the key's presence rather than by `migrated` — the next
+        // boot takes the read path and still clears it.
+        if (migrated) {
+            saveTimersConfig(timersConfig);
+        }
+        if (legacyKeyPresent) {
+            prefs.begin(NAMESPACE, false);
+            prefs.remove("tz_offset");
+            prefs.end();
+        }
 #endif
 
         return timersConfig;
@@ -432,7 +477,7 @@ namespace Config {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, false); // Read-write mode
 
-        prefs.putChar("tz_offset", config.timezone_offset_hours);
+        prefs.putString("tz", config.timezone);
 
         char key[20];
         for (uint8_t i = 0; i < TimersConfig::MAX_TIMERS; i++) {
@@ -454,6 +499,9 @@ namespace Config {
 
                 snprintf(key, sizeof(key), "timer_%u_dur", i);
                 prefs.putULong(key, config.timers[i].duration_seconds);
+
+                snprintf(key, sizeof(key), "timer_%u_lfd", i);
+                prefs.putUShort(key, config.timers[i].last_fired_yday);
             }
         }
 

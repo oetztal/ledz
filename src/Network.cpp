@@ -205,6 +205,14 @@ void Network::startSTA(const char *ssid, const char *password) {
         // RTC (≈ Jan 1970) and the OTA check fails with ESP_ERR_HTTP_CONNECT.
         // Multiple pool servers give lwip a chance to keep working even when
         // one DNS round-trip or UDP-port-123 detour is flaky.
+        //
+        // The 0,0 offsets also reset TZ to UTC, so this must stay ahead of
+        // the scheduler's first TZ apply — checkTimers() does the applying,
+        // and it is only reachable from the task loop below, well after this
+        // point. A non-UTC TZ is harmless to the handshake regardless:
+        // settimeofday/gettimeofday and time() all deal in UTC epoch
+        // seconds, and TZ only affects the localtime() family, which mbedtls
+        // does not use for certificate validity.
         configTime(0, 0, "pool.ntp.org", "time.nist.gov", "time.cloudflare.com");
 
         ESP_LOGI(TAG, "NTP time: %s", ntpClient.getFormattedTime());

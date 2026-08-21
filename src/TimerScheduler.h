@@ -17,6 +17,10 @@ private:
     ShowController &showController;
     Config::TimersConfig timersConfig;
     bool ntpAvailable = false;
+    // Set by setTimezone() on whatever task handled the request, consumed by
+    // checkTimers() on the Network task. Applying TZ is a process-global
+    // mutation, so only one task may do it — see design decision 4.
+    bool tzDirty = false;
 
     /**
      * Execute a timer action
@@ -99,16 +103,23 @@ public:
     [[nodiscard]] const Config::TimersConfig& getTimersConfig() const { return timersConfig; }
 
     /**
-     * Set timezone offset
-     * @param offsetHours Timezone offset in hours from UTC (-12 to +14)
+     * Set the timezone.
+     *
+     * Stores and persists the string, but does not apply it — the actual
+     * setenv/tzset happens on the next checkTimers() iteration, so that a
+     * request handler running on another task cannot mutate libc's timezone
+     * state underneath a live alarm evaluation.
+     *
+     * @param tz POSIX TZ string, e.g. "CET-1CEST,M3.5.0,M10.5.0/3"
+     * @return true if the string was accepted and stored
      */
-    void setTimezoneOffset(int8_t offsetHours);
+    bool setTimezone(const char *tz);
 
     /**
-     * Get timezone offset
-     * @return Timezone offset in hours
+     * Get the configured timezone
+     * @return POSIX TZ string
      */
-    [[nodiscard]] int8_t getTimezoneOffset() const { return timersConfig.timezone_offset_hours; }
+    [[nodiscard]] const char *getTimezone() const { return timersConfig.timezone; }
 };
 
 #endif //LEDZ_TIMER_SCHEDULER_H

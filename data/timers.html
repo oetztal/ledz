@@ -20,40 +20,80 @@
             <div class="section" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <div>
-                        <div style="font-size: 13px; opacity: 0.9; margin-bottom: 4px;">Current Time (UTC<span id="tzDisplay"></span>)</div>
+                        <div style="font-size: 13px; opacity: 0.9; margin-bottom: 4px;">Current Time<span id="tzDisplay"></span></div>
                         <div id="serverTime" style="font-size: 32px; font-weight: 600; font-family: monospace; letter-spacing: 2px;">--:--:--</div>
                     </div>
                     <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
-                        <select id="timezoneOffset" style="padding: 8px 12px; border-radius: 6px; border: none; background: rgba(255,255,255,0.2); color: white; font-size: 13px; min-width: 180px;">
-                            <option value="-12">UTC-12 Baker Island</option>
-                            <option value="-11">UTC-11 Samoa</option>
-                            <option value="-10">UTC-10 Hawaii</option>
-                            <option value="-9">UTC-9 Alaska</option>
-                            <option value="-8">UTC-8 Los Angeles</option>
-                            <option value="-7">UTC-7 Denver</option>
-                            <option value="-6">UTC-6 Chicago</option>
-                            <option value="-5">UTC-5 New York</option>
-                            <option value="-4">UTC-4 Santiago</option>
-                            <option value="-3">UTC-3 São Paulo</option>
-                            <option value="-2">UTC-2 Atlantic</option>
-                            <option value="-1">UTC-1 Azores</option>
-                            <option value="0" selected>UTC+0 London</option>
-                            <option value="1">UTC+1 Paris, Berlin</option>
-                            <option value="2">UTC+2 Cairo, Athens</option>
-                            <option value="3">UTC+3 Moscow</option>
-                            <option value="4">UTC+4 Dubai</option>
-                            <option value="5">UTC+5 Karachi</option>
-                            <option value="6">UTC+6 Dhaka</option>
-                            <option value="7">UTC+7 Bangkok</option>
-                            <option value="8">UTC+8 Singapore</option>
-                            <option value="9">UTC+9 Tokyo</option>
-                            <option value="10">UTC+10 Sydney</option>
-                            <option value="11">UTC+11 Noumea</option>
-                            <option value="12">UTC+12 Auckland</option>
+                        <select id="timezone" style="padding: 8px 12px; border-radius: 6px; border: none; background: rgba(255,255,255,0.2); color: white; font-size: 13px; min-width: 180px;">
+                            <option value="SST11"                                        data-iana="Pacific/Midway Pacific/Pago_Pago">Midway, Pago Pago</option>
+                            <option value="HST10"                                        data-iana="Pacific/Honolulu">Honolulu, Hawaii</option>
+                            <option value="<-0930>9:30"                                  data-iana="Pacific/Marquesas">Marquesas Islands</option>
+                            <option value="AKST9AKDT,M3.2.0,M11.1.0"                     data-iana="America/Anchorage">Anchorage, Alaska</option>
+                            <option value="PST8PDT,M3.2.0,M11.1.0"                       data-iana="America/Los_Angeles America/Vancouver America/Tijuana">Los Angeles, Vancouver, Seattle</option>
+                            <option value="MST7MDT,M3.2.0,M11.1.0"                       data-iana="America/Denver America/Edmonton">Denver, Calgary</option>
+                            <option value="MST7"                                         data-iana="America/Phoenix">Phoenix, Arizona (no DST)</option>
+                            <option value="CST6CDT,M3.2.0,M11.1.0"                       data-iana="America/Chicago America/Winnipeg">Chicago, Winnipeg</option>
+                            <option value="CST6"                                         data-iana="America/Mexico_City America/Guatemala America/Costa_Rica">Mexico City, Guatemala (no DST)</option>
+                            <option value="<-05>5"                                       data-iana="America/Bogota America/Lima America/Panama">Bogota, Lima, Panama</option>
+                            <option value="EST5EDT,M3.2.0,M11.1.0"                       data-iana="America/New_York America/Toronto America/Detroit">New York, Toronto, Miami</option>
+                            <option value="<-04>4"                                       data-iana="America/Caracas">Caracas</option>
+                            <option value="AST4ADT,M3.2.0,M11.1.0"                       data-iana="America/Halifax">Halifax, Bermuda</option>
+                            <option value="<-04>4<-03>,M9.1.6/24,M4.1.6/24"              data-iana="America/Santiago">Santiago</option>
+                            <option value="NST3:30NDT,M3.2.0,M11.1.0"                    data-iana="America/St_Johns">St. John's, Newfoundland</option>
+                            <option value="<-03>3"                                       data-iana="America/Sao_Paulo America/Argentina/Buenos_Aires America/Montevideo">Sao Paulo, Buenos Aires, Montevideo (no DST)</option>
+                            <option value="<-02>2"                                       data-iana="Atlantic/South_Georgia">South Georgia</option>
+                            <option value="<-01>1<+00>,M3.5.0/0,M10.5.0/1"               data-iana="Atlantic/Azores">Azores</option>
+                            <option value="<-01>1"                                       data-iana="Atlantic/Cape_Verde">Cape Verde</option>
+                            <option value="GMT0BST,M3.5.0/1,M10.5.0"                     data-iana="Europe/London Europe/Dublin Europe/Lisbon">London, Dublin, Lisbon</option>
+                            <option value="UTC0"                                         data-iana="UTC">UTC (no DST)</option>
+                            <option value="CET-1CEST,M3.5.0,M10.5.0/3"                   data-iana="Europe/Berlin Europe/Paris Europe/Madrid Europe/Rome Europe/Amsterdam Europe/Brussels Europe/Vienna Europe/Prague Europe/Warsaw Europe/Stockholm Europe/Oslo Europe/Copenhagen Europe/Zurich Europe/Budapest">Berlin, Paris, Madrid, Rome</option>
+                            <option value="WAT-1"                                        data-iana="Africa/Lagos Africa/Algiers Africa/Kinshasa">Lagos, Algiers, Kinshasa</option>
+                            <option value="EET-2EEST,M3.5.0/3,M10.5.0/4"                 data-iana="Europe/Athens Europe/Helsinki Europe/Kyiv Europe/Bucharest Europe/Riga">Athens, Helsinki, Kyiv, Bucharest</option>
+                            <option value="EET-2EEST,M4.5.5/0,M10.5.4/24"                data-iana="Africa/Cairo">Cairo</option>
+                            <option value="IST-2IDT,M3.4.4/26,M10.5.0"                   data-iana="Asia/Jerusalem">Jerusalem</option>
+                            <option value="SAST-2"                                       data-iana="Africa/Johannesburg Africa/Harare Africa/Maputo">Johannesburg, Harare, Maputo</option>
+                            <option value="MSK-3"                                        data-iana="Europe/Moscow Europe/Istanbul Africa/Nairobi Asia/Riyadh">Moscow, Istanbul, Nairobi</option>
+                            <option value="<+0330>-3:30"                                 data-iana="Asia/Tehran">Tehran (no DST)</option>
+                            <option value="<+04>-4"                                      data-iana="Asia/Dubai Asia/Baku Asia/Tbilisi Asia/Muscat">Dubai, Baku, Tbilisi</option>
+                            <option value="<+0430>-4:30"                                 data-iana="Asia/Kabul">Kabul</option>
+                            <option value="PKT-5"                                        data-iana="Asia/Karachi Asia/Tashkent">Karachi, Tashkent</option>
+                            <option value="IST-5:30"                                     data-iana="Asia/Kolkata Asia/Colombo">India, Sri Lanka</option>
+                            <option value="<+0545>-5:45"                                 data-iana="Asia/Kathmandu">Kathmandu</option>
+                            <option value="<+06>-6"                                      data-iana="Asia/Dhaka Asia/Almaty">Dhaka, Almaty</option>
+                            <option value="<+0630>-6:30"                                 data-iana="Asia/Yangon">Yangon</option>
+                            <option value="<+07>-7"                                      data-iana="Asia/Bangkok Asia/Jakarta Asia/Ho_Chi_Minh">Bangkok, Jakarta, Hanoi</option>
+                            <option value="CST-8"                                        data-iana="Asia/Shanghai Asia/Singapore Australia/Perth Asia/Hong_Kong Asia/Taipei">Beijing, Shanghai, Singapore, Perth</option>
+                            <option value="<+0845>-8:45"                                 data-iana="Australia/Eucla">Eucla</option>
+                            <option value="JST-9"                                        data-iana="Asia/Tokyo Asia/Seoul">Tokyo, Seoul</option>
+                            <option value="ACST-9:30ACDT,M10.1.0,M4.1.0/3"               data-iana="Australia/Adelaide">Adelaide</option>
+                            <option value="ACST-9:30"                                    data-iana="Australia/Darwin">Darwin</option>
+                            <option value="AEST-10"                                      data-iana="Australia/Brisbane">Brisbane (no DST)</option>
+                            <option value="AEST-10AEDT,M10.1.0,M4.1.0/3"                 data-iana="Australia/Sydney Australia/Melbourne Australia/Canberra Australia/Hobart">Sydney, Melbourne, Canberra</option>
+                            <option value="<+11>-11"                                     data-iana="Pacific/Noumea Pacific/Guadalcanal">Noumea, Solomon Islands</option>
+                            <option value="NZST-12NZDT,M9.5.0,M4.1.0/3"                  data-iana="Pacific/Auckland Pacific/Fiji">Auckland, Wellington, Fiji</option>
+                            <option value="<+1245>-12:45<+1345>,M9.5.0/2:45,M4.1.0/3:45" data-iana="Pacific/Chatham">Chatham Islands</option>
+                            <option value="<+13>-13"                                     data-iana="Pacific/Apia Pacific/Tongatapu">Apia, Tongatapu</option>
+                            <option value="<+14>-14"                                     data-iana="Pacific/Kiritimati">Kiritimati</option>
                         </select>
-                        <button onclick="setTimezone()" style="padding: 8px 20px; border-radius: 6px; border: none; background: rgba(255,255,255,0.3); color: white; cursor: pointer; font-size: 13px;">Save Timezone</button>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="detectTimezone()" style="padding: 8px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.5); background: transparent; color: white; cursor: pointer; font-size: 13px;">Detect</button>
+                            <button onclick="setTimezone()" style="padding: 8px 20px; border-radius: 6px; border: none; background: rgba(255,255,255,0.3); color: white; cursor: pointer; font-size: 13px;">Save Timezone</button>
+                        </div>
+                        <div id="tzMessage" style="font-size: 12px; opacity: 0.9; text-align: right; max-width: 280px;"></div>
                     </div>
                 </div>
+                <div id="tzFixedOffsetBanner" style="display: none; margin-top: 14px; padding: 10px 14px; border-radius: 8px; background: rgba(0,0,0,0.2); font-size: 13px; line-height: 1.5;">
+                    Your timezone is a fixed UTC offset and will not follow daylight saving. Pick your region above to enable it.
+                </div>
+                <details id="tzAdvanced" style="margin-top: 14px; font-size: 13px;">
+                    <summary style="cursor: pointer; opacity: 0.9;">Advanced: enter a POSIX TZ string</summary>
+                    <p style="opacity: 0.85; margin: 8px 0;">
+                        Overrides the selection above when filled in. The offset counts west of UTC,
+                        so <code>CET-1CEST,M3.5.0,M10.5.0/3</code> is UTC+1.
+                    </p>
+                    <input type="text" id="tzRaw" maxlength="63" placeholder="CET-1CEST,M3.5.0,M10.5.0/3"
+                           style="width: 100%; box-sizing: border-box; padding: 8px 12px; border-radius: 6px; border: none; font-family: monospace; font-size: 13px;">
+                </details>
             </div>
 
             <div class="section">
@@ -136,7 +176,10 @@
         let timersData = [];
         let timersFetchedAt = 0;
         let serverTimeAtFetch = 0;
-        let timezoneOffsetHours = 0;
+
+        // A fixed offset with no DST rule, as produced by migrating a
+        // pre-POSIX device: "UTC-1", "UTC+5".
+        const FIXED_OFFSET_TZ = /^UTC[+-]?\d+$/;
 
         // Format seconds as human-readable countdown
         function formatCountdown(seconds) {
@@ -194,10 +237,7 @@
                 timersData = (data.timers || []).filter(t => t.enabled);
                 timersFetchedAt = Date.now();
 
-                // Update timezone dropdown
-                timezoneOffsetHours = data.timezone_offset_hours || 0;
-                document.getElementById('timezoneOffset').value = timezoneOffsetHours;
-                document.getElementById('tzDisplay').textContent = (timezoneOffsetHours >= 0 ? '+' : '') + timezoneOffsetHours;
+                showStoredTimezone(data);
 
                 // Update server time display
                 if (data.local_seconds_since_midnight !== undefined && data.current_epoch !== 0) {
@@ -430,27 +470,134 @@
             }
         }
 
+        // Format an offset in minutes as the "UTC+01:00" the header shows
+        function formatUtcOffset(minutes) {
+            const sign = minutes < 0 ? '-' : '+';
+            const total = Math.abs(minutes);
+            const hh = Math.floor(total / 60).toString().padStart(2, '0');
+            const mm = (total % 60).toString().padStart(2, '0');
+            return `UTC${sign}${hh}:${mm}`;
+        }
+
+        // Reflect the device's stored timezone in the select, the header and
+        // the two "this isn't in the list" affordances.
+        function showStoredTimezone(data) {
+            const tz = data.timezone || 'UTC0';
+            const select = document.getElementById('timezone');
+
+            select.value = tz;
+            // An empty value means no <option> matched: either a migrated
+            // fixed offset or a hand-entered advanced string.
+            const matched = select.value === tz;
+
+            document.getElementById('tzFixedOffsetBanner').style.display =
+                (!matched && FIXED_OFFSET_TZ.test(tz)) ? 'block' : 'none';
+
+            if (!matched && !FIXED_OFFSET_TZ.test(tz)) {
+                document.getElementById('tzRaw').value = tz;
+                document.getElementById('tzAdvanced').open = true;
+            } else {
+                // Clear it: an open field with a stale string would silently
+                // override the region the user picks next.
+                document.getElementById('tzRaw').value = '';
+                document.getElementById('tzAdvanced').open = false;
+            }
+
+            const tzDisplay = document.getElementById('tzDisplay');
+            if (data.tz_abbrev !== undefined) {
+                tzDisplay.textContent = ` (${data.tz_abbrev}, ${formatUtcOffset(data.tz_offset_minutes)})`;
+            } else {
+                tzDisplay.textContent = '';
+            }
+        }
+
+        // Preselect the browser's zone. Selects only — Save Timezone stays
+        // the only action that writes to the device.
+        function detectTimezone() {
+            const message = document.getElementById('tzMessage');
+            const select = document.getElementById('timezone');
+            const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const options = Array.from(select.options);
+
+            const named = options.find(option =>
+                (option.dataset.iana || '').split(' ').includes(browserZone));
+            if (named) {
+                select.value = named.value;
+                message.textContent = `Detected ${browserZone} — press Save Timezone to apply.`;
+                return;
+            }
+
+            // Not listed. Two probes six months apart tell a fixed-offset
+            // zone from a DST one without needing the transition dates,
+            // which is enough to land on an equivalent row.
+            const now = new Date();
+            const later = new Date(now.getTime() + 182 * 86400000);
+            const browserOffsets = [browserOffsetMinutes(browserZone, now),
+                                    browserOffsetMinutes(browserZone, later)];
+
+            const equivalent = options.find(option => {
+                const zone = (option.dataset.iana || '').split(' ')[0];
+                return browserOffsetMinutes(zone, now) === browserOffsets[0] &&
+                       browserOffsetMinutes(zone, later) === browserOffsets[1];
+            });
+
+            if (equivalent) {
+                select.value = equivalent.value;
+                message.textContent =
+                    `${browserZone} isn't listed; selected an equivalent zone. Press Save Timezone to apply.`;
+            } else {
+                message.textContent =
+                    `Couldn't match your zone (${browserZone}) — please pick it manually.`;
+            }
+        }
+
+        // Minutes east of UTC that an IANA zone is at a given instant
+        function browserOffsetMinutes(zone, when) {
+            try {
+                const parts = new Intl.DateTimeFormat('en-US', {
+                    timeZone: zone, timeZoneName: 'longOffset'
+                }).formatToParts(when);
+                const name = parts.find(p => p.type === 'timeZoneName').value;
+                const match = name.match(/GMT([+-])(\d{2}):(\d{2})/);
+                if (!match) return 0; // bare "GMT" is UTC
+                const sign = match[1] === '-' ? -1 : 1;
+                return sign * (parseInt(match[2]) * 60 + parseInt(match[3]));
+            } catch (error) {
+                return NaN; // unknown zone never matches
+            }
+        }
+
         // Set timezone
         async function setTimezone() {
-            const offset = parseInt(document.getElementById('timezoneOffset').value);
+            const advanced = document.getElementById('tzAdvanced');
+            const raw = document.getElementById('tzRaw').value.trim();
+            // The advanced field wins when the user has actually opened it
+            // and typed something.
+            const tz = (advanced.open && raw) ? raw : document.getElementById('timezone').value;
+            const message = document.getElementById('tzMessage');
 
             try {
                 const response = await fetch('/api/timers/timezone', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ offset })
+                    body: JSON.stringify({ tz })
                 });
 
                 const result = await response.json();
                 if (result.success) {
-                    alert('Timezone updated!');
-                    await fetchTimers();
+                    message.textContent = 'Timezone saved, applying...';
+                    // The scheduler applies TZ on its next iteration, so give
+                    // it a beat before reading back the effective zone.
+                    setTimeout(async () => {
+                        await fetchTimers();
+                        message.textContent = '';
+                    }, 1500);
                 } else {
-                    alert('Failed to set timezone: ' + (result.error || 'Unknown error'));
+                    message.textContent = 'Failed to set timezone: ' + (result.error || 'Unknown error');
                 }
             } catch (error) {
                 console.error('Failed to set timezone:', error);
-                alert('Failed to set timezone');
+                message.textContent = 'Failed to set timezone — the device did not respond.';
             }
         }
 

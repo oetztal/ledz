@@ -12,6 +12,7 @@
 #include "OTAConfig.h"
 #include "TimerScheduler.h"
 #include "TouchController.h"
+#include "support/LocalTime.h"
 #include "support/WiFiCredentials.h"
 
 #ifdef ARDUINO
@@ -857,12 +858,23 @@ void WebServerManager::setupAPIRoutes() {
         const Config::TimersConfig &timersConfig = scheduler->getTimersConfig();
 
         StaticJsonDocument<Config::JSON_DOC_LARGE> doc;
-        doc["timezone_offset_hours"] = timersConfig.timezone_offset_hours;
+        doc["timezone"] = timersConfig.timezone;
         doc["current_epoch"] = currentEpoch;
-        
-        // Include local time as seconds since midnight for UI convenience
+
+        // Include local time as seconds since midnight for UI convenience.
+        // Without NTP there is no instant to resolve the zone at, so the
+        // derived fields are reported as unknown rather than describing
+        // epoch 0.
+        // Outlives the document: ArduinoJson stores a const char* by
+        // reference, so tz_abbrev must not point at a dead local.
+        LocalTime::Info tzInfo = {};
         if (currentEpoch != 0) {
             doc["local_seconds_since_midnight"] = scheduler->getSecondsSinceMidnight(currentEpoch);
+
+            tzInfo = LocalTime::describe(currentEpoch, timersConfig.timezone);
+            doc["tz_abbrev"] = static_cast<const char *>(tzInfo.abbrev);
+            doc["tz_offset_minutes"] = tzInfo.offset_minutes;
+            doc["is_dst"] = tzInfo.is_dst;
         } else {
             doc["local_seconds_since_midnight"] = 0;
         }
@@ -1113,7 +1125,7 @@ void WebServerManager::setupAPIRoutes() {
               }
     );
 
-    // POST /api/timers/timezone - Set timezone offset
+    // POST /api/timers/timezone - Set the POSIX TZ string
     server.on("/api/timers/timezone", HTTP_POST,
               []([[maybe_unused]] AsyncWebServerRequest *request) {
               },
@@ -1128,7 +1140,10 @@ void WebServerManager::setupAPIRoutes() {
                           return;
                       }
 
-                      StaticJsonDocument<Config::JSON_DOC_TINY> doc;
+                      // JSON_DOC_SMALL rather than TINY: a POSIX TZ string
+                      // runs to 44 characters for Chatham, and the object
+                      // overhead on top of that leaves too little margin.
+                      StaticJsonDocument<Config::JSON_DOC_SMALL> doc;
                       DeserializationError error = deserializeJson(doc, data, len);
 
                       if (error) {
@@ -1136,20 +1151,19 @@ void WebServerManager::setupAPIRoutes() {
                           return;
                       }
 
-                      if (!doc.containsKey("offset")) {
+                      if (!doc.containsKey("tz")) {
                           request->send(400, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Timezone offset required"})");
+                                        R"({"success":false,"error":"Timezone string required"})");
                           return;
                       }
 
-                      int8_t offset = doc["offset"];
-                      if (offset < -12 || offset > 14) {
+                      const char *tz = doc["tz"];
+                      if (!scheduler->setTimezone(tz)) {
                           request->send(400, CONTENT_TYPE_JSON,
-                                        R"({"success":false,"error":"Invalid timezone offset"})");
+                                        R"({"success":false,"error":"Invalid POSIX timezone string"})");
                           return;
                       }
 
-                      scheduler->setTimezoneOffset(offset);
                       request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
                   }
               }

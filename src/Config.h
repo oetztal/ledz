@@ -143,6 +143,12 @@ namespace Config {
     };
 
     /**
+     * Local day-of-year value that matches no calendar day, used as the
+     * "has never fired" state of TimerEntry::last_fired_yday.
+     */
+    constexpr uint16_t ALARM_NEVER_FIRED = 0xFFFF;
+
+    /**
      * Timer entry structure
      */
     struct TimerEntry {
@@ -152,6 +158,11 @@ namespace Config {
         uint8_t preset_index = 0;
         uint32_t target_time = 0;      // epoch for COUNTDOWN, seconds-since-midnight for ALARM_DAILY
         uint32_t duration_seconds = 0; // original duration for countdown display
+        // Local tm_yday on which an ALARM_DAILY last triggered. Keyed on the
+        // local day rather than an absolute time so that the two 02:30s of a
+        // fall-back night count as one day and fire only once. Unused by
+        // COUNTDOWN.
+        uint16_t last_fired_yday = ALARM_NEVER_FIRED;
     };
 
     /**
@@ -160,7 +171,11 @@ namespace Config {
     struct TimersConfig {
         static constexpr uint8_t MAX_TIMERS = 4;
         TimerEntry timers[MAX_TIMERS];
-        int8_t timezone_offset_hours = 0;
+        // POSIX TZ string, e.g. "CET-1CEST,M3.5.0,M10.5.0/3". Note the
+        // inverted sign: the offset counts west of UTC, so that is UTC+1.
+        // 64 bytes is sized off the longest realistic entry, Chatham's
+        // 44-character string.
+        char timezone[64] = "UTC0";
     };
 
     /**

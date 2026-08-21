@@ -1,6 +1,10 @@
 #include "TimerScheduler.h"
 #include "Log.h"
 #include "ShowController.h"
+#include "support/LocalTime.h"
+
+#include <cstdlib>
+#include <cstring>
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -14,9 +18,13 @@ TimerScheduler::TimerScheduler(Config::ConfigManager &config, ShowController &sh
 
 void TimerScheduler::begin() {
     timersConfig = config.loadTimersConfig();
+    // The stored zone still has to be handed to libc. Doing it through the
+    // same dirty flag the API uses keeps the apply on the Network task and
+    // guarantees it lands after configTime() has set TZ to UTC.
+    tzDirty = true;
 #ifdef ARDUINO
-    ESP_LOGI(TAG, "Loaded %d timers, timezone offset: %d hours",
-                  Config::TimersConfig::MAX_TIMERS, timersConfig.timezone_offset_hours);
+    ESP_LOGI(TAG, "Loaded %d timers, timezone: \"%s\"",
+                  Config::TimersConfig::MAX_TIMERS, timersConfig.timezone);
 
     for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
         if (timersConfig.timers[i].enabled) {
@@ -30,18 +38,7 @@ void TimerScheduler::begin() {
 }
 
 uint32_t TimerScheduler::getSecondsSinceMidnight(uint32_t epochTime) const {
-    if (epochTime == 0) return 0;
-
-    // Apply timezone offset
-    int32_t localEpoch = static_cast<int32_t>(epochTime) + (timersConfig.timezone_offset_hours * 3600);
-    
-    // Ensure we handle negative localEpoch (though unlikely with epoch times)
-    if (localEpoch < 0) {
-        return (86400 + (localEpoch % 86400)) % 86400;
-    }
-
-    // Calculate seconds since midnight in local time
-    return static_cast<uint32_t>(localEpoch) % 86400;
+    return LocalTime::secondsSinceMidnight(epochTime, timersConfig.timezone);
 }
 
 void TimerScheduler::checkTimers(uint32_t currentEpoch) {
@@ -49,7 +46,24 @@ void TimerScheduler::checkTimers(uint32_t currentEpoch) {
         return; // Skip timer checks if NTP is not available
     }
 
+    if (tzDirty) {
+        tzDirty = false;
+        // A syntactically valid string can still be nonsense, and newlib
+        // reports no parse error — it just falls back to UTC. Logging what
+        // libc actually made of it is the only diagnostic there is.
+        const LocalTime::Info info = LocalTime::describe(currentEpoch, timersConfig.timezone);
+#ifdef ARDUINO
+        ESP_LOGI(TAG, "Applied timezone \"%s\": %s, UTC%+d:%02d%s",
+                      timersConfig.timezone, info.abbrev,
+                      info.offset_minutes / 60, abs(info.offset_minutes % 60),
+                      info.is_dst ? " (DST)" : "");
+#else
+        (void) info;
+#endif
+    }
+
     uint32_t currentSecondsSinceMidnight = getSecondsSinceMidnight(currentEpoch);
+    const uint16_t today = LocalTime::localDayOfYear(currentEpoch, timersConfig.timezone);
     bool configChanged = false;
 
     for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
@@ -72,21 +86,21 @@ void TimerScheduler::checkTimers(uint32_t currentEpoch) {
                 break;
 
             case Config::TimerType::ALARM_DAILY:
-                // Check if current time matches target time (within 1 second window)
-                // target_time stores seconds since midnight for daily alarms
+                // target_time stores seconds since midnight for daily alarms.
+                // A wall-clock time that the spring-forward jump skips never
+                // falls inside this window, so the alarm is skipped that day
+                // and resumes the next — see design decision 8.
                 if (currentSecondsSinceMidnight >= timer.target_time &&
                     currentSecondsSinceMidnight < timer.target_time + 5) {
-                    shouldTrigger = true;
-                    // Daily alarms remain enabled but we need to prevent multiple triggers
-                    // Use duration_seconds as a "last triggered minute" marker
-                    // We need to store seconds since midnight of the trigger time to be robust
-                    // but currentEpoch / 60 is also okay as long as it's consistent.
-                    uint32_t triggerMinute = currentEpoch / 60;
-                    if (timer.duration_seconds != triggerMinute) {
-                        timer.duration_seconds = triggerMinute;
+                    // Daily alarms stay enabled, so repeat triggers are
+                    // suppressed by recording the local day they last fired
+                    // on. Keying on the local day rather than an absolute
+                    // time is what makes the two 02:30s of a fall-back night
+                    // count as one.
+                    if (timer.last_fired_yday != today) {
+                        timer.last_fired_yday = today;
+                        shouldTrigger = true;
                         configChanged = true;
-                    } else {
-                        shouldTrigger = false; // Already triggered this minute
                     }
                 }
                 break;
@@ -175,7 +189,9 @@ bool TimerScheduler::setDailyAlarm(uint8_t index, uint32_t secondsSinceMidnight,
     timer.action = action;
     timer.preset_index = presetIndex;
     timer.target_time = secondsSinceMidnight;
-    timer.duration_seconds = 0; // Will be used to track last trigger time
+    timer.duration_seconds = 0; // Unused by daily alarms
+    // A freshly set alarm has never fired, so it is eligible today.
+    timer.last_fired_yday = Config::ALARM_NEVER_FIRED;
 
     config.saveTimersConfig(timersConfig);
 
@@ -222,7 +238,11 @@ uint32_t TimerScheduler::getRemainingSeconds(uint8_t index, uint32_t currentEpoc
             return timer.target_time - currentEpoch;
 
         case Config::TimerType::ALARM_DAILY:
-            // For daily alarms, calculate time until next occurrence
+            // For daily alarms, calculate time until next occurrence.
+            // This counts wall-clock seconds, not real ones, so on a day
+            // with a transition the estimate is an hour out. It only drives
+            // the UI countdown; the trigger itself compares wall-clock time
+            // directly and is unaffected.
             {
                 uint32_t currentSecondsSinceMidnight = getSecondsSinceMidnight(currentEpoch);
                 if (currentSecondsSinceMidnight < timer.target_time) {
@@ -237,15 +257,22 @@ uint32_t TimerScheduler::getRemainingSeconds(uint8_t index, uint32_t currentEpoc
     return 0;
 }
 
-void TimerScheduler::setTimezoneOffset(int8_t offsetHours) {
-    if (offsetHours < -12 || offsetHours > 14) {
-        return; // Invalid offset
+bool TimerScheduler::setTimezone(const char *tz) {
+    if (!LocalTime::isSyntacticallyValidTz(tz)) {
+        return false;
     }
 
-    timersConfig.timezone_offset_hours = offsetHours;
+    strncpy(timersConfig.timezone, tz, sizeof(timersConfig.timezone) - 1);
+    timersConfig.timezone[sizeof(timersConfig.timezone) - 1] = '\0';
     config.saveTimersConfig(timersConfig);
 
+    // Deliberately no setenv/tzset here: this runs on the request handler's
+    // task. checkTimers() picks the change up within one iteration.
+    tzDirty = true;
+
 #ifdef ARDUINO
-    ESP_LOGI(TAG, "Set timezone offset to %d hours", offsetHours);
+    ESP_LOGI(TAG, "Set timezone to \"%s\"", timersConfig.timezone);
 #endif
+
+    return true;
 }

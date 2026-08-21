@@ -46,12 +46,12 @@
 There is no browser test harness and the native environment cannot render the web assets, so every check below is manual.
 
 - [x] 7.1 Flash and open the settings page: confirm no checkbox is stretched to full width and every label sits on the same line as its box
-- [ ] 7.2 Confirm "Enable touch control" renders as a switch, toggles the device immediately, and snaps back if the device is unreachable
-- [ ] 7.3 Confirm "Open network (no password)" is a checkbox and still disables and clears the password field
+- [x] 7.2 Confirm "Enable touch control" renders as a switch, toggles the device immediately, and snaps back if the device is unreachable
+- [x] 7.3 Confirm "Open network (no password)" is a checkbox and still disables and clears the password field
 - [ ] 7.4 Trigger the OTA force path (device on the latest version) and confirm `#forceGroup` reveals a correctly rendered checkbox
 - [ ] 7.5 On the control page, select the colour-ranges show and confirm "Gradient mode" matches the settings-page checkboxes, and that Apply still sends the gradient flag
 - [ ] 7.6 Keyboard-only pass: tab through both pages and confirm every boolean control shows a visible focus indicator — especially the toggle — and responds to Space
-- [ ] 7.7 Click each label's text and confirm the control toggles
+- [x] 7.7 Click each label's text and confirm the control toggles
 - [ ] 7.8 Check both pages at a phone viewport width: rows at least 44px high, wrapped labels aligned to the first line
 - [ ] 7.9 Enable the OS reduced-motion setting and confirm the toggle changes state without animating
 - [ ] 7.10 Confirm the Daily Alarm time field on `timers.html` is unchanged — this is the regression guarded against in task 1.1
