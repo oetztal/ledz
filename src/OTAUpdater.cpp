@@ -142,20 +142,28 @@ struct HttpClient {
                     ESP_LOGE(TAG, "HTTP too many redirects (last status=%d)", code);
                     return -1;
                 }
-                char *loc = nullptr;
-                if (esp_http_client_get_header(handle, "Location", &loc) != ESP_OK || !loc) {
-                    ESP_LOGE(TAG, "HTTP missing Location header on %d", code);
-                    return -1;
-                }
-                String next(loc);
-                free(loc);
                 // Close the existing connection BEFORE changing the URL.
                 // Without this, esp_http_client_open() returns ESP_OK because
                 // the state machine still thinks it's connected, but the
                 // subsequent fetch_headers() reads the old response and
                 // returns the stale redirect status again (infinite loop).
                 esp_http_client_close(handle);
-                esp_http_client_set_url(handle, next.c_str());
+                // esp_http_client_get_header() reads the *request* headers —
+                // there is no public getter for a response header, so asking
+                // it for "Location" always comes back empty. The parsed
+                // Location lives in the client's private state and the only
+                // way at it is set_redirection(), which points the client at
+                // it (resolving relative targets against the current URL).
+                if (esp_http_client_set_redirection(handle) != ESP_OK) {
+                    ESP_LOGE(TAG, "HTTP missing Location header on %d", code);
+                    return -1;
+                }
+                if (esp_log_level_get(TAG) >= ESP_LOG_DEBUG) {
+                    char next[256] = {0};
+                    if (esp_http_client_get_url(handle, next, sizeof(next)) == ESP_OK) {
+                        ESP_LOGD(TAG, "HTTP %d redirect -> %s", code, next);
+                    }
+                }
                 ++hops;
                 continue;
             }
