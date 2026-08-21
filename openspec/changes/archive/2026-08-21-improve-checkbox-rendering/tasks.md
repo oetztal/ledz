@@ -45,7 +45,7 @@
 
 There is no browser test harness and the native environment cannot render the web assets, so every check below is manual.
 
-- [ ] 7.1 Flash and open the settings page: confirm no checkbox is stretched to full width and every label sits on the same line as its box
+- [x] 7.1 Flash and open the settings page: confirm no checkbox is stretched to full width and every label sits on the same line as its box
 - [ ] 7.2 Confirm "Enable touch control" renders as a switch, toggles the device immediately, and snaps back if the device is unreachable
 - [ ] 7.3 Confirm "Open network (no password)" is a checkbox and still disables and clears the password field
 - [ ] 7.4 Trigger the OTA force path (device on the latest version) and confirm `#forceGroup` reveals a correctly rendered checkbox

@@ -333,15 +333,26 @@ input[type="color"] {
     height: 34px;
 }
 
+/* The input covers the whole switch and stays clickable — the slider below is
+   purely decorative, so clicks and taps anywhere on the graphic reach it. */
 .toggle-switch input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
     opacity: 0;
-    width: 0;
-    height: 0;
+    cursor: pointer;
+}
+
+.toggle-switch input:disabled {
+    cursor: not-allowed;
 }
 
 .toggle-switch .slider {
     position: absolute;
-    cursor: pointer;
+    pointer-events: none;
     top: 0;
     left: 0;
     right: 0;
@@ -378,7 +389,6 @@ input[type="color"] {
 
 .toggle-switch input:disabled + .slider {
     opacity: 0.5;
-    cursor: not-allowed;
 }
 
 @media (prefers-reduced-motion: reduce) {
