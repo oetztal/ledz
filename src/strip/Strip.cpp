@@ -9,4 +9,7 @@ namespace Strip {
         // Default implementation - can be overridden by subclasses
         return 0;
     }
+
+    Brightness Strip::getBrightness() const {
+    }
 }

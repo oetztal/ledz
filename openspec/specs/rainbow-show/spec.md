@@ -20,7 +20,7 @@ The Rainbow show SHALL advance hue across the strip such that pixel `i` at itera
 - **THEN** `time_step` is `3.0` and `pixel_step` defaults to `1.0`
 
 ### Requirement: Rainbow parameter ranges
-The Rainbow show SHALL accept any finite float value for `time_step` and `pixel_step`. The web UI SHALL restrict sliders to the range `0.0` to `5.0` with step `0.05`, but the C++ implementation SHALL NOT reject out-of-range or negative values received via the API.
+The Rainbow show SHALL accept any finite float value for `time_step` and `pixel_step`. The web UI SHALL restrict the `time_step` slider to the range `0.0` to `2.0` with step `0.01` and the `pixel_step` slider to the range `0.0` to `5.0` with step `0.05`, but the C++ implementation SHALL NOT reject out-of-range or negative values received via the API.
 
 #### Scenario: Slider clamps to non-negative in the UI
 - **WHEN** the user opens the Rainbow params section in the web UI

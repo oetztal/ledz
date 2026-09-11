@@ -41,7 +41,9 @@ namespace Strip {
 
         void show() override;
 
-        void setBrightness(uint8_t brightness) override;
+        void setBrightness(Brightness brightness) override;
+
+        [[nodiscard]] Brightness getBrightness() const override;
     };
 }
 

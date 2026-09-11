@@ -18,6 +18,8 @@ namespace Strip {
         std::unique_ptr<Adafruit_NeoPixel> strip;
         std::unique_ptr<Color[]> colors;
         Config::GammaMode gammaMode;
+        Brightness brightness;
+
 #endif
     public:
         Base(Pin pin, unsigned short length);
@@ -32,7 +34,9 @@ namespace Strip {
 
         PixelIndex length() const override;
 
-        void setBrightness(uint8_t brightness) override;
+        void setBrightness(Brightness brightness) override;
+
+        [[nodiscard]] Brightness getBrightness() const override;
 
 #ifdef ARDUINO
         /**
@@ -48,6 +52,22 @@ namespace Strip {
          * @return Gamma-corrected color
          */
         uint32_t applyGammaCorrection(uint32_t color);
+
+        /**
+         * Apply brightness scaling to a gamma-corrected color.
+         * Each component is scaled by `brightness` using accurate
+         * fixed-point math (FastLED-style scale8), avoiding the
+         * integer rounding artifacts of the Adafruit library.
+         * @param color Gamma-corrected color
+         * @return Brightness-scaled color
+         */
+        uint32_t applyBrightness(uint32_t color);
+
+        /**
+         * Scale a single 8-bit channel by an 8-bit factor (0-255).
+         * Uses (i * (1 + scale)) >> 8 so 255 * scale == scale exactly.
+         */
+        static uint8_t scaleComponent(uint8_t component, uint8_t scale);
 #endif
 
     };

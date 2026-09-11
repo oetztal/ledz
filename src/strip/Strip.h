@@ -8,6 +8,7 @@ namespace Strip {
     typedef int16_t PixelIndex;
     typedef uint32_t Color;
     typedef uint8_t ColorComponent;
+    typedef uint8_t Brightness;
 
     class Strip {
     public:
@@ -17,13 +18,15 @@ namespace Strip {
 
         virtual void setPixelColor(PixelIndex pixel_index, Color color);
 
-        virtual Color getPixelColor(PixelIndex pixel_index) const;
+        [[nodiscard]] virtual Color getPixelColor(PixelIndex pixel_index) const;
 
-        virtual PixelIndex length() const = 0;
+        [[nodiscard]] virtual PixelIndex length() const = 0;
 
         virtual void show() = 0;
 
-        virtual void setBrightness(uint8_t brightness) = 0;
+        virtual void setBrightness(Brightness brightness) = 0;
+
+        [[nodiscard]] virtual Brightness getBrightness() const;
     };
 }
 

@@ -123,7 +123,11 @@ namespace Strip {
         turnOffDeadLeds(); // Clear dead LEDs on initialization
     }
 
-    void Layout::setBrightness(uint8_t brightness) {
+    void Layout::setBrightness(Brightness brightness) {
         strip.setBrightness(brightness);
+    }
+
+    Brightness Layout::getBrightness() const {
+        return strip.getBrightness();
     }
 }
