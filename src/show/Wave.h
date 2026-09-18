@@ -11,13 +11,16 @@ namespace Show {
      * strip, so wavefronts are emitted in alternating directions. Where
      * previously emitted wavefronts still propagate, the wavefronts overlap and
      * self-interfere. Brightness decays exponentially with distance from the
-     * oscillating source (symmetric in both directions), and the wave's
-     * brightness contribution is the absolute value of a signed sine so the
-     * whole strip remains lit at all times.
+     * oscillating source (in units of wavelength, so the falloff is independent
+     * of strip length), and the wave's brightness contribution is the absolute
+     * value of a signed sine so the whole strip remains lit at all times. An
+     * end-fade factor dims the source as it approaches each strip end, hiding
+     * the hot spot that would otherwise appear because the cosine source
+     * momentarily stops at the extremes.
      */
     class Wave : public Show {
     private:
-        float decay_rate; // Exponential decay per unit distance from the source (higher = faster falloff)
+        float decay_rate; // Exponential decay per wavelength of distance from the source (higher = faster falloff)
         float brightness_frequency; // Source bounce frequency in cycles per second
         float wavelength; // Wave wavelength in pixels
 
@@ -27,13 +30,13 @@ namespace Show {
     public:
         /**
          * Constructor with configurable parameters.
-         * @param decay_rate Exponential decay per unit distance from the oscillating source (default: 2.0).
-         * @param brightness_frequency Source bounce frequency in cycles per second (default: 0.1).
-         * @param wavelength Wave wavelength in pixels (default: 6.0).
+         * @param decay_rate Exponential decay per wavelength of distance from the oscillating source (default: 1.0).
+         * @param brightness_frequency Source bounce frequency in cycles per second (default: 0.07).
+         * @param wavelength Wave wavelength in pixels (default: 15.0).
          */
-        Wave(float decay_rate = 2.0f,
-             float brightness_frequency = 0.1f,
-             float wavelength = 6.0f);
+        Wave(float decay_rate = 1.0f,
+             float brightness_frequency = 0.07f,
+             float wavelength = 15.0f);
 
         /**
          * Execute the show - update wave animation

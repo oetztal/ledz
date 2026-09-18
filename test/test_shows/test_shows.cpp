@@ -174,12 +174,15 @@ void test_wave_explicit_constructor_does_not_crash() {
 }
 
 void test_wave_symmetric_lighting_around_mid_source() {
-    // Brightness frequency 0.5 cycles/sec, execute at iteration t=10 (0.5s
-    // since each tick advances time by 0.05s, so iteration=10 lands the
-    // source at the midpoint of its first half-bounce).
+    // Brightness frequency 0.5 cycles/sec, source reaches the midpoint of its
+    // first half-bounce when t * 0.5 * 2π = π/2, i.e. time = 0.5s. Each
+    // execute() call advances time by 0.05, so call execute() ten times to
+    // land the source at pixel 9-10 on a 20-pixel strip.
     Show::Wave show(1.0f, 0.5f, 6.0f);
     MockStrip strip(20);
-    show.execute(strip, 10);
+    for (Show::Iteration t = 0; t < 10; t++) {
+        show.execute(strip, t);
+    }
 
     // The source is mid-strip, so pixels on either side near the centre must
     // both be lit (non-black).
