@@ -70,7 +70,8 @@ jobs:
 
           ### What's Changed
 
-          See commit history for detailed changes: https://github.com/${{ github.repository }}/commits/${GITHUB_REF_NAME}
+          See commit history for detailed changes:
+          https://github.com/${{ github.repository }}/commits/${GITHUB_REF_NAME}
           EOF
 
           # Set multiline output

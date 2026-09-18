@@ -21,32 +21,22 @@ namespace Show {
         uint16_t num_leds = strip.length();
 
         // Cosine-bouncing source position: oscillates between 0 and N-1 with
-        // continuous velocity (no jolt at the bounce). Velocity is zero at the
-        // extremes, so the source lingers there momentarily; the end-fade below
-        // hides that hot spot.
-        float t = time * brightness_frequency * 2.0f * M_PI;
+        // continuous velocity (no jolt at the bounce).
         float source_pos = (static_cast<float>(num_leds) - 1.0f) * 0.5f
-                         * (1.0f - cosf(t));
+                         * (1.0f - cosf(time * brightness_frequency * 2.0f * M_PI));
 
-        // End-fade factor: full brightness when the source is mid-strip, zero
-        // at the ends. Counters the cosine source lingering at the extremes.
-        float pos_norm = source_pos / static_cast<float>(num_leds - 1);
-        float end_fade = 1.0f - 2.0f * fabsf(pos_norm - 0.5f);
-
-        // Subtle source brightness oscillation, scaled by the end-fade.
-        float source_brightness = end_fade * (0.65f + 0.35f * sinf(t));
+        // Subtle source brightness oscillation (kept from the original show).
+        float source_brightness = 0.65f + 0.35f * sinf(time * brightness_frequency * 2.0f * M_PI);
 
         float inv_wavelength = 1.0f / wavelength;
+        float inv_num_leds = 1.0f / static_cast<float>(num_leds);
 
         for (uint16_t i = 0; i < num_leds; i++) {
             // Distance from the oscillating source: brightness peaks at the
-            // source and decays symmetrically toward both ends. Decay is
-            // measured in units of wavelength so the falloff is independent of
-            // strip length: the same `decay_rate` produces the same visual
-            // decay on a 30-pixel strip as on a 144-pixel strip.
+            // source and decays symmetrically toward both ends.
             float distance = static_cast<float>(i) - source_pos;
             float abs_distance = fabsf(distance);
-            float envelope = expf(-decay_rate * abs_distance * inv_wavelength);
+            float envelope = expf(-decay_rate * abs_distance * inv_num_leds);
 
             // Signed sine from the source position; take the absolute value so
             // the strip stays positive-valued and lit. Future interference
