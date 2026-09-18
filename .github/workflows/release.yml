@@ -68,31 +68,6 @@ jobs:
           **Commit:** ${GIT_COMMIT}
           **Size:** ${FIRMWARE_SIZE}
 
-          ### Installation
-
-          #### Over-The-Air (OTA) Update
-          1. Navigate to your device's web interface
-          2. Go to **Settings** > **Firmware Updates (OTA)**
-          3. Click **Check for Updates**
-          4. Click **Install Update**
-          5. Device will restart automatically
-
-          #### Manual Flash via USB
-          \`\`\`bash
-          # Install esptool if you haven't already
-          pip install esptool
-
-          # Flash firmware (replace /dev/ttyUSB0 with your port)
-          esptool.py --chip esp32s3 --port /dev/ttyUSB0 \\
-            --baud 921600 --before default_reset --after hard_reset \\
-            write_flash 0x10000 firmware.bin
-          \`\`\`
-
-          ### Files
-
-          - **firmware.bin** - Main firmware file (use this for OTA updates)
-          - **firmware.elf** - Debug symbols file (optional, for developers)
-
           ### What's Changed
 
           See commit history for detailed changes: https://github.com/${{ github.repository }}/commits/${GITHUB_REF_NAME}
