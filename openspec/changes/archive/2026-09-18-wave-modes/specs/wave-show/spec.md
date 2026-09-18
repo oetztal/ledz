@@ -1,26 +1,4 @@
-# wave-show Specification
-
-## Purpose
-TBD - created by archiving change wave-interference. Update Purpose after archive.
-## Requirements
-### Requirement: Wave source oscillates along the strip
-
-The Wave show's source position SHALL oscillate smoothly between the two ends of the strip following `source_pos(t) = (N - 1) * 0.5 * (1 - cos(t * 2π * brightness_frequency))`, where `N` is the strip length and `brightness_frequency` is a constructor parameter in cycles per second.
-
-#### Scenario: Source at left end at t=0
-
-- **WHEN** the show is executed at `iteration = 0` (or any multiple of `1 / brightness_frequency` iterations)
-- **THEN** the wave source position is at pixel 0 (or within rounding of it)
-
-#### Scenario: Source at right end at half-period
-
-- **WHEN** the show is executed at `iteration = 1 / (2 * brightness_frequency)` iterations
-- **THEN** the wave source position is at pixel `N - 1` (or within rounding of it)
-
-#### Scenario: Source motion has continuous velocity
-
-- **WHEN** source position is sampled at successive iterations across a bounce
-- **THEN** successive positions differ by a non-zero amount on either side of the bounce instant (no instantaneous jump)
+## MODIFIED Requirements
 
 ### Requirement: Brightness decays symmetrically from the source
 
@@ -61,15 +39,6 @@ When `mode == "bounce"` and the source is moving toward one end, the wavefronts 
 - **WHEN** mode is `"bounce"` and the show has executed for at least one full source period
 - **THEN** pixels both ahead of and behind the current source position show non-black wave amplitude (proving both directions of propagation are active)
 
-### Requirement: Color follows wavefront emission time
-
-Each pixel's color SHALL be derived from a `wheel()` hue index based on the time at which the wavefront that is currently at that pixel was emitted by the source. The hue SHALL drift continuously as wavefronts age, producing the existing rainbow-trailing look.
-
-#### Scenario: Hue varies along the strip
-
-- **WHEN** the show is executing at any iteration
-- **THEN** pixels at different positions have different hue indices (proving each pixel's hue is tied to its own emission time, not stripe-uniformly)
-
 ### Requirement: Wave accepts three parameters
 
 The Wave show SHALL accept exactly these parameters: `mode` (string, default `"bounce"`), `decay_rate` (float, default `2.0`), `brightness_frequency` (float, default `0.1`), `wavelength` (float, default `6.0`).
@@ -94,38 +63,13 @@ The Wave show SHALL accept exactly these parameters: `mode` (string, default `"b
 - **WHEN** Wave is created with `params_json == "{\"mode\":\"bogus\"}"`
 - **THEN** the constructed show has `mode="bounce"` (no error is raised)
 
-### Requirement: wave_speed is no longer accepted
+## REMOVED Requirements
 
-The Wave show SHALL NOT use a `wave_speed` parameter. JSON input containing a `wave_speed` field SHALL be silently ignored.
+### Requirement: No new web UI parameters
+**Reason**: This change adds a `mode` dropdown to the Wave parameter section of the web UI. The previous "no new web UI parameters" gate was written before the mode concept existed and is now superseded by the requirement that the UI SHALL expose the `mode` parameter.
+**Migration**: None. NVS-stored configs are unaffected. Users who do not interact with the new dropdown see no change.
 
-#### Scenario: wave_speed in JSON has no effect
-
-- **WHEN** Wave is created with `params_json == "{\"wave_speed\":5.0,\"wavelength\":6.0}"`
-- **THEN** the constructed show has `wavelength=6.0` and `wave_speed` is not stored or used
-
-#### Scenario: Existing NVS configs with wave_speed still load
-
-- **WHEN** an NVS-stored config from before this change containing `"wave_speed":N` is loaded
-- **THEN** Wave is constructed with `decay_rate=2.0`, `brightness_frequency=0.1`, `wavelength=6.0` (defaults); no error is raised
-
-### Requirement: Wave persistence
-
-The Wave show's parameters SHALL persist across reboots via the existing `params_json` NVS storage, following the same mechanism as other configurable shows.
-
-#### Scenario: Parameters restored after reboot
-
-- **WHEN** Wave is active with `decay_rate=3.5, brightness_frequency=0.5, wavelength=10.0` and the device reboots
-- **THEN** on next boot, Wave is reconstructed with `decay_rate=3.5, brightness_frequency=0.5, wavelength=10.0`
-
-### Requirement: Computational profile unchanged
-
-The Wave show's `execute()` SHALL perform at most one `sin`, one `exp`, one `fabs`, and one `wheel` call per pixel per iteration, and SHALL NOT allocate memory inside `execute()`.
-
-#### Scenario: No per-pixel allocation
-
-- **WHEN** `execute()` is reviewed or instrumented for heap allocations
-- **THEN** zero heap allocations occur per pixel per iteration
-- **THEN** `strip.setPixelColor` is called exactly `N` times per iteration
+## ADDED Requirements
 
 ### Requirement: Bounce mode phase is source-relative
 
@@ -169,4 +113,3 @@ The Wave parameter section of the control page SHALL include a `Mode` selector w
 
 - **WHEN** the user selects `Traveling`, adjusts decay/freq/wavelength, and clicks Apply Parameters
 - **THEN** a `POST /api/show` request is sent with body `{"name":"Wave","params":{"mode":"traveling", "decay_rate":..., "brightness_frequency":..., "wavelength":...}}`
-

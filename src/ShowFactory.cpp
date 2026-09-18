@@ -117,15 +117,19 @@ ShowFactory::ShowFactory() {
         return std::make_unique<Show::Rainbow>(time_step, pixel_step);
     });
 
-    registerShow("Wave", "A bouncing rainbow source whose emitted waves reflect off the strip ends and interfere where they overlap", [](const JsonDocument &doc) {
+    registerShow("Wave", "Cosine-bouncing rainbow source (Bounce) or the same envelope with stripes that drift along the strip independently of source motion (Traveling)", [](const JsonDocument &doc) {
         // wave_speed is no longer used; if present in JSON it is silently
         // ignored so existing configs keep loading.
+        const char *mode_str = doc["mode"] | "bounce";
+        Show::WaveMode mode = (strcmp(mode_str, "traveling") == 0)
+                            ? Show::WaveMode::Traveling
+                            : Show::WaveMode::Bounce;
         float decay_rate = doc["decay_rate"] | 2.0f;
         float brightness_frequency = doc["brightness_frequency"] | 0.1f;
         float wavelength = doc["wavelength"] | 6.0f;
-        ESP_LOGI(TAG, "Creating Wave decay=%.2f, freq=%.2f, wavelength=%.2f",
-                      decay_rate, brightness_frequency, wavelength);
-        return std::make_unique<Show::Wave>(decay_rate, brightness_frequency, wavelength);
+        ESP_LOGI(TAG, "Creating Wave mode=%s, decay=%.2f, freq=%.2f, wavelength=%.2f",
+                      mode_str, decay_rate, brightness_frequency, wavelength);
+        return std::make_unique<Show::Wave>(decay_rate, brightness_frequency, wavelength, mode);
     });
 
     registerShow("TheaterChase", "Evenly spaced rainbow dots march along the strip, like lights around a theater marquee", [](const JsonDocument &doc) {

@@ -350,6 +350,62 @@ void test_wave_ignores_wave_speed_legacy_field() {
     }
 }
 
+void test_wave_parses_mode_from_json() {
+    // Show exposes no accessor for its parsed mode, so the test verifies it
+    // behaviourally: a Wave built with mode="traveling" must produce a
+    // rendered strip that differs from a Wave built with mode="bounce"
+    // when both are advanced past t=0. (At t=0 both happen to write the
+    // same first frame because source position and hue start out the same
+    // and the wave phase differs only by a constant — the strip only
+    // becomes visibly different once the time term accumulates.)
+    const std::string traveling_params =
+        R"({"mode":"traveling","decay_rate":2.0,"brightness_frequency":0.1,"wavelength":6.0})";
+    const std::string bouncing_params =
+        R"({"mode":"bounce","decay_rate":2.0,"brightness_frequency":0.1,"wavelength":6.0})";
+
+    auto traveling = factory->createShow("Wave", traveling_params);
+    auto bouncing = factory->createShow("Wave", bouncing_params);
+    TEST_ASSERT_NOT_NULL_MESSAGE(traveling.get(), "traveling-mode Wave");
+    TEST_ASSERT_NOT_NULL_MESSAGE(bouncing.get(), "bounce-mode Wave");
+
+    MockStrip strip_t(60);
+    MockStrip strip_b(60);
+    for (Show::Iteration t = 0; t < 50; t++) {
+        traveling->execute(strip_t, t);
+        bouncing->execute(strip_b, t);
+    }
+
+    int differing_pixels = 0;
+    for (Strip::PixelIndex i = 0; i < 60; i++) {
+        if (strip_t.getPixelColor(i) != strip_b.getPixelColor(i)) {
+            differing_pixels++;
+        }
+    }
+    TEST_ASSERT_TRUE_MESSAGE(differing_pixels > 10,
+                             "mode=\"traveling\" produced output too similar to mode=\"bounce\"");
+}
+
+void test_wave_unknown_mode_falls_back_to_bounce() {
+    // Unknown mode values must silently fall back to bounce (per the spec).
+    // With the same other parameters, an unknown mode must produce pixels
+    // identical to a mode="bounce" construction.
+    auto unknown = factory->createShow("Wave", R"({"mode":"bogus"})");
+    auto bounce = factory->createShow("Wave", R"({"mode":"bounce"})");
+    TEST_ASSERT_NOT_NULL_MESSAGE(unknown.get(), "unknown-mode Wave");
+    TEST_ASSERT_NOT_NULL_MESSAGE(bounce.get(), "explicit bounce Wave");
+
+    MockStrip strip_u(20);
+    MockStrip strip_b(20);
+    unknown->execute(strip_u, 0);
+    bounce->execute(strip_b, 0);
+
+    for (Strip::PixelIndex i = 0; i < 20; i++) {
+        TEST_ASSERT_EQUAL_HEX32_MESSAGE(strip_b.getPixelColor(i),
+                                        strip_u.getPixelColor(i),
+                                        "unknown mode should match bounce");
+    }
+}
+
 int runUnityTests() {
     renderAll();
 
@@ -375,6 +431,8 @@ int runUnityTests() {
     RUN_TEST(test_wave_parses_all_three_parameters_from_json);
     RUN_TEST(test_wave_partial_parameters_use_defaults);
     RUN_TEST(test_wave_ignores_wave_speed_legacy_field);
+    RUN_TEST(test_wave_parses_mode_from_json);
+    RUN_TEST(test_wave_unknown_mode_falls_back_to_bounce);
 
     return UNITY_END();
 }

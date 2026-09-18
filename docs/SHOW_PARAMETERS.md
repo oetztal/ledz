@@ -261,23 +261,31 @@ In gradient mode, colors are treated as evenly-spaced waypoints across the strip
 ### Wave
 **Behavior**: A rainbow source that bounces smoothly between the two ends of the strip using a cosine motion. Wavefronts are emitted in the source's current direction; when the source reverses at an end, the wavefronts it previously emitted keep propagating in the other direction, so the strip fills with overlapping wavefronts that self-interfere. Brightness decays exponentially with distance from the (moving) source, so the whole strip is meaningfully lit at all times. Each pixel's hue is determined by the time at which the wavefront currently sitting on it was emitted by the source, producing a rainbow that drifts as wavefronts age.
 
-**Parameters**:
-- `decay_rate` (float, default: `2.0`): Exponential decay per unit distance from the oscillating source, measured in units of strip length. Higher values make the bright spot around the source narrower; lower values make the strip more uniformly lit.
-- `brightness_frequency` (float, default: `0.1`): Source bounce frequency in cycles per second. Higher values make the source zip along the strip; lower values make the pattern feel calmer.
-- `wavelength` (float, default: `6.0`): Wave wavelength in pixels. Smaller values produce more wave crests per strip; larger values produce broader, slower-looking waves.
+Two modes are available via the `mode` parameter:
+- `bounce` (default): Stripes are phase-locked to the bouncing source, so they move with it. This is the only mode the show used to have.
+- `traveling`: Stripes detach from the source and drift along the strip at `brightness_frequency * wavelength` pixels per second, while the bouncing brightness envelope still applies. Sign of `brightness_frequency` reverses drift direction.
 
-**`wave_speed` is no longer accepted.** Configurations stored in NVS or sent via the API may still contain `wave_speed`; the field is silently ignored. Only the three parameters above are used.
+**Parameters**:
+- `mode` (string, default: `"bounce"`): Phase mode, either `"bounce"` or `"traveling"`. Unknown values fall back to `"bounce"`.
+- `decay_rate` (float, default: `2.0`): Exponential decay per unit distance from the oscillating source, measured in units of strip length. Higher values make the bright spot around the source narrower; lower values make the strip more uniformly lit. Applied in both modes.
+- `brightness_frequency` (float, default: `0.1`): In `bounce` mode this is the source bounce frequency in cycles per second (higher = source zips along the strip). In `traveling` mode it is the stripe drift phase frequency, with stripes drifting at `freq * wavelength` pixels per second.
+- `wavelength` (float, default: `6.0`): Wave wavelength in pixels. Smaller values produce more wave crests per strip; larger values produce broader, slower-looking waves. Applied in both modes.
+
+**`wave_speed` is no longer accepted and is not exposed in the web UI.** Configurations stored in NVS or sent via the API may still contain `wave_speed`; the field is silently ignored. The `mode` parameter is the only new addition.
 
 **Example JSON**:
 ```json
 // Default: gentle bouncing rainbow with medium decay
-{"decay_rate": 2.0, "brightness_frequency": 0.1, "wavelength": 6.0}
+{"mode": "bounce", "decay_rate": 2.0, "brightness_frequency": 0.1, "wavelength": 6.0}
 
-// Tight, fast, dense interference
-{"decay_rate": 4.0, "brightness_frequency": 0.4, "wavelength": 3.0}
+// Tight, fast, dense interference (bounce mode)
+{"mode": "bounce", "decay_rate": 4.0, "brightness_frequency": 0.4, "wavelength": 3.0}
 
-// Calm, broad waves that fill the whole strip
-{"decay_rate": 1.0, "brightness_frequency": 0.05, "wavelength": 12.0}
+// Calm, broad waves that fill the whole strip (bounce mode)
+{"mode": "bounce", "decay_rate": 1.0, "brightness_frequency": 0.05, "wavelength": 12.0}
+
+// Traveling: stripes drift at 0.6 px/s inside the bouncing envelope
+{"mode": "traveling", "decay_rate": 2.0, "brightness_frequency": 0.1, "wavelength": 6.0}
 ```
 
 ### Other Shows

@@ -198,6 +198,60 @@ void test_wave_symmetric_lighting_around_mid_source() {
     }
 }
 
+void test_wave_traveling_mode_stripes_drift_independent_of_source() {
+    // Wave traveling mode: phase = 2π * (i/λ - t * freq). Stripes drift at
+    // freq * λ pixels per second independent of source motion.
+    //
+    // We use decay_rate = 0 so the envelope is uniformly 1 across the strip;
+    // otherwise the bouncing source position would modulate brightness
+    // independently of the wave and obscure the drift. The drift rate
+    // λ * freq is what we are testing; the envelope is a multiplicative
+    // factor that is identical in both modes.
+    constexpr float freq = 0.1f;
+    constexpr float wavelength = 6.0f;
+    constexpr Show::Iteration drift_iters = 50;  // t = 2.5 s, drift = 1.5 px
+
+    auto totalBrightness = [](Strip::Color c) {
+        return static_cast<int>(red(c)) + green(c) + blue(c);
+    };
+
+    // Sample the brightness profile at t = 0 on a fresh wave.
+    Show::Wave show_first(0.0f, freq, wavelength, Show::WaveMode::Traveling);
+    MockStrip strip_first(30);
+    show_first.execute(strip_first, 0);
+
+    // Sample at t = 2.5 s on another fresh wave.
+    Show::Wave show_later(0.0f, freq, wavelength, Show::WaveMode::Traveling);
+    MockStrip strip_later(30);
+    for (Show::Iteration t = 0; t <= drift_iters; t++) {
+        show_later.execute(strip_later, t);
+    }
+
+    // Compare the brightness profiles via integer-pixel cross-correlation.
+    // The shift that maximises the inner product is the wave drift. The
+    // expected drift is 1.5 px; with discrete integer shifts the peak
+    // should land at 1 or 2.
+    long best_correlation = -1;
+    int best_shift = 0;
+    for (int s = -3; s <= 3; s++) {
+        long corr = 0;
+        for (Strip::PixelIndex i = 5; i < 25; i++) {
+            int j = static_cast<int>(i) + s;
+            if (j < 0 || j >= static_cast<int>(strip_first.length())) continue;
+            corr += static_cast<long>(totalBrightness(strip_first.getPixelColor(i)))
+                  * static_cast<long>(totalBrightness(strip_later.getPixelColor(
+                        static_cast<Strip::PixelIndex>(j))));
+        }
+        if (corr > best_correlation) {
+            best_correlation = corr;
+            best_shift = s;
+        }
+    }
+
+    TEST_ASSERT_TRUE_MESSAGE(best_shift == 1 || best_shift == 2,
+                             "traveling-mode stripes should have drifted by ~1.5 px");
+}
+
 int runUnityTests() {
     UNITY_BEGIN();
 
@@ -223,6 +277,7 @@ int runUnityTests() {
     RUN_TEST(test_wave_default_execute_runs_without_crash);
     RUN_TEST(test_wave_explicit_constructor_does_not_crash);
     RUN_TEST(test_wave_symmetric_lighting_around_mid_source);
+    RUN_TEST(test_wave_traveling_mode_stripes_drift_independent_of_source);
 
     return UNITY_END();
 }

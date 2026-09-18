@@ -207,9 +207,12 @@
 
                 <div id="waveParams" class="params-section">
                     <div class="param-row">
-                        <label class="param-label" for="waveSpeed">Wave Speed</label>
-                        <input type="number" id="waveSpeed" step="0.1" min="0.1" max="10" value="1.0">
-                        <small style="display:block; margin-top:4px; color:#666;">Higher = faster wave propagation</small>
+                        <label class="param-label" for="waveMode">Mode</label>
+                        <select id="waveMode">
+                            <option value="bounce" selected>Bounce</option>
+                            <option value="traveling">Traveling</option>
+                        </select>
+                        <small style="display:block; margin-top:4px; color:#666;">Bounce: stripes follow the source. Traveling: stripes drift along the strip independent of the source.</small>
                     </div>
                     <div class="param-row">
                         <label class="param-label" for="waveDecay">Decay Rate</label>
@@ -219,7 +222,7 @@
                     <div class="param-row">
                         <label class="param-label" for="waveBrightnessFreq">Brightness Frequency</label>
                         <input type="number" id="waveBrightnessFreq" step="0.01" min="0.01" max="1" value="0.1">
-                        <small style="display:block; margin-top:4px; color:#666;">Frequency of source brightness pulsation</small>
+                        <small id="waveBrightnessFreqHint" style="display:block; margin-top:4px; color:#666;">Bounces per second</small>
                     </div>
                     <div class="param-row">
                         <label class="param-label" for="waveWavelength">Wavelength</label>
@@ -641,9 +644,23 @@
             }
         }
 
+        // Update the help text under the brightness-frequency input to match the
+        // selected Wave mode. The hint id is stable so the same element is
+        // re-targeted regardless of which mode is currently shown.
+        function updateWaveBrightnessFreqHint() {
+            const hint = document.getElementById('waveBrightnessFreqHint');
+            if (!hint) return;
+            const mode = document.getElementById('waveMode').value;
+            if (mode === 'traveling') {
+                hint.textContent = 'Phase cycles per second — drift = freq × wavelength px/s';
+            } else {
+                hint.textContent = 'Bounces per second';
+            }
+        }
+
         // Apply Wave parameters
         async function applyWaveParams() {
-            const wave_speed = parseFloat(document.getElementById('waveSpeed').value);
+            const mode = document.getElementById('waveMode').value;
             const decay_rate = parseFloat(document.getElementById('waveDecay').value);
             const brightness_frequency = parseFloat(document.getElementById('waveBrightnessFreq').value);
             const wavelength = parseFloat(document.getElementById('waveWavelength').value);
@@ -655,7 +672,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         name: 'Wave',
-                        params: { wave_speed, decay_rate, brightness_frequency, wavelength }
+                        params: { mode, decay_rate, brightness_frequency, wavelength }
                     })
                 });
                 pendingParameterConfig = false;  // Applied successfully
@@ -869,7 +886,10 @@
                     break;
 
                 case 'Wave':
-                    if (params.wave_speed !== undefined) document.getElementById('waveSpeed').value = params.wave_speed;
+                    if (params.mode !== undefined) {
+                        document.getElementById('waveMode').value = params.mode;
+                        updateWaveBrightnessFreqHint();
+                    }
                     if (params.decay_rate !== undefined) document.getElementById('waveDecay').value = params.decay_rate;
                     if (params.brightness_frequency !== undefined) document.getElementById('waveBrightnessFreq').value = params.brightness_frequency;
                     if (params.wavelength !== undefined) document.getElementById('waveWavelength').value = params.wavelength;
@@ -999,6 +1019,13 @@
             } catch (error) {
                 console.error('Failed to change brightness:', error);
             }
+        });
+
+        // Wave mode dropdown swaps the brightness-frequency hint text between
+        // bounces/sec (Bounce) and phase cycles/sec (Traveling). Only the hint
+        // changes; the numeric input itself is shared.
+        document.getElementById('waveMode').addEventListener('change', () => {
+            updateWaveBrightnessFreqHint();
         });
 
         // Load layout configuration
