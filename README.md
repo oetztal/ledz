@@ -27,6 +27,53 @@ ESP32-based LED controller with web interface for WS2812B/NeoPixel LED strips.
 | Max LEDs | 300 (configurable) |
 | LED pin | GPIO 39 (onboard) or GPIO 35 (external) |
 
+## Wiring
+
+The ESP32-S3 GPIO outputs 3.3 V. The WS2812B spec requires a logic-high of
+≥ 0.7 × VDD (3.5 V at 5 V supply), so a direct 3.3 V → 5 V connection is
+technically out-of-spec and is the most common cause of *wrong pixels lighting
+up in the same area* on long strips. Add a level shifter and a series resistor
+on the data line:
+
+```
+                  +5V
+                   │
+            ┌──────┴──────┐
+            │             │
+  ESP32-S3  │   330 Ω    ┌┴─────────────┐
+  GPIO ─────┴───/\/\/────┤1A    74HCT125├── 1Y ────── DIN  LED Strip
+                          │             │
+                          │  OE ──┐     │
+                          │       GND   │
+                          └─────────────┘
+            GND ─────────────────────────────────── GND
+            +5V ────────────────┬────────────────── +5V
+                               │
+                          ┌────┴────┐
+                          │ 1000 µF │  (across +5V / GND at strip input)
+                          └─────────┘
+```
+
+**Components**
+
+- **74HCT125** (or 74HCT245) — non-inverting 3.3 V → 5 V level shifter. Tie the
+  output-enable pin (`OE`) to GND so the buffer is always active.
+- **330 Ω resistor** in series with the data line, placed as close to the
+  ESP32 GPIO as possible. Dampens reflections on the data wire that can
+  re-trigger pixels and corrupt the bitstream.
+- **1000 µF capacitor** across +5 V and GND at the strip's power input.
+  Buffers the WiFi TX current spikes that would otherwise dip the rail and
+  cause the LEDs to latch wrong bits.
+
+**Pin assignments** (default, configurable in Settings → LED Pin):
+
+- GPIO 39 — onboard NeoPixel on the QT Py ESP32-S3 (no external wiring needed)
+- GPIO 35 — external strip, route through the level shifter as shown above
+
+For long strips (≥ 60 LEDs) or strips where the wrong-pixel area is in the
+back half, also inject +5 V / GND at the far end of the strip. Voltage sags
+along the length, and the back pixels latch wrong bits under load.
+
 ## Getting Started
 
 ### Build & Upload
