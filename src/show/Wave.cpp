@@ -7,44 +7,57 @@
 #endif
 
 namespace Show {
-    Wave::Wave(float wave_speed, float decay_rate, float brightness_frequency, float wavelength)
-        : wave_speed(wave_speed), decay_rate(decay_rate),
-          brightness_frequency(brightness_frequency), wavelength(wavelength),
+    Wave::Wave(float decay_rate, float brightness_frequency, float wavelength)
+        : decay_rate(decay_rate),
+          brightness_frequency(brightness_frequency),
+          wavelength(wavelength),
           time(0.0f), color_time(0.0f) {
     }
 
     void Wave::execute(Strip::Strip &strip, Iteration iteration) {
-        // Increment time counters
         time += 0.05f;
         color_time += 0.05f;
 
         uint16_t num_leds = strip.length();
 
-        // Calculate source brightness using sine wave (oscillates between 0.3 and 1.0)
+        // Cosine-bouncing source position: oscillates between 0 and N-1 with
+        // continuous velocity (no jolt at the bounce).
+        float source_pos = (static_cast<float>(num_leds) - 1.0f) * 0.5f
+                         * (1.0f - cosf(time * brightness_frequency * 2.0f * M_PI));
+
+        // Subtle source brightness oscillation (kept from the original show).
         float source_brightness = 0.65f + 0.35f * sinf(time * brightness_frequency * 2.0f * M_PI);
 
-        // Clear strip
-        for (uint16_t i = 0; i < num_leds; i++) {
-            // Create wave pattern: sine wave propagates outward from center
-            float wave_position = (float) (i - (time * wave_speed * 10.0f)) / wavelength;
-            float wave_brightness = (sinf(wave_position) + 1.0f) / 2.0f; // Normalize to 0-1
+        float inv_wavelength = 1.0f / wavelength;
+        float inv_num_leds = 1.0f / static_cast<float>(num_leds);
 
-            // Calculate when this wave element was at the center (emission time)
-            // This determines what color it should have
-            float emission_time = color_time - ((float) i / (wave_speed * 10.0f));
-            uint8_t color_index = (uint8_t)((int) (emission_time * 20.0f) % 255);
+        for (uint16_t i = 0; i < num_leds; i++) {
+            // Distance from the oscillating source: brightness peaks at the
+            // source and decays symmetrically toward both ends.
+            float distance = static_cast<float>(i) - source_pos;
+            float abs_distance = fabsf(distance);
+            float envelope = expf(-decay_rate * abs_distance * inv_num_leds);
+
+            // Signed sine from the source position; take the absolute value so
+            // the strip stays positive-valued and lit. Future interference
+            // work can sum multiple sources as `|wave_a + wave_b|`.
+            float wave = sinf(distance * 2.0f * M_PI * inv_wavelength);
+            float wave_brightness = fabsf(wave);
+
+            // Hue index based on the time at which the wavefront currently at
+            // pixel i was emitted. For a source moving at roughly N * freq
+            // pixels per second, the wavefront at pixel i was emitted about
+            // |i - source_pos| / (N * freq) seconds ago.
+            float propagation_speed = static_cast<float>(num_leds) * brightness_frequency;
+            float emission_time = color_time - abs_distance / propagation_speed;
+            uint8_t color_index = static_cast<uint8_t>(static_cast<int>(emission_time * 20.0f) % 255);
             Strip::Color pixel_color = wheel(color_index);
 
-            // Apply distance-based decay (exponential decay towards the ends)
-            float distance_factor = expf(-decay_rate * (float) i / (float) num_leds);
+            float final_brightness = source_brightness * wave_brightness * envelope;
 
-            // Combine source brightness, wave pattern, and distance decay
-            float final_brightness = source_brightness * wave_brightness * distance_factor;
-
-            // Apply brightness to color
-            uint8_t r = (uint8_t)(red(pixel_color) * final_brightness);
-            uint8_t g = (uint8_t)(green(pixel_color) * final_brightness);
-            uint8_t b = (uint8_t)(blue(pixel_color) * final_brightness);
+            uint8_t r = static_cast<uint8_t>(red(pixel_color) * final_brightness);
+            uint8_t g = static_cast<uint8_t>(green(pixel_color) * final_brightness);
+            uint8_t b = static_cast<uint8_t>(blue(pixel_color) * final_brightness);
 
             strip.setPixelColor(i, color(r, g, b));
         }

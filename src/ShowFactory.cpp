@@ -117,14 +117,15 @@ ShowFactory::ShowFactory() {
         return std::make_unique<Show::Rainbow>(time_step, pixel_step);
     });
 
-    registerShow("Wave", "Rainbow waves roll out from one end and fade as they travel, with a pulsing source", [](const JsonDocument &doc) {
-        float wave_speed = doc["wave_speed"] | 1.0f;
+    registerShow("Wave", "A bouncing rainbow source whose emitted waves reflect off the strip ends and interfere where they overlap", [](const JsonDocument &doc) {
+        // wave_speed is no longer used; if present in JSON it is silently
+        // ignored so existing configs keep loading.
         float decay_rate = doc["decay_rate"] | 2.0f;
         float brightness_frequency = doc["brightness_frequency"] | 0.1f;
         float wavelength = doc["wavelength"] | 6.0f;
-        ESP_LOGI(TAG, "Creating Wave speed=%.2f, decay=%.2f, freq=%.2f, wavelength=%.2f",
-                      wave_speed, decay_rate, brightness_frequency, wavelength);
-        return std::make_unique<Show::Wave>(wave_speed, decay_rate, brightness_frequency, wavelength);
+        ESP_LOGI(TAG, "Creating Wave decay=%.2f, freq=%.2f, wavelength=%.2f",
+                      decay_rate, brightness_frequency, wavelength);
+        return std::make_unique<Show::Wave>(decay_rate, brightness_frequency, wavelength);
     });
 
     registerShow("TheaterChase", "Evenly spaced rainbow dots march along the strip, like lights around a theater marquee", [](const JsonDocument &doc) {

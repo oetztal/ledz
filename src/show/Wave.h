@@ -5,29 +5,33 @@
 
 namespace Show {
     /**
-     * Wave - Creates a propagating wave effect with color cycling
-     * Wave emanates from the start with changing brightness and exponential decay
+     * Wave - A wave whose source oscillates along the strip.
+     *
+     * The source position follows a cosine bounce between the two ends of the
+     * strip, so wavefronts are emitted in alternating directions. Where
+     * previously emitted wavefronts still propagate, the wavefronts overlap and
+     * self-interfere. Brightness decays exponentially with distance from the
+     * oscillating source (symmetric in both directions), and the wave's
+     * brightness contribution is the absolute value of a signed sine so the
+     * whole strip remains lit at all times.
      */
     class Wave : public Show {
     private:
-        float wave_speed; // Speed of wave propagation (higher = faster)
-        float decay_rate; // Rate of brightness decay towards ends (higher = faster decay)
-        float brightness_frequency; // Frequency of brightness oscillation at source
-        float wavelength; // Wavelength of the wave pattern (higher = longer waves)
+        float decay_rate; // Exponential decay per unit distance from the source (higher = faster falloff)
+        float brightness_frequency; // Source bounce frequency in cycles per second
+        float wavelength; // Wave wavelength in pixels
 
-        float time; // Time counter for wave position
-        float color_time; // Time counter for color cycling
+        float time; // Time counter for source motion
+        float color_time; // Time counter for color cycling along the strip
 
     public:
         /**
-         * Constructor with configurable parameters
-         * @param wave_speed Speed of wave propagation (default: 1.0)
-         * @param decay_rate Rate of brightness decay (default: 2.0)
-         * @param brightness_frequency Frequency of source brightness oscillation (default: 0.1)
-         * @param wavelength Wavelength of wave pattern (default: 6.0)
+         * Constructor with configurable parameters.
+         * @param decay_rate Exponential decay per unit distance from the oscillating source (default: 2.0).
+         * @param brightness_frequency Source bounce frequency in cycles per second (default: 0.1).
+         * @param wavelength Wave wavelength in pixels (default: 6.0).
          */
-        Wave(float wave_speed = 1.0f,
-             float decay_rate = 2.0f,
+        Wave(float decay_rate = 2.0f,
              float brightness_frequency = 0.1f,
              float wavelength = 6.0f);
 

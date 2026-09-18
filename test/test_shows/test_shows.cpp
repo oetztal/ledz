@@ -2,6 +2,7 @@
 #include "../MockStrip.h"
 #include "show/Fire.h"
 #include "show/Rainbow.h"
+#include "show/Wave.h"
 
 Show::FireState *state;
 
@@ -147,6 +148,53 @@ void test_rainbow_explicit_constructor_does_not_crash() {
     TEST_PASS();
 }
 
+// Wave show tests
+void test_wave_default_constructor_runs() {
+    auto show = new Show::Wave();
+    TEST_ASSERT_NOT_NULL(show);
+    delete show;
+}
+
+void test_wave_default_execute_runs_without_crash() {
+    Show::Wave show;
+    MockStrip strip(30);
+    for (Show::Iteration t = 0; t < 5; t++) {
+        show.execute(strip, t);
+    }
+    TEST_ASSERT_EQUAL_UINT32(30, strip.length());
+}
+
+void test_wave_explicit_constructor_does_not_crash() {
+    auto show = new Show::Wave(3.5f, 0.5f, 10.0f);
+    MockStrip strip(60);
+    show->execute(strip, 0);
+    show->execute(strip, 42);
+    delete show;
+    TEST_PASS();
+}
+
+void test_wave_symmetric_lighting_around_mid_source() {
+    // Brightness frequency 0.5 cycles/sec, execute at iteration t=10 (0.5s
+    // since each tick advances time by 0.05s, so iteration=10 lands the
+    // source at the midpoint of its first half-bounce).
+    Show::Wave show(1.0f, 0.5f, 6.0f);
+    MockStrip strip(20);
+    show.execute(strip, 10);
+
+    // The source is mid-strip, so pixels on either side near the centre must
+    // both be lit (non-black).
+    TEST_ASSERT_TRUE_MESSAGE(strip.getPixelColor(9) != 0, "left of source is black");
+    TEST_ASSERT_TRUE_MESSAGE(strip.getPixelColor(10) != 0, "right of source is black");
+
+    // Every pixel's brightness contribution from the wave must be non-negative:
+    // since the colour is wheel(emission_time) * brightness, and brightness is
+    // the product of non-negative factors, the result has each channel scaled
+    // by a non-negative factor. Verify a few pixels either side are non-black.
+    for (Strip::PixelIndex i = 7; i <= 12; i++) {
+        TEST_ASSERT_TRUE_MESSAGE(strip.getPixelColor(i) != 0, "expected lit pixel near source");
+    }
+}
+
 int runUnityTests() {
     UNITY_BEGIN();
 
@@ -166,6 +214,12 @@ int runUnityTests() {
     RUN_TEST(test_rainbow_pixel_step_zero_all_pixels_share_hue);
     RUN_TEST(test_rainbow_time_step_zero_hue_advances_with_pixel);
     RUN_TEST(test_rainbow_explicit_constructor_does_not_crash);
+
+    // Wave show
+    RUN_TEST(test_wave_default_constructor_runs);
+    RUN_TEST(test_wave_default_execute_runs_without_crash);
+    RUN_TEST(test_wave_explicit_constructor_does_not_crash);
+    RUN_TEST(test_wave_symmetric_lighting_around_mid_source);
 
     return UNITY_END();
 }

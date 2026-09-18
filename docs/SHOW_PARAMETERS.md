@@ -258,6 +258,28 @@ In gradient mode, colors are treated as evenly-spaced waypoints across the strip
 {"time_step": 1.0, "pixel_step": 3.0}
 ```
 
+### Wave
+**Behavior**: A rainbow source that bounces smoothly between the two ends of the strip using a cosine motion. Wavefronts are emitted in the source's current direction; when the source reverses at an end, the wavefronts it previously emitted keep propagating in the other direction, so the strip fills with overlapping wavefronts that self-interfere. Brightness decays exponentially with distance from the (moving) source, so the whole strip is meaningfully lit at all times. Each pixel's hue is determined by the time at which the wavefront currently sitting on it was emitted by the source, producing a rainbow that drifts as wavefronts age.
+
+**Parameters**:
+- `decay_rate` (float, default: `2.0`): Exponential decay per unit distance from the oscillating source, measured in units of strip length. Higher values make the bright spot around the source narrower; lower values make the strip more uniformly lit.
+- `brightness_frequency` (float, default: `0.1`): Source bounce frequency in cycles per second. Higher values make the source zip along the strip; lower values make the pattern feel calmer.
+- `wavelength` (float, default: `6.0`): Wave wavelength in pixels. Smaller values produce more wave crests per strip; larger values produce broader, slower-looking waves.
+
+**`wave_speed` is no longer accepted.** Configurations stored in NVS or sent via the API may still contain `wave_speed`; the field is silently ignored. Only the three parameters above are used.
+
+**Example JSON**:
+```json
+// Default: gentle bouncing rainbow with medium decay
+{"decay_rate": 2.0, "brightness_frequency": 0.1, "wavelength": 6.0}
+
+// Tight, fast, dense interference
+{"decay_rate": 4.0, "brightness_frequency": 0.4, "wavelength": 3.0}
+
+// Calm, broad waves that fill the whole strip
+{"decay_rate": 1.0, "brightness_frequency": 0.05, "wavelength": 12.0}
+```
+
 ### Other Shows
 ColorRun and Jump currently don't support parameters and will use their default behavior.
 

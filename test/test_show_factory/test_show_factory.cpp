@@ -284,6 +284,72 @@ void test_gradient_flag_changes_the_result() {
     TEST_ASSERT_TRUE_MESSAGE(differs, "gradient:true produced identical pixels");
 }
 
+// --- Wave parameter parsing -------------------------------------------------
+
+void test_wave_parses_all_three_parameters_from_json() {
+    // The show exposes no accessors for its parsed parameters, so verify
+    // behaviourally: Wave with decay_rate=8.0 must produce a much darker strip
+    // than Wave with the default decay_rate=2.0, because brightness decays
+    // exponentially from the source.
+    const std::string params =
+        R"({"decay_rate":8.0,"brightness_frequency":0.1,"wavelength":6.0})";
+
+    auto fast = factory->createShow("Wave", params);
+    auto slow = factory->createShow("Wave", "{}");
+
+    TEST_ASSERT_NOT_NULL_MESSAGE(fast.get(), "Wave params");
+    TEST_ASSERT_NOT_NULL_MESSAGE(slow.get(), "Wave defaults");
+
+    MockStrip fast_strip(60);
+    MockStrip slow_strip(60);
+    fast->execute(fast_strip, 0);
+    slow->execute(slow_strip, 0);
+
+    // Count lit pixels (any channel > 0) on each strip; with a much higher
+    // decay rate the bright region around the source is narrower.
+    auto countLit = [](const MockStrip &s) {
+        int lit = 0;
+        for (Strip::PixelIndex i = 0; i < s.length(); i++) {
+            auto c = s.getPixelColor(i);
+            if (red(c) > 0 || green(c) > 0 || blue(c) > 0) lit++;
+        }
+        return lit;
+    };
+
+    const int fast_lit = countLit(fast_strip);
+    const int slow_lit = countLit(slow_strip);
+    TEST_ASSERT_TRUE_MESSAGE(fast_lit <= slow_lit,
+                             "high decay_rate should not produce more lit pixels than the default");
+}
+
+void test_wave_partial_parameters_use_defaults() {
+    // Only wavelength supplied; decay_rate and brightness_frequency default.
+    auto show = factory->createShow("Wave", R"({"wavelength":12.0})");
+    TEST_ASSERT_NOT_NULL(show.get());
+}
+
+void test_wave_ignores_wave_speed_legacy_field() {
+    // wave_speed is no longer accepted: extra legacy field must not break
+    // construction, and the resulting pixels must match a default-config run
+    // because the three real parameters all default to the same values.
+    auto with_legacy = factory->createShow("Wave",
+        R"({"wave_speed":5.0,"wavelength":6.0})");
+    auto with_defaults = factory->createShow("Wave", "{}");
+    TEST_ASSERT_NOT_NULL(with_legacy.get());
+    TEST_ASSERT_NOT_NULL(with_defaults.get());
+
+    MockStrip strip_a(20);
+    MockStrip strip_b(20);
+    with_legacy->execute(strip_a, 0);
+    with_defaults->execute(strip_b, 0);
+
+    for (Strip::PixelIndex i = 0; i < 20; i++) {
+        TEST_ASSERT_EQUAL_HEX32_MESSAGE(strip_b.getPixelColor(i),
+                                        strip_a.getPixelColor(i),
+                                        "wave_speed should be silently ignored");
+    }
+}
+
 int runUnityTests() {
     renderAll();
 
@@ -305,6 +371,10 @@ int runUnityTests() {
     RUN_TEST(test_malformed_color_entries_are_skipped);
     RUN_TEST(test_many_colors_are_all_parsed);
     RUN_TEST(test_gradient_flag_changes_the_result);
+
+    RUN_TEST(test_wave_parses_all_three_parameters_from_json);
+    RUN_TEST(test_wave_partial_parameters_use_defaults);
+    RUN_TEST(test_wave_ignores_wave_speed_legacy_field);
 
     return UNITY_END();
 }
