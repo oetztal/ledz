@@ -129,37 +129,56 @@ namespace Config {
      */
     enum class TimerType : uint8_t {
         COUNTDOWN = 0,    // One-shot countdown timer (duration-based)
-        ALARM_DAILY = 1   // Recurring daily alarm
+        SCHEDULE = 1      // Recurring action at a time of day on selected weekdays
     };
 
     /**
      * Local day-of-year value that matches no calendar day, used as the
      * "has never fired" state of TimerEntry::last_fired_yday.
      */
-    constexpr uint16_t ALARM_NEVER_FIRED = 0xFFFF;
+    constexpr uint16_t SCHEDULE_NEVER_FIRED = 0xFFFF;
+
+    /**
+     * Weekday mask with every day selected: bits 0..6, Sunday through
+     * Saturday. The default for new schedules and for schedules stored by
+     * firmware that predates the mask.
+     */
+    constexpr uint8_t SCHEDULE_EVERY_DAY = 0x7F;
 
     /**
      * Timer entry structure
      */
     struct TimerEntry {
-        bool enabled = false;
+        bool enabled = false;          // slot occupied (not "armed" — see paused)
         TimerType type = TimerType::COUNTDOWN;
         TimerAction action = TimerAction::TURN_OFF;
         uint8_t preset_index = 0;
-        uint32_t target_time = 0;      // epoch for COUNTDOWN, seconds-since-midnight for ALARM_DAILY
+        uint32_t target_time = 0;      // epoch for COUNTDOWN, seconds-since-midnight for SCHEDULE
         uint32_t duration_seconds = 0; // original duration for countdown display
-        // Local tm_yday on which an ALARM_DAILY last triggered. Keyed on the
+        // Local tm_yday on which a SCHEDULE last triggered. Keyed on the
         // local day rather than an absolute time so that the two 02:30s of a
         // fall-back night count as one day and fire only once. Unused by
         // COUNTDOWN.
-        uint16_t last_fired_yday = ALARM_NEVER_FIRED;
+        uint16_t last_fired_yday = SCHEDULE_NEVER_FIRED;
+        // Armed state of a SCHEDULE: a paused schedule keeps every setting
+        // and its slot but never fires. Meaningless for COUNTDOWN (always
+        // false). Pause/resume leave last_fired_yday alone so that resuming
+        // after today's firing does not fire again today.
+        bool paused = false;
+        // Weekdays on which a SCHEDULE fires: bit n = tm_wday n
+        // (Sunday = 0), so the check is (days_mask >> wday) & 1. 0x7F is
+        // every day. Ignored by COUNTDOWN.
+        uint8_t days_mask = SCHEDULE_EVERY_DAY;
     };
 
     /**
      * Timers configuration structure
      */
     struct TimersConfig {
-        static constexpr uint8_t MAX_TIMERS = 4;
+        // Per-slot NVS keys are "timer_%u_<field>" and NVS caps a key at 15
+        // characters, so with two-digit indices every field suffix must be
+        // at most 6 characters ("timer_11_paused" is exactly 15).
+        static constexpr uint8_t MAX_TIMERS = 12;
         TimerEntry timers[MAX_TIMERS];
         // POSIX TZ string, e.g. "CET-1CEST,M3.5.0,M10.5.0/3". Note the
         // inverted sign: the offset counts west of UTC, so that is UTC+1.

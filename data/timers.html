@@ -11,7 +11,7 @@
     <div class="container">
         <div class="header">
             <h1>Timers & Schedules</h1>
-            <p>Configure countdown timers and daily alarms</p>
+            <p>Configure countdown timers and schedules</p>
         </div>
         <div class="nav">
             <a href="/">&larr; Back to Control Panel</a>
@@ -141,32 +141,47 @@
                 <button class="btn btn-primary" onclick="setCustomCountdown()">Set Countdown Timer</button>
             </div>
 
-            <div class="section">
-                <h2>Daily Alarm</h2>
-                <p>Set a recurring daily alarm to trigger an action at a specific time each day.</p>
+            <div class="section" id="scheduleSection">
+                <h2>Schedule</h2>
+                <p>Set a schedule to trigger an action at a specific time on the days you choose.</p>
 
                 <div class="form-group">
-                    <label for="dailyAlarmTime">Alarm Time</label>
-                    <input type="time" id="dailyAlarmTime" value="07:00">
+                    <label for="scheduleTime">Time</label>
+                    <input type="time" id="scheduleTime" value="07:00">
                 </div>
 
                 <div class="form-group">
-                    <label for="dailyAlarmAction">Action</label>
-                    <select id="dailyAlarmAction">
+                    <label id="scheduleDaysLabel">Repeat</label>
+                    <!-- Monday-first for display; data-wday carries the C tm_wday
+                         (Sunday = 0) that the device's mask is keyed on. -->
+                    <div class="day-picker" id="scheduleDays" role="group" aria-labelledby="scheduleDaysLabel">
+                        <button type="button" class="day-btn" data-wday="1" aria-pressed="true" aria-label="Monday">M</button>
+                        <button type="button" class="day-btn" data-wday="2" aria-pressed="true" aria-label="Tuesday">T</button>
+                        <button type="button" class="day-btn" data-wday="3" aria-pressed="true" aria-label="Wednesday">W</button>
+                        <button type="button" class="day-btn" data-wday="4" aria-pressed="true" aria-label="Thursday">T</button>
+                        <button type="button" class="day-btn" data-wday="5" aria-pressed="true" aria-label="Friday">F</button>
+                        <button type="button" class="day-btn" data-wday="6" aria-pressed="true" aria-label="Saturday">S</button>
+                        <button type="button" class="day-btn" data-wday="0" aria-pressed="true" aria-label="Sunday">S</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="scheduleAction">Action</label>
+                    <select id="scheduleAction">
                         <option value="off">Turn Off LEDs</option>
                         <option value="preset">Load Preset</option>
                     </select>
                 </div>
 
-                <div class="form-group" id="dailyAlarmPresetGroup" style="display: none;">
-                    <label for="dailyAlarmPreset">Preset to Load</label>
-                    <select id="dailyAlarmPreset">
+                <div class="form-group" id="schedulePresetGroup" style="display: none;">
+                    <label for="schedulePreset">Preset to Load</label>
+                    <select id="schedulePreset">
                         <option value="">Select preset...</option>
                     </select>
                 </div>
 
-                <button class="btn btn-primary" onclick="setDailyAlarm()">Set Daily Alarm</button>
-
+                <button class="btn btn-primary" id="scheduleSubmit" onclick="setSchedule()">Add Schedule</button>
+                <button type="button" class="btn-link" id="scheduleCancelEdit" onclick="cancelEdit()" hidden>Cancel edit</button>
             </div>
         </div>
     </div>
@@ -176,6 +191,47 @@
         let timersData = [];
         let timersFetchedAt = 0;
         let serverTimeAtFetch = 0;
+        // Slot index of the schedule loaded into the form, or null in create mode
+        let editingIndex = null;
+        // Whether the last list render contained a countdown, which is the
+        // only reason to rebuild the list on the one-second tick
+        let renderedWithCountdown = false;
+
+        // Weekday mask: bit n = tm_wday n, Sunday = 0. The UI is Monday-first,
+        // and this table is the single place where the two orders meet.
+        const DISPLAY_WDAYS = [1, 2, 3, 4, 5, 6, 0];
+        const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+        const EVERY_DAY = 0x7F;
+
+        function isDaySelected(mask, wday) {
+            return ((mask >> wday) & 1) === 1;
+        }
+
+        function dayButtons() {
+            return Array.from(document.querySelectorAll('#scheduleDays .day-btn'));
+        }
+
+        // Push a mask into the picker buttons
+        function maskToDays(mask) {
+            dayButtons().forEach(button => {
+                button.setAttribute('aria-pressed', String(isDaySelected(mask, Number(button.dataset.wday))));
+            });
+        }
+
+        // Read the picker buttons back into a mask
+        function daysToMask(buttons) {
+            return buttons.reduce((mask, button) =>
+                button.getAttribute('aria-pressed') === 'true'
+                    ? mask | (1 << Number(button.dataset.wday))
+                    : mask, 0);
+        }
+
+        function renderDayDots(mask) {
+            const dots = DISPLAY_WDAYS.map(wday =>
+                `<span${isDaySelected(mask, wday) ? ' data-on' : ''}></span>`).join('');
+            const letters = DAY_LETTERS.map(letter => `<span>${letter}</span>`).join('');
+            return `<div class="day-dots" aria-hidden="true">${dots}</div><div class="day-letters" aria-hidden="true">${letters}</div>`;
+        }
 
         // A fixed offset with no DST rule, as produced by migrating a
         // pre-POSIX device: "UTC-1", "UTC+5".
@@ -202,8 +258,8 @@
             return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
 
-        // Format alarm time as HH:MM (no seconds for alarms)
-        function formatAlarmTime(secondsSinceMidnight) {
+        // Format schedule time as HH:MM (no seconds for schedules)
+        function formatScheduleTime(secondsSinceMidnight) {
             const hours = Math.floor(secondsSinceMidnight / 3600);
             const mins = Math.floor((secondsSinceMidnight % 3600) / 60);
             return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
@@ -222,7 +278,7 @@
 
                 document.getElementById('countdownPreset').innerHTML =
                     '<option value="">Select preset...</option>' + options;
-                document.getElementById('dailyAlarmPreset').innerHTML =
+                document.getElementById('schedulePreset').innerHTML =
                     '<option value="">Select preset...</option>' + options;
             } catch (error) {
                 console.error('Failed to load presets:', error);
@@ -246,7 +302,7 @@
                     serverTimeAtFetch = -1; // NTP not available
                 }
 
-                updateTimerDisplay();
+                updateTimerDisplay(true);
             } catch (error) {
                 console.error('Failed to load timers:', error);
                 document.getElementById('timerList').innerHTML =
@@ -254,8 +310,10 @@
             }
         }
 
-        // Update timer display using cached data
-        function updateTimerDisplay() {
+        // Update timer display using cached data. The list itself is only
+        // rebuilt when forced (fresh data) or while a countdown is ticking,
+        // so a schedule card's toggle is not torn down mid-interaction.
+        function updateTimerDisplay(force = false) {
             const timerList = document.getElementById('timerList');
             const elapsedSeconds = Math.floor((Date.now() - timersFetchedAt) / 1000);
 
@@ -276,6 +334,24 @@
                 return t.remaining_seconds - elapsedSeconds > 0;
             });
 
+            // Countdowns first, soonest on top; then schedules by time of day.
+            // Slot index only breaks ties, so the order tracks the clock
+            // rather than which slot happened to be free.
+            activeTimers.sort((a, b) => {
+                const aCountdown = a.type_name === 'countdown';
+                const bCountdown = b.type_name === 'countdown';
+                if (aCountdown !== bCountdown) return aCountdown ? -1 : 1;
+                const aKey = aCountdown ? a.remaining_seconds : a.target_time;
+                const bKey = bCountdown ? b.remaining_seconds : b.target_time;
+                return (aKey - bKey) || (a.index - b.index);
+            });
+
+            const hasCountdown = activeTimers.some(t => t.type_name === 'countdown');
+            if (!force && !hasCountdown && !renderedWithCountdown) {
+                return;
+            }
+            renderedWithCountdown = hasCountdown;
+
             if (activeTimers.length === 0) {
                 timerList.innerHTML = '<p style="color: #888; text-align: center; padding: 20px;">No active timers</p>';
                 if (timersData.length > 0) {
@@ -294,6 +370,9 @@
                     let timeDisplay = '';
                     let typeLabel = '';
                     let typeColor = '';
+                    let cardClass = 'timer-card';
+                    let details = '';
+                    let controls = '';
 
                     switch (timer.type_name) {
                         case 'countdown':
@@ -303,22 +382,38 @@
                             typeColor = '#667eea';
                             break;
                         case 'alarm_daily':
-                            timeDisplay = formatAlarmTime(timer.target_time);
-                            typeLabel = 'DAILY';
-                            typeColor = '#28a745';
+                            timeDisplay = formatScheduleTime(timer.target_time);
+                            if (timer.paused) {
+                                typeLabel = 'PAUSED';
+                                typeColor = '#888888';
+                                cardClass += ' paused';
+                            } else {
+                                typeLabel = 'SCHEDULE';
+                                typeColor = '#28a745';
+                            }
+                            details = renderDayDots(timer.days_mask ?? EVERY_DAY);
+                            controls = `
+                                <span class="toggle-switch" title="${timer.paused ? 'Paused' : 'Armed'}">
+                                    <input type="checkbox" id="scheduleArmed${timer.index}" aria-label="Schedule armed"
+                                           ${timer.paused ? '' : 'checked'} onchange="setScheduleArmed(${timer.index}, this)">
+                                    <span class="slider"></span>
+                                </span>
+                                <button class="btn btn-secondary btn-small" onclick="startEdit(${timer.index})">Edit</button>`;
                             break;
                     }
 
                     return `
-                        <div style="display: flex; align-items: center; padding: 12px 16px; background: #f8f9fa; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid ${typeColor};">
-                            <div style="flex: 1;">
+                        <div class="${cardClass}" style="display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #f8f9fa; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid ${typeColor};">
+                            <div style="flex: 1; min-width: 0;">
                                 <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px;">
                                     <span style="font-size: 10px; font-weight: 600; color: ${typeColor}; background: ${typeColor}22; padding: 2px 6px; border-radius: 4px;">${typeLabel}</span>
                                     <span style="font-size: 28px; font-weight: 600; font-family: monospace; letter-spacing: 2px; color: #333;">${timeDisplay}</span>
                                 </div>
                                 <div style="font-size: 13px; color: #666;">${actionText}</div>
+                                ${details}
                             </div>
-                            <button class="btn btn-danger" onclick="cancelTimer(${timer.index})" style="width: auto; padding: 6px 12px; font-size: 12px; margin: 0;">Cancel</button>
+                            ${controls}
+                            <button class="btn btn-danger btn-small" onclick="cancelTimer(${timer.index})">Cancel</button>
                         </div>
                     `;
                 }).join('');
@@ -395,13 +490,19 @@
             }
         }
 
-        // Set a daily alarm
-        async function setDailyAlarm() {
-            const timeValue = document.getElementById('dailyAlarmTime').value;
-            const actionSelect = document.getElementById('dailyAlarmAction').value;
+        // Add or update a schedule
+        async function setSchedule() {
+            const timeValue = document.getElementById('scheduleTime').value;
+            const actionSelect = document.getElementById('scheduleAction').value;
 
             if (!timeValue) {
                 alert('Please enter a time');
+                return;
+            }
+
+            const days = daysToMask(dayButtons());
+            if (days === 0) {
+                alert('Please select at least one day');
                 return;
             }
 
@@ -410,11 +511,15 @@
             const requestBody = {
                 daily: true,
                 hour: hours,
-                minute: mins
+                minute: mins,
+                days
             };
+            if (editingIndex !== null) {
+                requestBody.index = editingIndex;
+            }
 
             if (actionSelect === 'preset') {
-                const presetIndex = parseInt(document.getElementById('dailyAlarmPreset').value);
+                const presetIndex = parseInt(document.getElementById('schedulePreset').value);
                 if (isNaN(presetIndex)) {
                     alert('Please select a preset');
                     return;
@@ -426,7 +531,7 @@
             }
 
             try {
-                const response = await fetch('/api/timers/alarm', {
+                const response = await fetch('/api/timers/schedule', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(requestBody)
@@ -434,14 +539,75 @@
 
                 const result = await response.json();
                 if (result.success) {
+                    const wasEdit = editingIndex !== null;
+                    cancelEdit();
                     await fetchTimers();
-                    alert('Daily alarm set!');
+                    alert(wasEdit ? 'Schedule updated!' : 'Schedule added!');
                 } else {
-                    alert('Failed to set alarm: ' + (result.error || 'Unknown error'));
+                    alert('Failed to set schedule: ' + (result.error || 'Unknown error'));
                 }
             } catch (error) {
-                console.error('Failed to set alarm:', error);
-                alert('Failed to set alarm');
+                console.error('Failed to set schedule:', error);
+                alert('Failed to set schedule');
+            }
+        }
+
+        // Load a schedule from the list into the form. Sends nothing: the
+        // request goes out when the user presses Update Schedule.
+        function startEdit(index) {
+            const timer = timersData.find(t => t.index === index);
+            if (!timer) return;
+
+            editingIndex = index;
+            document.getElementById('scheduleTime').value = formatScheduleTime(timer.target_time);
+
+            const isPreset = timer.action === 0;
+            document.getElementById('scheduleAction').value = isPreset ? 'preset' : 'off';
+            document.getElementById('schedulePresetGroup').style.display = isPreset ? 'block' : 'none';
+            if (isPreset) {
+                document.getElementById('schedulePreset').value = String(timer.preset_index);
+            }
+
+            maskToDays(timer.days_mask ?? EVERY_DAY);
+
+            document.getElementById('scheduleSubmit').textContent = 'Update Schedule';
+            document.getElementById('scheduleCancelEdit').hidden = false;
+            document.getElementById('scheduleSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // Back to create mode with default values
+        function cancelEdit() {
+            editingIndex = null;
+            document.getElementById('scheduleTime').value = '07:00';
+            document.getElementById('scheduleAction').value = 'off';
+            document.getElementById('schedulePresetGroup').style.display = 'none';
+            document.getElementById('schedulePreset').value = '';
+            maskToDays(EVERY_DAY);
+            document.getElementById('scheduleSubmit').textContent = 'Add Schedule';
+            document.getElementById('scheduleCancelEdit').hidden = true;
+        }
+
+        // Card toggle: checked = armed. Acts immediately; on failure the
+        // switch goes back to where it was and the list is re-read.
+        async function setScheduleArmed(index, checkbox) {
+            const paused = !checkbox.checked;
+            try {
+                const response = await fetch('/api/timers/pause', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ index, paused })
+                });
+
+                const result = await response.json();
+                if (!result.success) {
+                    throw new Error(result.error || 'Unknown error');
+                }
+                await fetchTimers();
+            } catch (error) {
+                console.error('Failed to update schedule:', error);
+                checkbox.checked = !checkbox.checked;
+                alert(`Failed to ${paused ? 'pause' : 'resume'} schedule`);
+                await fetchTimers();
             }
         }
 
@@ -607,9 +773,16 @@
                 e.target.value === 'preset' ? 'block' : 'none';
         });
 
-        document.getElementById('dailyAlarmAction').addEventListener('change', (e) => {
-            document.getElementById('dailyAlarmPresetGroup').style.display =
+        document.getElementById('scheduleAction').addEventListener('change', (e) => {
+            document.getElementById('schedulePresetGroup').style.display =
                 e.target.value === 'preset' ? 'block' : 'none';
+        });
+
+        // Day picker: flip the pressed state, nothing is sent until submit
+        document.getElementById('scheduleDays').addEventListener('click', (e) => {
+            const button = e.target.closest('.day-btn');
+            if (!button) return;
+            button.setAttribute('aria-pressed', String(button.getAttribute('aria-pressed') !== 'true'));
         });
 
         // Initialize
@@ -617,7 +790,7 @@
         fetchTimers();
 
         // Update display every second (uses cached data)
-        setInterval(updateTimerDisplay, 1000);
+        setInterval(() => updateTimerDisplay(false), 1000);
     </script>
 </body>
 </html>

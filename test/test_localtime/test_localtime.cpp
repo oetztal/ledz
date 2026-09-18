@@ -203,6 +203,33 @@ void test_day_of_year_is_local_not_utc() {
     TEST_ASSERT_EQUAL_UINT16(0, LocalTime::localDayOfYear(epoch, "UTC0"));
 }
 
+// --- localWeekday ---------------------------------------------------------
+
+void test_weekday_for_known_dates() {
+    // 2026-06-15 is a Monday, 2026-06-14 a Sunday.
+    TEST_ASSERT_EQUAL_UINT8(1, LocalTime::localWeekday(utcEpoch(2026, 6, 15, 10, 0, 0), BERLIN));
+    TEST_ASSERT_EQUAL_UINT8(0, LocalTime::localWeekday(utcEpoch(2026, 6, 14, 10, 0, 0), BERLIN));
+}
+
+void test_weekday_is_shared_by_both_fall_back_instants() {
+    // 2026-10-25 is the last Sunday of October: both 02:30s are Sunday and
+    // the same day of the year, so the mask and the de-duplication agree.
+    const uint32_t firstHalfPast = utcEpoch(2026, 10, 25, 0, 30, 0);  // 02:30 CEST
+    const uint32_t secondHalfPast = utcEpoch(2026, 10, 25, 1, 30, 0); // 02:30 CET
+
+    TEST_ASSERT_EQUAL_UINT8(0, LocalTime::localWeekday(firstHalfPast, BERLIN));
+    TEST_ASSERT_EQUAL_UINT8(0, LocalTime::localWeekday(secondHalfPast, BERLIN));
+    TEST_ASSERT_EQUAL_UINT16(LocalTime::localDayOfYear(firstHalfPast, BERLIN),
+                             LocalTime::localDayOfYear(secondHalfPast, BERLIN));
+}
+
+void test_weekday_is_local_not_utc() {
+    // 2026-06-13 22:00 UTC is a Saturday, but 11:00 on Sunday at UTC+13.
+    const uint32_t epoch = utcEpoch(2026, 6, 13, 22, 0, 0);
+    TEST_ASSERT_EQUAL_UINT8(6, LocalTime::localWeekday(epoch, "UTC0"));
+    TEST_ASSERT_EQUAL_UINT8(0, LocalTime::localWeekday(epoch, "<+13>-13"));
+}
+
 // --- describe -------------------------------------------------------------
 
 void test_describe_reports_dst_state_and_abbreviation() {
@@ -266,6 +293,10 @@ int main(int, char **) {
     RUN_TEST(test_day_of_year_is_shared_by_both_fall_back_instants);
     RUN_TEST(test_day_of_year_changes_across_local_midnight);
     RUN_TEST(test_day_of_year_is_local_not_utc);
+
+    RUN_TEST(test_weekday_for_known_dates);
+    RUN_TEST(test_weekday_is_shared_by_both_fall_back_instants);
+    RUN_TEST(test_weekday_is_local_not_utc);
 
     RUN_TEST(test_describe_reports_dst_state_and_abbreviation);
     RUN_TEST(test_describe_truncates_a_long_abbreviation);

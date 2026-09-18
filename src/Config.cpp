@@ -419,8 +419,18 @@ namespace Config {
 
         char key[20];
         for (uint8_t i = 0; i < TimersConfig::MAX_TIMERS; i++) {
-            snprintf(key, sizeof(key), "timer_%u_enabled", i);
-            timersConfig.timers[i].enabled = prefs.getBool(key, false);
+            // "timer_%u_en" replaced "timer_%u_enabled" when the slot count
+            // went past ten: "timer_10_enabled" is 16 characters, one over
+            // the NVS key limit. Slots written by earlier firmware still
+            // carry the long key, which is read as a fallback and removed
+            // on the next save.
+            snprintf(key, sizeof(key), "timer_%u_en", i);
+            if (prefs.isKey(key)) {
+                timersConfig.timers[i].enabled = prefs.getBool(key, false);
+            } else {
+                snprintf(key, sizeof(key), "timer_%u_enabled", i);
+                timersConfig.timers[i].enabled = prefs.getBool(key, false);
+            }
 
             if (timersConfig.timers[i].enabled) {
                 snprintf(key, sizeof(key), "timer_%u_type", i);
@@ -439,13 +449,22 @@ namespace Config {
                 timersConfig.timers[i].duration_seconds = prefs.getULong(key, 0);
 
                 snprintf(key, sizeof(key), "timer_%u_lfd", i);
-                timersConfig.timers[i].last_fired_yday = prefs.getUShort(key, ALARM_NEVER_FIRED);
+                timersConfig.timers[i].last_fired_yday = prefs.getUShort(key, SCHEDULE_NEVER_FIRED);
+
+                // Both keys are absent for schedules written by earlier
+                // firmware; the defaults reproduce the old behaviour
+                // exactly: armed, every day.
+                snprintf(key, sizeof(key), "timer_%u_paused", i);
+                timersConfig.timers[i].paused = prefs.getBool(key, false);
+
+                snprintf(key, sizeof(key), "timer_%u_days", i);
+                timersConfig.timers[i].days_mask = prefs.getUChar(key, SCHEDULE_EVERY_DAY);
 
                 // Firmware before the POSIX-timezone change used
                 // duration_seconds as a "last triggered epoch minute"
-                // marker for daily alarms, so a migrated entry has a number
+                // marker for schedules, so a migrated entry has a number
                 // around 29 million where a duration belongs.
-                if (migrated && timersConfig.timers[i].type == TimerType::ALARM_DAILY) {
+                if (migrated && timersConfig.timers[i].type == TimerType::SCHEDULE) {
                     timersConfig.timers[i].duration_seconds = 0;
                 }
             }
@@ -481,8 +500,15 @@ namespace Config {
 
         char key[20];
         for (uint8_t i = 0; i < TimersConfig::MAX_TIMERS; i++) {
-            snprintf(key, sizeof(key), "timer_%u_enabled", i);
+            snprintf(key, sizeof(key), "timer_%u_en", i);
             prefs.putBool(key, config.timers[i].enabled);
+
+            // Drop the pre-rename key so a later boot cannot read a stale
+            // value from it (see loadTimersConfig).
+            snprintf(key, sizeof(key), "timer_%u_enabled", i);
+            if (prefs.isKey(key)) {
+                prefs.remove(key);
+            }
 
             if (config.timers[i].enabled) {
                 snprintf(key, sizeof(key), "timer_%u_type", i);
@@ -502,6 +528,12 @@ namespace Config {
 
                 snprintf(key, sizeof(key), "timer_%u_lfd", i);
                 prefs.putUShort(key, config.timers[i].last_fired_yday);
+
+                snprintf(key, sizeof(key), "timer_%u_paused", i);
+                prefs.putBool(key, config.timers[i].paused);
+
+                snprintf(key, sizeof(key), "timer_%u_days", i);
+                prefs.putUChar(key, config.timers[i].days_mask);
             }
         }
 

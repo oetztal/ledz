@@ -809,13 +809,16 @@ void WebServerManager::setupAPIRoutes() {
                 timerObj["target_time"] = timer.target_time;
                 timerObj["duration_seconds"] = timer.duration_seconds;
                 timerObj["remaining_seconds"] = scheduler->getRemainingSeconds(i, currentEpoch);
+                timerObj["paused"] = timer.paused;
+                timerObj["days_mask"] = timer.days_mask;
 
                 // Add type name for UI convenience
                 switch (timer.type) {
                     case Config::TimerType::COUNTDOWN:
                         timerObj["type_name"] = "countdown";
                         break;
-                    case Config::TimerType::ALARM_DAILY:
+                    case Config::TimerType::SCHEDULE:
+                        // Wire name predates the "schedule" wording; kept stable.
                         timerObj["type_name"] = "alarm_daily";
                         break;
                 }
@@ -903,11 +906,12 @@ void WebServerManager::setupAPIRoutes() {
         server.addHandler(handler);
     }
 
-    // POST /api/timers/alarm - Set a daily recurring alarm
+    // POST /api/timers/schedule - Set or update a schedule.
+    // "/api/timers/alarm" is the pre-rename path, kept as an alias so that
+    // existing scripts keep working; type_name stays "alarm_daily" for the
+    // same reason.
     {
-        auto *handler = new AsyncCallbackJsonWebHandler(
-            AsyncURIMatcher::exact("/api/timers/alarm"),
-            [this](AsyncWebServerRequest *request, JsonVariant &doc) {
+        auto setScheduleHandler = [this](AsyncWebServerRequest *request, JsonVariant &doc) {
                 TimerScheduler *scheduler = network.getTimerScheduler();
                 if (!scheduler) {
                     request->send(503, CONTENT_TYPE_JSON,
@@ -915,9 +919,7 @@ void WebServerManager::setupAPIRoutes() {
                     return;
                 }
 
-
-
-                // Required: hour and minute for the alarm time
+                // Required: hour and minute for the schedule time
                 if (doc["hour"].isNull() || doc["minute"].isNull()) {
                     request->send(400, CONTENT_TYPE_JSON,
                                   R"({"success":false,"error":"Hour and minute required"})");
@@ -959,8 +961,18 @@ void WebServerManager::setupAPIRoutes() {
 
                 uint8_t presetIndex = doc["preset_index"] | 0;
 
+                // Optional: days — weekday mask, bit n = tm_wday n (Sunday = 0).
+                // Defaults to every day; an empty mask is an error, not a pause.
+                int days = doc["days"] | static_cast<int>(Config::SCHEDULE_EVERY_DAY);
+                if (days <= 0 || days > Config::SCHEDULE_EVERY_DAY) {
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Invalid days"})");
+                    return;
+                }
+
                 uint32_t secondsSinceMidnight = hour * 3600 + minute * 60;
-                bool success = scheduler->setDailyAlarm(timerIndex, secondsSinceMidnight, action, presetIndex);
+                bool success = scheduler->setSchedule(timerIndex, secondsSinceMidnight, action, presetIndex,
+                                                        static_cast<uint8_t>(days));
 
                 if (success) {
                     JsonDocument responseDoc;
@@ -972,7 +984,49 @@ void WebServerManager::setupAPIRoutes() {
                     request->send(200, CONTENT_TYPE_JSON, response);
                 } else {
                     request->send(500, CONTENT_TYPE_JSON,
-                                  R"({"success":false,"error":"Failed to set alarm"})");
+                                  R"({"success":false,"error":"Failed to set schedule"})");
+                }
+            };
+
+        for (const char *path : {"/api/timers/schedule", "/api/timers/alarm"}) {
+            auto *handler = new AsyncCallbackJsonWebHandler(AsyncURIMatcher::exact(path), setScheduleHandler);
+            handler->setMethod(HTTP_POST);
+            server.addHandler(handler);
+        }
+    }
+
+    // POST /api/timers/pause - Pause or resume a schedule in place
+    {
+        auto *handler = new AsyncCallbackJsonWebHandler(
+            AsyncURIMatcher::exact("/api/timers/pause"),
+            [this](AsyncWebServerRequest *request, JsonVariant &doc) {
+                TimerScheduler *scheduler = network.getTimerScheduler();
+                if (!scheduler) {
+                    request->send(503, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Timer scheduler not available"})");
+                    return;
+                }
+
+                if (doc[JSON_KEY_INDEX].isNull() || doc["paused"].isNull()) {
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Index and paused required"})");
+                    return;
+                }
+
+                int timerIndex = doc[JSON_KEY_INDEX];
+                if (timerIndex < 0 || timerIndex >= Config::TimersConfig::MAX_TIMERS) {
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Invalid timer index"})");
+                    return;
+                }
+
+                bool paused = doc["paused"];
+                if (scheduler->setPaused(timerIndex, paused)) {
+                    request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
+                } else {
+                    // The only remaining failure modes are an empty slot or a countdown.
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Slot does not hold a schedule"})");
                 }
             });
         handler->setMethod(HTTP_POST);

@@ -398,6 +398,114 @@ input[type="color"] {
     }
 }
 
+/* Weekday picker: seven toggle buttons, Monday first. State lives in
+   aria-pressed so the styling and the accessibility tree cannot disagree. */
+.day-picker {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.day-picker button {
+    flex: 1 1 44px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    background: #fff;
+    color: #666;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.day-picker button[aria-pressed="true"] {
+    background: #667eea;
+    border-color: #667eea;
+    color: #fff;
+}
+
+.day-picker button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.4);
+}
+
+/* Read-only weekday indicator on a schedule card: filled dot = selected. */
+.day-dots,
+.day-letters {
+    display: grid;
+    grid-template-columns: repeat(7, 14px);
+    gap: 4px;
+    justify-items: center;
+}
+
+.day-dots span {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid #28a745;
+    box-sizing: border-box;
+}
+
+.day-dots span[data-on] {
+    background: #28a745;
+}
+
+.day-letters {
+    margin-top: 2px;
+    font-size: 10px;
+    line-height: 1;
+    color: #888;
+}
+
+/* Schedule card states */
+.timer-card.paused {
+    opacity: 0.55;
+}
+
+.timer-card.paused .day-dots span {
+    border-color: #888;
+}
+
+.timer-card.paused .day-dots span[data-on] {
+    background: #888;
+}
+
+/* Small inline action button on a card (Edit) */
+.btn-small {
+    width: auto;
+    padding: 6px 12px;
+    font-size: 12px;
+    margin: 0;
+}
+
+.btn-secondary {
+    background-color: #e9ecef;
+    color: #333;
+}
+
+.btn-secondary:hover {
+    background-color: #dde1e6;
+}
+
+/* Text-style button, e.g. "Cancel edit" beside a form's submit button */
+.btn-link {
+    background: none;
+    border: none;
+    padding: 8px 4px;
+    color: #667eea;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.btn-link:focus-visible {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
 /* Misc */
 .device-id {
     font-size: 14px;

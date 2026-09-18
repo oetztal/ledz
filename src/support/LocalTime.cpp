@@ -60,6 +60,11 @@ namespace LocalTime {
         return static_cast<uint16_t>(parts.tm_yday);
     }
 
+    uint8_t localWeekday(uint32_t epoch, const char *tz) {
+        const struct tm parts = localParts(epoch, tz);
+        return static_cast<uint8_t>(parts.tm_wday);
+    }
+
     Info describe(uint32_t epoch, const char *tz) {
         const struct tm local = localParts(epoch, tz);
 

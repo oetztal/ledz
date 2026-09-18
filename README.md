@@ -13,7 +13,7 @@ ESP32-based LED controller with web interface for WS2812B/NeoPixel LED strips.
 - **Web interface** - Control from any device on your network
 - **Presets** - Save and recall up to 8 complete configurations
 - **Touch control** - Capacitive touch pins to load presets without WiFi
-- **Timers & Alarms** - Schedule shows with countdown timers or daily alarms
+- **Timers & Schedules** - Countdown timers, plus schedules that switch shows at a set time on chosen weekdays and can be paused
 - **OTA updates** - Update firmware over WiFi from GitHub releases
 - **Easy setup** - Captive portal for WiFi configuration
 
@@ -96,7 +96,7 @@ pio run -e adafruit_qtpy_esp32s3_nopsram -t upload
 | Page | Description |
 |------|-------------|
 | Control | Select shows, adjust parameters, manage presets |
-| Timers | Set countdown timers and daily alarms |
+| Timers | Set countdown timers and schedules |
 | Settings | Configure WiFi, brightness, LED count, OTA updates |
 | About | Device information and diagnostics |
 
@@ -122,8 +122,8 @@ pio run -e adafruit_qtpy_esp32s3_nopsram -t upload
 ## Timers
 
 - **Countdown timers** - Turn off or load a preset after a duration
-- **Daily alarms** - Recurring triggers at a specific time each day
-- Up to 4 concurrent timers
+- **Schedules** - Trigger at a specific time on selected weekdays; edit in place or pause without deleting
+- Up to 12 concurrent timers and schedules
 - Actions: Turn off LEDs or load a saved preset
 
 ## API
@@ -137,7 +137,8 @@ pio run -e adafruit_qtpy_esp32s3_nopsram -t upload
 | `/api/presets` | POST | Save a preset |
 | `/api/timers` | GET | List active timers |
 | `/api/timers/countdown` | POST | Set countdown timer |
-| `/api/timers/alarm` | POST | Set daily alarm |
+| `/api/timers/schedule` | POST | Set or update a schedule (optional `days` weekday mask); `/api/timers/alarm` is kept as an alias |
+| `/api/timers/pause` | POST | Pause or resume a schedule |
 | `/api/touch` | GET | Touch config and current values |
 | `/api/touch` | POST | Update touch settings |
 | `/api/ota/check` | GET | Check for firmware updates |

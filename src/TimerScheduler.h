@@ -1,6 +1,6 @@
 //
 // Timer Scheduler for ledz
-// Manages countdown timers and alarms
+// Manages countdown timers and schedules
 //
 
 #ifndef LEDZ_TIMER_SCHEDULER_H
@@ -60,7 +60,7 @@ public:
 
     /**
      * Set a countdown timer
-     * @param index Timer slot index (0-3)
+     * @param index Timer slot index (0 .. MAX_TIMERS-1)
      * @param durationSeconds Countdown duration in seconds
      * @param action Action to perform when timer expires
      * @param presetIndex Preset index (only used if action is LOAD_PRESET)
@@ -71,26 +71,48 @@ public:
                       uint8_t presetIndex, uint32_t currentEpoch);
 
     /**
-     * Set a daily recurring alarm
-     * @param index Timer slot index (0-3)
+     * Set a schedule.
+     *
+     * Naming the index of a slot that already holds a schedule updates it in
+     * place: time, action, preset and weekday mask are replaced, the slot
+     * and its paused state are kept, and the schedule becomes eligible to fire
+     * at its next occurrence, including later today.
+     *
+     * @param index Timer slot index (0 .. MAX_TIMERS-1)
      * @param secondsSinceMidnight Time of day as seconds since midnight
-     * @param action Action to perform when alarm triggers
+     * @param action Action to perform when schedule triggers
      * @param presetIndex Preset index (only used if action is LOAD_PRESET)
-     * @return true if alarm was set successfully
+     * @param daysMask Weekdays to fire on, bit n = tm_wday n (Sunday = 0);
+     *                 Config::SCHEDULE_EVERY_DAY for every day. 0 and values
+     *                 above 0x7F are rejected.
+     * @return true if schedule was set successfully
      */
-    bool setDailyAlarm(uint8_t index, uint32_t secondsSinceMidnight, Config::TimerAction action,
-                       uint8_t presetIndex);
+    bool setSchedule(uint8_t index, uint32_t secondsSinceMidnight, Config::TimerAction action,
+                       uint8_t presetIndex, uint8_t daysMask = Config::SCHEDULE_EVERY_DAY);
+
+    /**
+     * Pause or resume a schedule without changing any of its settings.
+     * Does not touch the last-fired record, so resuming after today's
+     * firing does not fire again today.
+     * @param index Timer slot index (0 .. MAX_TIMERS-1)
+     * @param paused true to pause, false to arm
+     * @return false if the index is out of range, the slot is empty, or it
+     *         holds a countdown timer
+     */
+    bool setPaused(uint8_t index, bool paused);
 
     /**
      * Cancel a timer
-     * @param index Timer slot index (0-3)
+     * @param index Timer slot index (0 .. MAX_TIMERS-1)
      * @return true if timer was cancelled
      */
     bool cancelTimer(uint8_t index);
 
     /**
-     * Get remaining seconds for a timer
-     * @param index Timer slot index (0-3)
+     * Get remaining seconds for a timer. For a schedule this is the wall-clock
+     * time to its next occurrence on a selected weekday, looking at most
+     * seven days ahead; a paused schedule reports 0.
+     * @param index Timer slot index (0 .. MAX_TIMERS-1)
      * @param currentEpoch Current NTP epoch time
      * @return Remaining seconds, or 0 if timer is not active
      */
@@ -108,7 +130,7 @@ public:
      * Stores and persists the string, but does not apply it — the actual
      * setenv/tzset happens on the next checkTimers() iteration, so that a
      * request handler running on another task cannot mutate libc's timezone
-     * state underneath a live alarm evaluation.
+     * state underneath a live schedule evaluation.
      *
      * @param tz POSIX TZ string, e.g. "CET-1CEST,M3.5.0,M10.5.0/3"
      * @return true if the string was accepted and stored

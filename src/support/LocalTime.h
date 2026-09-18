@@ -12,7 +12,7 @@
 // zone. Callers must therefore confine themselves to a single task: on the
 // device that is the Network task, which owns checkTimers(). A request
 // handler running on the AsyncTCP task must hand the string over via a
-// dirty flag rather than call these directly, or it races a live alarm
+// dirty flag rather than call these directly, or it races a live schedule
 // evaluation.
 //
 
@@ -41,13 +41,24 @@ namespace LocalTime {
     uint32_t secondsSinceMidnight(uint32_t epoch, const char *tz);
 
     /**
-     * Local day of the year, used to fire a daily alarm at most once per
+     * Local day of the year, used to fire a schedule at most once per
      * local day. Both 02:30 instants of a fall-back night share a value.
      * @param epoch UTC epoch seconds
      * @param tz POSIX TZ string
      * @return 0..365
      */
     uint16_t localDayOfYear(uint32_t epoch, const char *tz);
+
+    /**
+     * Local weekday as the C library's tm_wday (Sunday = 0 .. Saturday = 6),
+     * used to match a schedule's weekday mask. Derived from the same
+     * conversion as localDayOfYear, so at the second 02:30 of a fall-back
+     * night the two agree on which day it is.
+     * @param epoch UTC epoch seconds
+     * @param tz POSIX TZ string
+     * @return 0..6
+     */
+    uint8_t localWeekday(uint32_t epoch, const char *tz);
 
     /**
      * Describe the zone as it stands at the given instant.

@@ -64,6 +64,7 @@ void TimerScheduler::checkTimers(uint32_t currentEpoch) {
 
     uint32_t currentSecondsSinceMidnight = getSecondsSinceMidnight(currentEpoch);
     const uint16_t today = LocalTime::localDayOfYear(currentEpoch, timersConfig.timezone);
+    const uint8_t wday = LocalTime::localWeekday(currentEpoch, timersConfig.timezone);
     bool configChanged = false;
 
     for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
@@ -85,14 +86,24 @@ void TimerScheduler::checkTimers(uint32_t currentEpoch) {
                 }
                 break;
 
-            case Config::TimerType::ALARM_DAILY:
-                // target_time stores seconds since midnight for daily alarms.
+            case Config::TimerType::SCHEDULE:
+                // A paused schedule keeps its slot and settings but never fires.
+                if (timer.paused) {
+                    break;
+                }
+                // Only on a selected local weekday. wday and today come from
+                // the same conversion, so on a fall-back night they agree on
+                // which day it is.
+                if (((timer.days_mask >> wday) & 1) == 0) {
+                    break;
+                }
+                // target_time stores seconds since midnight for schedules.
                 // A wall-clock time that the spring-forward jump skips never
-                // falls inside this window, so the alarm is skipped that day
+                // falls inside this window, so the schedule is skipped that day
                 // and resumes the next — see design decision 8.
                 if (currentSecondsSinceMidnight >= timer.target_time &&
                     currentSecondsSinceMidnight < timer.target_time + 5) {
-                    // Daily alarms stay enabled, so repeat triggers are
+                    // Schedules stay enabled, so repeat triggers are
                     // suppressed by recording the local day they last fired
                     // on. Keying on the local day rather than an absolute
                     // time is what makes the two 02:30s of a fall-back night
@@ -173,8 +184,9 @@ bool TimerScheduler::setCountdown(uint8_t index, uint32_t durationSeconds,
     return true;
 }
 
-bool TimerScheduler::setDailyAlarm(uint8_t index, uint32_t secondsSinceMidnight,
-                                    Config::TimerAction action, uint8_t presetIndex) {
+bool TimerScheduler::setSchedule(uint8_t index, uint32_t secondsSinceMidnight,
+                                    Config::TimerAction action, uint8_t presetIndex,
+                                    uint8_t daysMask) {
     if (index >= Config::TimersConfig::MAX_TIMERS) {
         return false;
     }
@@ -183,22 +195,59 @@ bool TimerScheduler::setDailyAlarm(uint8_t index, uint32_t secondsSinceMidnight,
         return false; // Invalid time
     }
 
+    // An empty mask is not "paused": pause is its own explicit state, and an
+    // schedule that can never fire would be indistinguishable from a UI bug.
+    if (daysMask == 0 || daysMask > Config::SCHEDULE_EVERY_DAY) {
+        return false;
+    }
+
     Config::TimerEntry &timer = timersConfig.timers[index];
+    // Updating an existing schedule in place keeps its paused state: Edit and
+    // Resume are separate controls, and an edit that silently re-armed the
+    // schedule would turn the lights on while the user is away. A slot that
+    // was empty or held a countdown starts armed.
+    const bool keepPaused = timer.enabled && timer.type == Config::TimerType::SCHEDULE;
+    timer.paused = keepPaused ? timer.paused : false;
     timer.enabled = true;
-    timer.type = Config::TimerType::ALARM_DAILY;
+    timer.type = Config::TimerType::SCHEDULE;
     timer.action = action;
     timer.preset_index = presetIndex;
     timer.target_time = secondsSinceMidnight;
-    timer.duration_seconds = 0; // Unused by daily alarms
-    // A freshly set alarm has never fired, so it is eligible today.
-    timer.last_fired_yday = Config::ALARM_NEVER_FIRED;
+    timer.duration_seconds = 0; // Unused by schedules
+    timer.days_mask = daysMask;
+    // A freshly set schedule has never fired, so it is eligible today.
+    timer.last_fired_yday = Config::SCHEDULE_NEVER_FIRED;
 
     config.saveTimersConfig(timersConfig);
 
 #ifdef ARDUINO
     uint8_t hours = secondsSinceMidnight / 3600;
     uint8_t minutes = (secondsSinceMidnight % 3600) / 60;
-    ESP_LOGI(TAG, "Set daily alarm %d for %02d:%02d", index, hours, minutes);
+    ESP_LOGI(TAG, "Set schedule %d for %02d:%02d, days=0x%02X%s", index, hours, minutes,
+                  daysMask, timer.paused ? " (paused)" : "");
+#endif
+
+    return true;
+}
+
+bool TimerScheduler::setPaused(uint8_t index, bool paused) {
+    if (index >= Config::TimersConfig::MAX_TIMERS) {
+        return false;
+    }
+
+    Config::TimerEntry &timer = timersConfig.timers[index];
+    if (!timer.enabled || timer.type != Config::TimerType::SCHEDULE) {
+        return false; // Nothing to pause, or a countdown, which has no pause semantic
+    }
+
+    // Deliberately leaves last_fired_yday alone. If it already fired today,
+    // resuming must not fire it again; if it has been paused for days, the
+    // stale record does not stop it firing at its next time.
+    timer.paused = paused;
+    config.saveTimersConfig(timersConfig);
+
+#ifdef ARDUINO
+    ESP_LOGI(TAG, "%s schedule %d", paused ? "Paused" : "Resumed", index);
 #endif
 
     return true;
@@ -209,7 +258,9 @@ bool TimerScheduler::cancelTimer(uint8_t index) {
         return false;
     }
 
-    timersConfig.timers[index].enabled = false;
+    // Reset the whole entry so a later occupant of the slot starts from the
+    // defaults (armed, every day) rather than inheriting stale state.
+    timersConfig.timers[index] = Config::TimerEntry{};
     config.saveTimersConfig(timersConfig);
 
 #ifdef ARDUINO
@@ -237,20 +288,36 @@ uint32_t TimerScheduler::getRemainingSeconds(uint8_t index, uint32_t currentEpoc
             }
             return timer.target_time - currentEpoch;
 
-        case Config::TimerType::ALARM_DAILY:
-            // For daily alarms, calculate time until next occurrence.
-            // This counts wall-clock seconds, not real ones, so on a day
-            // with a transition the estimate is an hour out. It only drives
-            // the UI countdown; the trigger itself compares wall-clock time
-            // directly and is unaffected.
+        case Config::TimerType::SCHEDULE:
+            // For schedules, calculate time until the next occurrence on
+            // a selected weekday. This counts wall-clock seconds, not real
+            // ones, so on a day with a transition the estimate is an hour
+            // out. It only drives the UI hint; the trigger itself compares
+            // wall-clock time directly and is unaffected.
             {
-                uint32_t currentSecondsSinceMidnight = getSecondsSinceMidnight(currentEpoch);
-                if (currentSecondsSinceMidnight < timer.target_time) {
-                    return timer.target_time - currentSecondsSinceMidnight;
-                } else {
-                    // Timer will trigger tomorrow
-                    return (86400 - currentSecondsSinceMidnight) + timer.target_time;
+                if (timer.paused) {
+                    return 0;
                 }
+
+                const uint32_t currentSecondsSinceMidnight = getSecondsSinceMidnight(currentEpoch);
+                uint8_t wday = LocalTime::localWeekday(currentEpoch, timersConfig.timezone);
+                uint32_t remaining;
+                if (currentSecondsSinceMidnight < timer.target_time) {
+                    remaining = timer.target_time - currentSecondsSinceMidnight;
+                } else {
+                    // Today's time has passed; the earliest candidate is tomorrow.
+                    remaining = (86400 - currentSecondsSinceMidnight) + timer.target_time;
+                    wday = (wday + 1) % 7;
+                }
+
+                // Step whole days forward until the candidate lands on a
+                // selected weekday. The mask is never empty, so this stops
+                // within seven steps.
+                for (uint8_t step = 0; step < 7 && ((timer.days_mask >> wday) & 1) == 0; step++) {
+                    remaining += 86400;
+                    wday = (wday + 1) % 7;
+                }
+                return remaining;
             }
     }
 
