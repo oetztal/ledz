@@ -45,9 +45,9 @@ namespace Show {
          * Check if the show has reached its final static state
          * @return true if blend is complete
          */
-        bool isComplete() const override;
+        [[nodiscard]] bool isComplete() const override;
 
-        const char *name() { return "ColorRanges"; }
+        static const char *name() { return "ColorRanges"; }
     };
 } // namespace Show
 

@@ -138,4 +138,6 @@ namespace Show {
     bool ColorRanges::isComplete() const {
         return initialized && (blend == nullptr || blend->isComplete());
     }
+
+
 } // namespace Show

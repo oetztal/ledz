@@ -9,10 +9,6 @@
 #include <functional>
 #include <memory>
 #include <string>
-
-// ArduinoJson is unconditional: ShowConstructor names JsonDocument in this
-// header's public interface, so guarding the include never made the header
-// self-contained on non-Arduino builds — it only deferred the error.
 #include <ArduinoJson.h>
 
 #ifdef ARDUINO
@@ -21,6 +17,7 @@
 
 #include "show/Show.h"
 #include "Config.h"
+#include "show/factory/ColorRangesFactory.h"
 
 /**
  * ShowFactory
@@ -28,6 +25,8 @@
  * Supports show registration and parameter parsing
  */
 class ShowFactory {
+    Show::Factory::ColorRangesFactory colorRangesFactory;
+
 public:
     /**
      * Show constructor function type that takes JSON parameters
@@ -46,14 +45,9 @@ private:
     std::map<std::string, ShowConstructor> showConstructors;
     std::vector<ShowInfo> showList;
 
-    static void extract_colors_from_array(std::vector<Strip::Color>& colors, const JsonArrayConst& colorArray);
-
-    static void extract_colors_from_json_array(std::vector<Strip::Color>& colors, const JsonArrayConst& colorsArray);
-
-    static std::unique_ptr<Show::Show> createSolid(const JsonDocument& doc);
-
 public:
-    ShowFactory();
+    ShowFactory(Show::Factory::ColorRangesFactory color_ranges_factory);
+    ShowFactory() : ShowFactory(Show::Factory::ColorRangesFactory()) {}
 
     // disable copy constructor
     ShowFactory(const ShowFactory &) = delete;
