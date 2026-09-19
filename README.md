@@ -210,6 +210,11 @@ coverage data from recompiled objects is discarded automatically after each
 link; without that, editing a test makes the coverage runtime fail its merge
 and, on macOS, segfault at exit *after* every test has already passed.
 
+The script also writes `coverage-generic.xml` for SonarCloud. SonarCloud's
+CFamily sensor silently ignores `sonar.cfamily.coverage.reportPaths` from
+6.79.0 onwards, and `sonar.gcov.reportsPath` is deprecated; the Generic
+Coverage XML sensor reads the file via `sonar.coverageReportPaths`.
+
 ### Web Assets
 
 Web files in `data/` are automatically minified and gzip-compressed into C++ header files during the build process. No manual steps required.
