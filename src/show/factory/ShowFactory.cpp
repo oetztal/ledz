@@ -19,13 +19,11 @@ static const char* TAG = "show";
 
 namespace Show::Factory {
 
-ShowFactory::ShowFactory(ColorRangesFactory color_ranges_factory): colorRangesFactory(color_ranges_factory) {
+ShowFactory::ShowFactory() {
     // Register all available shows (in display order)
     // Each lambda receives a JsonDocument and uses defaults via | operator
 
-    registerShow("Solid", "Static light: one color, or the strip split into sections with optional gradient blending (flags, patterns)", [this](const JsonDocument &doc) {
-        return colorRangesFactory.createSolid(doc);
-    });
+    registerShow("Solid", "Static light: one color, or the strip split into sections with optional gradient blending (flags, patterns)", ColorRangesFactory::createSolid);
 
     registerShow("Fire", "Flickering flames rising from one end, fed by random sparks and cooling into embers", [](const JsonDocument &doc) {
         float cooling = doc["cooling"] | 0.1f;

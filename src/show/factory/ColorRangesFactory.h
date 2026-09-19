@@ -7,7 +7,7 @@
 namespace Show::Factory {
     class ColorRangesFactory {
     public:
-        std::unique_ptr<Show> createSolid(const JsonDocument &doc);
+        static std::unique_ptr<Show> createSolid(const JsonDocument &doc);
     };
 }
 

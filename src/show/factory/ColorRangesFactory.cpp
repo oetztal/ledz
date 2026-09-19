@@ -24,37 +24,43 @@ namespace Show::Factory {
         }
     }
 
+    static void parse_colors(const JsonDocument &doc, std::vector<Strip::Color> &colors) {
+        auto colorsArray = doc["colors"].as<JsonArrayConst>();
+        if (!colorsArray.isNull() && colorsArray.size() > 0) {
+            extract_colors_from_json_array(colors, colorsArray);
+        }
+    }
+
+    static void parse_ranges(const JsonDocument &doc, std::vector<float> &ranges) {
+        auto rangesArray = doc["ranges"].as<JsonArrayConst>();
+        if (!rangesArray.isNull() && rangesArray.size() > 0) {
+            for (JsonVariantConst rangeVariant: rangesArray) {
+                ranges.push_back(rangeVariant.as<float>());
+            }
+        }
+    }
+
+    static void set_default_if_empty(std::vector<Strip::Color> &colors) {
+        if (colors.empty()) {
+            colors.push_back(color(255, 250, 230)); // Warm white
+        }
+    }
+
     std::unique_ptr<Show> ColorRangesFactory::createSolid(const JsonDocument &doc) {
         std::vector<Strip::Color> colors;
         std::vector<float> ranges;
 
-        // Parse colors array (supports 1 or more colors)
-        // JsonArrayConst, not JsonArray: doc is a const reference, so its
-        // subscripts are JsonVariantConst and only convert to the const views.
         if (!doc["colors"].isNull()) {
-            auto colorsArray = doc["colors"].as<JsonArrayConst>();
-            if (!colorsArray.isNull() && colorsArray.size() > 0) {
-                extract_colors_from_json_array(colors, colorsArray);
-            }
+            parse_colors(doc, colors);
         }
 
-        // Parse ranges array (optional)
         if (!doc["ranges"].isNull()) {
-            auto rangesArray = doc["ranges"].as<JsonArrayConst>();
-            if (!rangesArray.isNull() && rangesArray.size() > 0) {
-                for (JsonVariantConst rangeVariant: rangesArray) {
-                    ranges.push_back(rangeVariant.as<float>());
-                }
-            }
+            parse_ranges(doc, ranges);
         }
 
-        // Parse gradient flag (optional, default false)
         bool gradient = doc["gradient"] | false;
 
-        // If no colors parsed, use default warm white
-        if (colors.empty()) {
-            colors.push_back(color(255, 250, 230)); // Warm white
-        }
+        set_default_if_empty(colors);
 
         return std::make_unique<ColorRanges>(colors, ranges, gradient);
     }

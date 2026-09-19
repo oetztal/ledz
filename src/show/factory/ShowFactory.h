@@ -21,13 +21,7 @@
 
 namespace Show::Factory {
 
-/**
- * ShowFactory
- * Factory pattern for creating LED shows by name
- * Supports show registration and parameter parsing
- */
 class ShowFactory {
-    ColorRangesFactory colorRangesFactory;
 
 public:
     /**
@@ -48,8 +42,7 @@ private:
     std::vector<ShowInfo> showList;
 
 public:
-    ShowFactory(ColorRangesFactory color_ranges_factory);
-    ShowFactory() : ShowFactory(ColorRangesFactory()) {}
+    ShowFactory();
 
     // disable copy constructor
     ShowFactory(const ShowFactory &) = delete;
