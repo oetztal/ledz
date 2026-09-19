@@ -1,8 +1,8 @@
 // ShowFactory - Manages show registration and creation
 //
 
-#ifndef LEDZ_SHOWFACTORY_H
-#define LEDZ_SHOWFACTORY_H
+#ifndef LEDZ_SHOW_FACTORY_SHOWFACTORY_H
+#define LEDZ_SHOW_FACTORY_SHOWFACTORY_H
 
 #include <map>
 #include <vector>
@@ -17,7 +17,9 @@
 
 #include "show/Show.h"
 #include "Config.h"
-#include "show/factory/ColorRangesFactory.h"
+#include "ColorRangesFactory.h"
+
+namespace Show::Factory {
 
 /**
  * ShowFactory
@@ -25,13 +27,13 @@
  * Supports show registration and parameter parsing
  */
 class ShowFactory {
-    Show::Factory::ColorRangesFactory colorRangesFactory;
+    ColorRangesFactory colorRangesFactory;
 
 public:
     /**
      * Show constructor function type that takes JSON parameters
      */
-    using ShowConstructor = std::function<std::unique_ptr<Show::Show>(const JsonDocument &)>;
+    using ShowConstructor = std::function<std::unique_ptr<Show>(const JsonDocument &)>;
 
     /**
      * Show metadata for listing available shows
@@ -46,8 +48,8 @@ private:
     std::vector<ShowInfo> showList;
 
 public:
-    ShowFactory(Show::Factory::ColorRangesFactory color_ranges_factory);
-    ShowFactory() : ShowFactory(Show::Factory::ColorRangesFactory()) {}
+    ShowFactory(ColorRangesFactory color_ranges_factory);
+    ShowFactory() : ShowFactory(ColorRangesFactory()) {}
 
     // disable copy constructor
     ShowFactory(const ShowFactory &) = delete;
@@ -65,7 +67,7 @@ public:
      * @param name Show name
      * @return Show instance (caller owns pointer) or nullptr if not found
      */
-    std::unique_ptr<Show::Show> createShow(const std::string &name);
+    std::unique_ptr<Show> createShow(const std::string &name);
 
     /**
      * Create a show by name with JSON parameters
@@ -73,7 +75,7 @@ public:
      * @param paramsJson JSON string with parameters (e.g., {"r":255,"g":0,"b":0})
      * @return Show instance (caller owns pointer) or nullptr if not found
      */
-    std::unique_ptr<Show::Show> createShow(const std::string &name, const std::string &paramsJson);
+    std::unique_ptr<Show> createShow(const std::string &name, const std::string &paramsJson);
 
     /**
      * Get list of all registered shows
@@ -89,4 +91,6 @@ public:
     bool hasShow(const std::string &name) const;
 };
 
-#endif //LEDZ_SHOWFACTORY_H
+} // namespace Show::Factory
+
+#endif //LEDZ_SHOW_FACTORY_SHOWFACTORY_H

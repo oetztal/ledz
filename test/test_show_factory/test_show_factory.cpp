@@ -1,5 +1,5 @@
 #include "unity.h"
-#include "ShowFactory.h"
+#include "show/factory/ShowFactory.h"
 #include "color.h"
 #include "../MockStrip.h"
 #include <chrono>
@@ -8,6 +8,8 @@
 #include <string>
 #include <thread>
 #include <vector>
+
+using Show::Factory::ShowFactory;
 
 // Exercises ShowFactory through its real JSON entry point, createShow(name,
 // paramsJson). Before the ArduinoJson v7 migration ShowFactory was excluded

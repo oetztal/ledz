@@ -4,7 +4,7 @@
 #include "Network.h"
 #include "Config.h"
 #include "WebServerManager.h"
-#include "ShowFactory.h"
+#include "show/factory/ShowFactory.h"
 #include "ShowController.h"
 #include "strip/Base.h"
 #include "task/LedShow.h"
@@ -16,7 +16,7 @@ static const char* TAG = "main";
 TaskHandle_t networkTaskHandle = nullptr;
 
 Config::ConfigManager config;
-ShowFactory showFactory;
+Show::Factory::ShowFactory showFactory;
 ShowController showController(showFactory, config);
 Task::LedShow ledShow(showController);
 Network network(config, showController);

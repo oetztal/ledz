@@ -12,12 +12,14 @@
 #include "show/TheaterChase.h"
 #include "show/Stroboscope.h"
 #include "show/Fire.h"
-#include "show/factory/ColorRangesFactory.h"
+#include "ColorRangesFactory.h"
 
 
 static const char* TAG = "show";
 
-ShowFactory::ShowFactory(Show::Factory::ColorRangesFactory color_ranges_factory): colorRangesFactory(color_ranges_factory) {
+namespace Show::Factory {
+
+ShowFactory::ShowFactory(ColorRangesFactory color_ranges_factory): colorRangesFactory(color_ranges_factory) {
     // Register all available shows (in display order)
     // Each lambda receives a JsonDocument and uses defaults via | operator
 
@@ -34,7 +36,7 @@ ShowFactory::ShowFactory(Show::Factory::ColorRangesFactory color_ranges_factory)
         int spark_range = doc["spark_range"] | 5;
         ESP_LOGI(TAG, "Creating Fire cooling=%.2f, spread=%.2f, ignition=%.2f, spark_amount=%.2f, start_offset=%d, spark_range=%d",
                       cooling, spread, ignition, spark_amount, start_offset, spark_range);
-        return std::make_unique<Show::Fire>(cooling, spread, ignition, spark_amount, std::vector<float>{1.0f}, start_offset, spark_range);
+        return std::make_unique<Fire>(cooling, spread, ignition, spark_amount, std::vector<float>{1.0f}, start_offset, spark_range);
     });
 
     registerShow("Starlight", "Single pixels light up at random and slowly fade away, like stars in a night sky", [](const JsonDocument &doc) {
@@ -46,7 +48,7 @@ ShowFactory::ShowFactory(Show::Factory::ColorRangesFactory color_ranges_factory)
         uint8_t b = doc["b"] | 50;
         ESP_LOGI(TAG, "Creating Starlight probability=%.2f, length=%lums, fade=%lums, RGB(%d,%d,%d)",
                       probability, length_ms, fade_ms, r, g, b);
-        return std::make_unique<Show::Starlight>(probability, length_ms, fade_ms, r, g, b);
+        return std::make_unique<Starlight>(probability, length_ms, fade_ms, r, g, b);
     });
 
     registerShow("Stroboscope", "Hard on/off flashes of a single color at an adjustable rhythm", [](const JsonDocument &doc) {
@@ -57,17 +59,17 @@ ShowFactory::ShowFactory(Show::Factory::ColorRangesFactory color_ranges_factory)
         unsigned int off_cycles = doc["off_cycles"] | 10;
         ESP_LOGI(TAG, "Creating Stroboscope RGB(%d,%d,%d), on=%u, off=%u",
                       r, g, b, on_cycles, off_cycles);
-        return std::make_unique<Show::Stroboscope>(r, g, b, on_cycles, off_cycles);
+        return std::make_unique<Stroboscope>(r, g, b, on_cycles, off_cycles);
     });
 
     registerShow("ColorRun", "Colored dots appear at random and race along the strip at their own speed", [](const JsonDocument &doc) {
         // ColorRun has no parameters yet
-        return std::make_unique<Show::ColorRun>();
+        return std::make_unique<ColorRun>();
     });
 
     registerShow("Jump", "Several balls bounce along the strip at different heights and speeds, swapping colors at each bounce", [](const JsonDocument &doc) {
         // Jump has no parameters yet
-        return std::make_unique<Show::Jump>();
+        return std::make_unique<Jump>();
     });
 
     registerShow("Rainbow", "The full color spectrum drifting smoothly along the strip", [](const JsonDocument &doc) {
@@ -75,29 +77,29 @@ ShowFactory::ShowFactory(Show::Factory::ColorRangesFactory color_ranges_factory)
         float pixel_step = doc["pixel_step"] | 1.0f;
         ESP_LOGI(TAG, "Creating Rainbow time_step=%.2f, pixel_step=%.2f",
                       time_step, pixel_step);
-        return std::make_unique<Show::Rainbow>(time_step, pixel_step);
+        return std::make_unique<Rainbow>(time_step, pixel_step);
     });
 
     registerShow("Wave", "Cosine-bouncing rainbow source (Bounce) or the same envelope with stripes that drift along the strip independently of source motion (Traveling)", [](const JsonDocument &doc) {
         // wave_speed is no longer used; if present in JSON it is silently
         // ignored so existing configs keep loading.
         const char *mode_str = doc["mode"] | "bounce";
-        Show::WaveMode mode = (strcmp(mode_str, "traveling") == 0)
-                            ? Show::WaveMode::Traveling
-                            : Show::WaveMode::Bounce;
+        WaveMode mode = (strcmp(mode_str, "traveling") == 0)
+                            ? WaveMode::Traveling
+                            : WaveMode::Bounce;
         float decay_rate = doc["decay_rate"] | 2.0f;
         float brightness_frequency = doc["brightness_frequency"] | 0.1f;
         float wavelength = doc["wavelength"] | 6.0f;
         ESP_LOGI(TAG, "Creating Wave mode=%s, decay=%.2f, freq=%.2f, wavelength=%.2f",
                       mode_str, decay_rate, brightness_frequency, wavelength);
-        return std::make_unique<Show::Wave>(decay_rate, brightness_frequency, wavelength, mode);
+        return std::make_unique<Wave>(decay_rate, brightness_frequency, wavelength, mode);
     });
 
     registerShow("TheaterChase", "Evenly spaced rainbow dots march along the strip, like lights around a theater marquee", [](const JsonDocument &doc) {
         unsigned int num_steps_per_cycle = doc["num_steps_per_cycle"] | 21;
         ESP_LOGI(TAG, "Creating TheaterChase num_steps_per_cycle=%u",
                       num_steps_per_cycle);
-        return std::make_unique<Show::TheaterChase>(num_steps_per_cycle);
+        return std::make_unique<TheaterChase>(num_steps_per_cycle);
     });
 
     registerShow("MorseCode", "Your own message spelled out in Morse code, scrolling across the strip as dots and dashes", [](const JsonDocument &doc) {
@@ -112,7 +114,7 @@ ShowFactory::ShowFactory(Show::Factory::ColorRangesFactory color_ranges_factory)
         unsigned int word_space = doc["word_space"] | 5;
         ESP_LOGI(TAG, "Creating MorseCode message=\"%s\", speed=%.2f, dot=%u, dash=%u",
                       message, speed, dot_length, dash_length);
-        return std::make_unique<Show::MorseCode>(message, speed, dot_length, dash_length,
+        return std::make_unique<MorseCode>(message, speed, dot_length, dash_length,
                                                  symbol_space, letter_space, word_space);
     });
 
@@ -122,7 +124,7 @@ ShowFactory::ShowFactory(Show::Factory::ColorRangesFactory color_ranges_factory)
         float Rdelta = doc["Rdelta"] | 0.0002f;
         ESP_LOGI(TAG, "Creating Chaos Rmin=%.4f, Rmax=%.4f, Rdelta=%.6f",
                       Rmin, Rmax, Rdelta);
-        return std::make_unique<Show::Chaos>(Rmin, Rmax, Rdelta);
+        return std::make_unique<Chaos>(Rmin, Rmax, Rdelta);
     });
 
     registerShow("Mandelbrot", "A slow scan across the Mandelbrot set, one fractal slice at a time, colored by escape time", [](const JsonDocument &doc) {
@@ -135,7 +137,7 @@ ShowFactory::ShowFactory(Show::Factory::ColorRangesFactory color_ranges_factory)
         ESP_LOGI(TAG,
             "Creating Mandelbrot Cre0=%.4f, Cim0=%.4f, Cim1=%.4f, scale=%u, max_iter=%u, color_scale=%u",
             Cre0, Cim0, Cim1, scale, max_iterations, color_scale);
-        return std::make_unique<Show::Mandelbrot>(Cre0, Cim0, Cim1, scale, max_iterations, color_scale);
+        return std::make_unique<Mandelbrot>(Cre0, Cim0, Cim1, scale, max_iterations, color_scale);
     });
 }
 
@@ -144,11 +146,11 @@ void ShowFactory::registerShow(const std::string &name, const std::string &descr
     showList.push_back({name, description});
 }
 
-std::unique_ptr<Show::Show> ShowFactory::createShow(const std::string &name) {
+std::unique_ptr<Show> ShowFactory::createShow(const std::string &name) {
     return createShow(name, "{}"); // Default to empty params
 }
 
-std::unique_ptr<Show::Show> ShowFactory::createShow(const std::string &name, const std::string &paramsJson) {
+std::unique_ptr<Show> ShowFactory::createShow(const std::string &name, const std::string &paramsJson) {
     // Check if show exists
     auto it = showConstructors.find(name);
     if (it == showConstructors.end()) {
@@ -177,3 +179,5 @@ const std::vector<ShowFactory::ShowInfo> &ShowFactory::listShows() const {
 bool ShowFactory::hasShow(const std::string &name) const {
     return showConstructors.find(name) != showConstructors.end();
 }
+
+} // namespace Show::Factory

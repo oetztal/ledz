@@ -16,7 +16,7 @@
 #endif
 
 #include "show/Show.h"
-#include "ShowFactory.h"
+#include "show/factory/ShowFactory.h"
 #include "Config.h"
 #include "strip/Base.h"
 #include "strip/Strip.h"
@@ -68,7 +68,7 @@ private:
     QueueHandle_t commandQueue;
 #endif
 
-    ShowFactory &factory;
+    Show::Factory::ShowFactory &factory;
     Config::ConfigManager &config;
 
     std::unique_ptr<Show::Show> currentShow;
@@ -93,7 +93,7 @@ public:
      * @param factory Show factory for creating shows
      * @param config Configuration manager for persistence
      */
-    ShowController(ShowFactory &factory, Config::ConfigManager &config);
+    ShowController(Show::Factory::ShowFactory &factory, Config::ConfigManager &config);
 
     // disable copy constructor
     ShowController(const ShowController &) = delete;
@@ -175,7 +175,7 @@ public:
      */
     ~ShowController();
 
-    const std::vector<ShowFactory::ShowInfo> &listShows() const;
+    const std::vector<Show::Factory::ShowFactory::ShowInfo> &listShows() const;
 
     void executeShow(unsigned int iteration) const;
 
