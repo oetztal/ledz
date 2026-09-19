@@ -6,7 +6,7 @@
 #include <Arduino.h>
 #endif
 
-static const char* TAG = "show";
+static const char *TAG = "show";
 
 namespace Show {
     ColorRanges::ColorRanges(const std::vector<Strip::Color> &colors,
@@ -44,8 +44,8 @@ namespace Show {
             if (use_custom_ranges && ranges.size() != colors.size() - 1) {
 #ifdef ARDUINO
                 ESP_LOGW(TAG,
-                    "Expected %zu ranges for %zu colors, got %zu. Using equal distribution.",
-                    colors.size() - 1, colors.size(), ranges.size());
+                         "Expected %zu ranges for %zu colors, got %zu. Using equal distribution.",
+                         colors.size() - 1, colors.size(), ranges.size());
 #endif
                 use_custom_ranges = false;
             }
@@ -57,7 +57,7 @@ namespace Show {
                 ESP_LOGD(TAG, "Using equal distribution for %zu colors", colors.size());
 #endif
                 for (size_t i = 1; i < colors.size(); i++) {
-                    uint16_t boundary = (uint16_t)((float) num_leds * i / colors.size());
+                    uint16_t boundary = (uint16_t) ((float) num_leds * i / colors.size());
                     boundaries.push_back(boundary);
                 }
             } else {
@@ -69,7 +69,7 @@ namespace Show {
                 }
 #endif
                 for (float range: ranges) {
-                    uint16_t boundary = (uint16_t)((float) num_leds * range / 100.0f);
+                    uint16_t boundary = (uint16_t) ((float) num_leds * range / 100.0f);
                     boundaries.push_back(boundary);
                 }
             }
@@ -80,16 +80,16 @@ namespace Show {
                 // Waypoints are evenly distributed: 0%, 1/(N-1), 2/(N-1), ..., 100%
                 for (uint16_t led = 0; led < num_leds; led++) {
                     float position = (num_leds > 1)
-                        ? (float)led / (float)(num_leds - 1)
-                        : 0.0f;
+                                         ? (float) led / (float) (num_leds - 1)
+                                         : 0.0f;
 
                     // Find which segment this LED is in
-                    float segment_size = 1.0f / (float)(colors.size() - 1);
-                    size_t segment = (size_t)(position / segment_size);
+                    float segment_size = 1.0f / (float) (colors.size() - 1);
+                    size_t segment = (size_t) (position / segment_size);
                     if (segment >= colors.size() - 1) segment = colors.size() - 2;
 
                     // Calculate position within segment (0.0 to 1.0)
-                    float segment_start = (float)segment * segment_size;
+                    float segment_start = (float) segment * segment_size;
                     float ratio = (position - segment_start) / segment_size;
                     if (ratio > 1.0f) ratio = 1.0f;
 
@@ -97,9 +97,9 @@ namespace Show {
                     Strip::Color colorA = colors[segment];
                     Strip::Color colorB = colors[segment + 1];
 
-                    uint8_t r = (uint8_t)(red(colorA) * (1.0f - ratio) + red(colorB) * ratio);
-                    uint8_t g = (uint8_t)(green(colorA) * (1.0f - ratio) + green(colorB) * ratio);
-                    uint8_t b = (uint8_t)(blue(colorA) * (1.0f - ratio) + blue(colorB) * ratio);
+                    uint8_t r = (uint8_t) (red(colorA) * (1.0f - ratio) + red(colorB) * ratio);
+                    uint8_t g = (uint8_t) (green(colorA) * (1.0f - ratio) + green(colorB) * ratio);
+                    uint8_t b = (uint8_t) (blue(colorA) * (1.0f - ratio) + blue(colorB) * ratio);
 
                     target_colors.push_back(color(r, g, b));
                 }
@@ -139,5 +139,5 @@ namespace Show {
         return initialized && (blend == nullptr || blend->isComplete());
     }
 
-
+    const char *ColorRanges::name() { return "ColorRanges"; }
 } // namespace Show

@@ -49,7 +49,6 @@ namespace Show {
         );
     }
 
-
     Strip::PixelIndex ColorRun::State::position(Iteration iteration) const {
         return speed * (iteration - start);
     }

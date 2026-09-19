@@ -47,7 +47,7 @@ namespace Show {
          */
         [[nodiscard]] bool isComplete() const override;
 
-        static const char *name() { return "ColorRanges"; }
+        static const char *name();
     };
 } // namespace Show
 
