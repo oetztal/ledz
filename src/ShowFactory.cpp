@@ -24,7 +24,7 @@ void ShowFactory::extract_colors_from_array(std::vector<Strip::Color>& colors, c
     colors.push_back(color(r, g, b));
 }
 
-void ShowFactory::extract_colors_from_json_array(std::vector<Strip::Color> colors, JsonArrayConst colorsArray) {
+void ShowFactory::extract_colors_from_json_array(std::vector<Strip::Color>& colors, const JsonArrayConst& colorsArray) {
     for (JsonVariantConst colorVariant: colorsArray) {
         JsonArrayConst colorArray = colorVariant.as<JsonArrayConst>();
         if (!colorArray.isNull() && colorArray.size() >= 3) {

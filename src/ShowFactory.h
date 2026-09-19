@@ -48,7 +48,7 @@ private:
 
     static void extract_colors_from_array(std::vector<Strip::Color>& colors, const JsonArrayConst& colorArray);
 
-    static void extract_colors_from_json_array(std::vector<Strip::Color> colors, JsonArrayConst colorsArray);
+    static void extract_colors_from_json_array(std::vector<Strip::Color>& colors, const JsonArrayConst& colorsArray);
 
     static std::unique_ptr<Show::Show> createSolid(const JsonDocument& doc);
 
