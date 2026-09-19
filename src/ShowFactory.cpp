@@ -17,52 +17,62 @@
 
 static const char* TAG = "show";
 
+void ShowFactory::extract_colors_from_array(std::vector<Strip::Color>& colors, const JsonArrayConst& colorArray) {
+    uint8_t r = colorArray[0].as<uint8_t>();
+    uint8_t g = colorArray[1].as<uint8_t>();
+    uint8_t b = colorArray[2].as<uint8_t>();
+    colors.push_back(color(r, g, b));
+}
+
+void ShowFactory::extract_colors_from_json_array(std::vector<Strip::Color>& colors, const JsonArrayConst& colorsArray) {
+    for (JsonVariantConst colorVariant: colorsArray) {
+        JsonArrayConst colorArray = colorVariant.as<JsonArrayConst>();
+        if (!colorArray.isNull() && colorArray.size() >= 3) {
+            extract_colors_from_array(colors, colorArray);
+        }
+    }
+}
+
+std::unique_ptr<Show::Show> ShowFactory::createSolid(const JsonDocument& doc) {
+    std::vector<Strip::Color> colors;
+    std::vector<float> ranges;
+
+    // Parse colors array (supports 1 or more colors)
+    // JsonArrayConst, not JsonArray: doc is a const reference, so its
+    // subscripts are JsonVariantConst and only convert to the const views.
+    if (!doc["colors"].isNull()) {
+        JsonArrayConst colorsArray = doc["colors"].as<JsonArrayConst>();
+        if (!colorsArray.isNull() && colorsArray.size() > 0) {
+            extract_colors_from_json_array(colors, colorsArray);
+        }
+    }
+
+    // Parse ranges array (optional)
+    if (!doc["ranges"].isNull()) {
+        JsonArrayConst rangesArray = doc["ranges"].as<JsonArrayConst>();
+        if (!rangesArray.isNull() && rangesArray.size() > 0) {
+            for (JsonVariantConst rangeVariant: rangesArray) {
+                ranges.push_back(rangeVariant.as<float>());
+            }
+        }
+    }
+
+    // Parse gradient flag (optional, default false)
+    bool gradient = doc["gradient"] | false;
+
+    // If no colors parsed, use default warm white
+    if (colors.empty()) {
+        colors.push_back(color(255, 250, 230)); // Warm white
+    }
+
+    return std::make_unique<Show::ColorRanges>(colors, ranges, gradient);
+}
+
 ShowFactory::ShowFactory() {
     // Register all available shows (in display order)
     // Each lambda receives a JsonDocument and uses defaults via | operator
 
-    registerShow("Solid", "Static light: one color, or the strip split into sections with optional gradient blending (flags, patterns)", [](const JsonDocument &doc) {
-        std::vector<Strip::Color> colors;
-        std::vector<float> ranges;
-
-        // Parse colors array (supports 1 or more colors)
-        // JsonArrayConst, not JsonArray: doc is a const reference, so its
-        // subscripts are JsonVariantConst and only convert to the const views.
-        if (!doc["colors"].isNull()) {
-            JsonArrayConst colorsArray = doc["colors"].as<JsonArrayConst>();
-            if (!colorsArray.isNull() && colorsArray.size() > 0) {
-                for (JsonVariantConst colorVariant: colorsArray) {
-                    JsonArrayConst colorArray = colorVariant.as<JsonArrayConst>();
-                    if (!colorArray.isNull() && colorArray.size() >= 3) {
-                        uint8_t r = colorArray[0].as<uint8_t>();
-                        uint8_t g = colorArray[1].as<uint8_t>();
-                        uint8_t b = colorArray[2].as<uint8_t>();
-                        colors.push_back(color(r, g, b));
-                    }
-                }
-            }
-        }
-
-        // Parse ranges array (optional)
-        if (!doc["ranges"].isNull()) {
-            JsonArrayConst rangesArray = doc["ranges"].as<JsonArrayConst>();
-            if (!rangesArray.isNull() && rangesArray.size() > 0) {
-                for (JsonVariantConst rangeVariant: rangesArray) {
-                    ranges.push_back(rangeVariant.as<float>());
-                }
-            }
-        }
-
-        // Parse gradient flag (optional, default false)
-        bool gradient = doc["gradient"] | false;
-
-        // If no colors parsed, use default warm white
-        if (colors.empty()) {
-            colors.push_back(color(255, 250, 230)); // Warm white
-        }
-
-        return std::make_unique<Show::ColorRanges>(colors, ranges, gradient);
-    });
+    registerShow("Solid", "Static light: one color, or the strip split into sections with optional gradient blending (flags, patterns)", createSolid);
 
     registerShow("Fire", "Flickering flames rising from one end, fed by random sparks and cooling into embers", [](const JsonDocument &doc) {
         float cooling = doc["cooling"] | 0.1f;

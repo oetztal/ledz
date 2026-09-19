@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Build an lcov coverage report from the native test run.
+"""Build an lcov coverage report and a Sonar Generic Coverage XML from the
+native test run.
 
 Run the tests first, then this:
 
@@ -12,17 +13,27 @@ deliberately no "generate automatically after tests" hook: PlatformIO builds
 and runs each test directory in turn, so no SCons action can fire after the
 *last* test binary has run, which is the only point where the .gcda files are
 complete. The previous post-action on a target named "test" never fired at all.
+
+SonarCloud integration note: the CFamily plugin 6.79+ silently ignores
+`sonar.cfamily.coverage.reportPaths`, and the older `sonar.gcov.reportsPath`
+is deprecated. The Generic Coverage XML format
+(<https://docs.sonarsource.com/sonarcloud/advanced-setup/test-coverage/generic-test-data/>)
+is processed by a dedicated sensor that reliably picks up coverage for C++.
+That XML is written next to the LCOV file so the workflow can pass it to
+`-Dsonar.coverageReportPaths`.
 """
 
 import os
 import shutil
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BUILD_DIR = os.path.join(ROOT, ".pio", "build", "native")
 INFO = os.path.join(ROOT, "coverage.info")
 INFO_FILTERED = os.path.join(ROOT, "coverage_filtered.info")
+SONAR_XML = os.path.join(ROOT, "coverage-generic.xml")
 HTML_DIR = os.path.join(ROOT, "coverage_report")
 
 # Apple's clang and gcc both emit data that lcov 2.x flags over. None of these
@@ -50,6 +61,58 @@ def lcov_major():
             except ValueError:
                 continue
     return 1
+
+
+def lcov_to_sonar_xml(lcov_file, xml_file):
+    """Convert an LCOV .info file to Sonar Generic Coverage XML.
+
+    The output paths are relative to the project root so SonarCloud can match
+    them to indexed files regardless of where the runner was invoked.
+    """
+    root = ET.Element("coverage", version="1")
+    file_elem = None
+
+    with open(lcov_file, encoding="utf-8") as f:
+        for raw_line in f:
+            line = raw_line.rstrip()
+            if line.startswith("SF:"):
+                abs_path = line[3:]
+                try:
+                    rel_path = os.path.relpath(abs_path, ROOT)
+                except ValueError:
+                    print(
+                        f"warning: could not compute relative path for '{abs_path}' "
+                        f"(project root: '{ROOT}'); using absolute path",
+                        file=sys.stderr,
+                    )
+                    rel_path = abs_path
+                file_elem = ET.SubElement(root, "file", path=rel_path)
+            elif line.startswith("DA:") and file_elem is not None:
+                parts = line[3:].split(",")
+                if len(parts) < 2:
+                    continue
+                line_number = parts[0]
+                try:
+                    hit_count = int(parts[1])
+                except ValueError:
+                    print(
+                        f"warning: could not parse hit count in DA entry: '{line}'",
+                        file=sys.stderr,
+                    )
+                    continue
+                covered = "true" if hit_count > 0 else "false"
+                ET.SubElement(
+                    file_elem,
+                    "lineToCover",
+                    lineNumber=line_number,
+                    covered=covered,
+                )
+            elif line == "end_of_record":
+                file_elem = None
+
+    tree = ET.ElementTree(root)
+    ET.indent(tree, space="  ")
+    tree.write(xml_file, encoding="unicode", xml_declaration=True)
 
 
 def main():
@@ -120,7 +183,13 @@ def main():
                   capture_output=True, text=True)
     print(summary.stdout.strip() or summary.stderr.strip())
 
+    # Sonar Generic Coverage XML: produced from the filtered LCOV so paths
+    # already match the project root. SonarCloud's CFamily sensor silently
+    # drops `sonar.cfamily.coverage.reportPaths` from 6.79.0 onwards; the
+    # Generic Coverage sensor processes this XML reliably.
+    lcov_to_sonar_xml(INFO_FILTERED, SONAR_XML)
     print(f"\nCoverage report: {os.path.join(HTML_DIR, 'index.html')}")
+    print(f"Sonar coverage XML: {SONAR_XML}")
     return 0
 
 

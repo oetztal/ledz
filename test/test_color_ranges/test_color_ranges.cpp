@@ -44,6 +44,10 @@ public:
     void setBrightness(uint8_t brightness) override {
         // Mock implementation
     }
+
+    [[nodiscard]] ::Strip::Brightness getBrightness() const override {
+        return 255;
+    }
 };
 
 MockStrip* mock_strip;
