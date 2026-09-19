@@ -27,8 +27,7 @@ namespace Show {
 
     void FireState::spread(float spread_rate, float ignition, Strip::PixelIndex spark_range, float spark_amount,
                            const std::vector<float> &weights) {
-        // Copy current state to previous buffer for consistent reads during this frame
-        std::copy(temperature.begin(), temperature.end(), prev_temperature.begin());
+        prev_temperature = temperature;
 
         for (Strip::PixelIndex i = 0; i < length(); i++) {
             float weighted_previous = 0.0f;
