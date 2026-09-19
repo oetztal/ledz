@@ -12,8 +12,8 @@ namespace Show {
     class FireState {
         Strip::PixelIndex _length;
         std::function<float()> randomFloat;
-        std::unique_ptr<float[]> temperature;
-        std::unique_ptr<float[]> prev_temperature;
+        std::vector<float> temperature;
+        std::vector<float> prev_temperature;
 
     public:
         explicit FireState(std::function<float()> randomFloat,
@@ -32,7 +32,7 @@ namespace Show {
         void spread(float spread_rate, float ignition, Strip::PixelIndex spark_range, float spark_amount,
                     const std::vector<float> &weights = {1.0f});
 
-        float get_temperature(Strip::PixelIndex pixel_index) const;
+        [[nodiscard]] float get_temperature(Strip::PixelIndex pixel_index) const;
         void set_temperature(Strip::PixelIndex pixel_index, float value);
     };
 

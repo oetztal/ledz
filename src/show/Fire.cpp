@@ -12,11 +12,8 @@ namespace Show {
     FireState::FireState(std::function<float()> randomFloat, Strip::PixelIndex length) :
         randomFloat(std::move(randomFloat)),
         _length(length),
-        temperature(std::make_unique<float[]>(length)),
-        prev_temperature(std::make_unique<float[]>(length)) {
-        std::fill(temperature.get(), temperature.get() + length, 0.0f);
-        std::fill(prev_temperature.get(), prev_temperature.get() + length, 0.0f);
-    }
+        temperature(std::vector<float>(length, 0.0f)),
+        prev_temperature(std::vector<float>(length, 0.0f)) {}
 
     Strip::PixelIndex FireState::length() const {
         return _length;
@@ -31,7 +28,7 @@ namespace Show {
     void FireState::spread(float spread_rate, float ignition, Strip::PixelIndex spark_range, float spark_amount,
                            const std::vector<float> &weights) {
         // Copy current state to previous buffer for consistent reads during this frame
-        std::copy(temperature.get(), temperature.get() + length(), prev_temperature.get());
+        std::copy(temperature.begin(), temperature.end(), prev_temperature.begin());
 
         for (Strip::PixelIndex i = 0; i < length(); i++) {
             float weighted_previous = 0.0f;

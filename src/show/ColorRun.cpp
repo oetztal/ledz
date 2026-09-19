@@ -34,7 +34,7 @@ namespace Show {
         strip.fill(0x000000);
 
         for (auto state: states) {
-            strip.setPixelColor(state.position(iteration), state.color);
+            strip.setPixelColor(state.position(iteration), state.getColor());
         }
 
         clean_up_state(strip.length(), iteration);
@@ -51,5 +51,9 @@ namespace Show {
 
     Strip::PixelIndex ColorRun::State::position(Iteration iteration) const {
         return speed * (iteration - start);
+    }
+
+    Strip::Color ColorRun::State::getColor() const {
+        return color;
     }
 } // Show

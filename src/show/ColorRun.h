@@ -13,17 +13,18 @@ namespace Show {
         class State {
             Iteration start;
             float speed;
-
-        public:
             Strip::Color color;
 
+        public:
             State(Iteration start, float speed, Strip::Color color)
                 : start(start),
                   speed(speed),
                   color(color) {
             }
 
-            Strip::PixelIndex position(Iteration iteration) const;
+            [[nodiscard]] Strip::PixelIndex position(Iteration iteration) const;
+
+            [[nodiscard]] Strip::Color getColor() const;
         };
 
         std::uniform_int_distribution<> randomPercent;
