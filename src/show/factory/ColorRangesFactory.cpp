@@ -1,7 +1,3 @@
-//
-// Created by Andreas W. on 19.09.26.
-//
-
 #include "show/ColorRanges.h"
 #include "strip/Strip.h"
 
@@ -11,7 +7,7 @@
 
 namespace Show::Factory {
     static void extract_colors_from_array(std::vector<Strip::Color> &colors,
-                                                       const JsonArrayConst &colorArray) {
+                                          const JsonArrayConst &colorArray) {
         auto r = colorArray[0].as<uint8_t>();
         auto g = colorArray[1].as<uint8_t>();
         auto b = colorArray[2].as<uint8_t>();
@@ -19,7 +15,7 @@ namespace Show::Factory {
     }
 
     static void extract_colors_from_json_array(std::vector<Strip::Color> &colors,
-                                                            const JsonArrayConst &colorsArray) {
+                                               const JsonArrayConst &colorsArray) {
         for (JsonVariantConst colorVariant: colorsArray) {
             auto colorArray = colorVariant.as<JsonArrayConst>();
             if (!colorArray.isNull() && colorArray.size() >= 3) {
