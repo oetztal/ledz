@@ -49,6 +49,12 @@ struct FirmwareInfo {
     size_t size = 0;       // File size in bytes
     String changelog;      // Release notes body (capped at 2 KB by parser)
     bool isValid = false;  // True if the struct contains valid data
+
+    FirmwareInfo() = default;
+    FirmwareInfo(const FirmwareInfo&) = default;
+    FirmwareInfo& operator=(const FirmwareInfo&) = default;
+    FirmwareInfo(FirmwareInfo&&) noexcept = default;
+    FirmwareInfo& operator=(FirmwareInfo&&) noexcept = default;
 };
 
 struct Progress {
