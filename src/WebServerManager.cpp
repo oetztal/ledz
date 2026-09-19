@@ -29,42 +29,42 @@
 #include "generated/favicon_gz.h"
 
 // Content type constants
-static const char* CONTENT_TYPE_HTML = "text/html";
-static const char* CONTENT_TYPE_CSS = "text/css";
-static const char* CONTENT_TYPE_SVG = "image/svg+xml";
-static const char* CONTENT_TYPE_JSON = "application/json";
+constexpr static auto CONTENT_TYPE_HTML = "text/html";
+constexpr static auto CONTENT_TYPE_CSS = "text/css";
+constexpr static auto CONTENT_TYPE_SVG = "image/svg+xml";
+constexpr static auto CONTENT_TYPE_JSON = "application/json";
 
 // JSON Key constants
-static const char* JSON_KEY_SUCCESS = "success";
-static const char* JSON_KEY_ERROR = "error";
-static const char* JSON_KEY_VALUE = "value";
-static const char* JSON_KEY_NAME = "name";
-static const char* JSON_KEY_INDEX = "index";
-static const char* JSON_KEY_SHOW_NAME = "show_name";
-static const char* JSON_KEY_PARAMS = "params";
-static const char* JSON_KEY_CURRENT_SHOW = "current_show";
-static const char* JSON_KEY_SHOW_PARAMS = "show_params";
+constexpr static auto JSON_KEY_SUCCESS = "success";
+constexpr static auto JSON_KEY_ERROR = "error";
+constexpr static auto JSON_KEY_VALUE = "value";
+constexpr static auto JSON_KEY_NAME = "name";
+constexpr static auto JSON_KEY_INDEX = "index";
+constexpr static auto JSON_KEY_SHOW_NAME = "show_name";
+constexpr static auto JSON_KEY_PARAMS = "params";
+constexpr static auto JSON_KEY_CURRENT_SHOW = "current_show";
+constexpr static auto JSON_KEY_SHOW_PARAMS = "show_params";
 
 // Common JSON Responses
-static const char* JSON_RESPONSE_SUCCESS = "{\"success\":true}";
-static const char* JSON_RESPONSE_ERROR_QUEUE_FULL = "{\"success\":false,\"error\":\"Queue full\"}";
+constexpr static auto JSON_RESPONSE_SUCCESS = "{\"success\":true}";
+constexpr static auto JSON_RESPONSE_ERROR_QUEUE_FULL = "{\"success\":false,\"error\":\"Queue full\"}";
 
-static const char* TAG = "http";
+constexpr static auto TAG = "http";
 
 // API Paths
-static const char* API_PATH_WIFI = "/api/wifi";
-static const char* API_PATH_STATUS = "/api/status";
-static const char* API_PATH_SHOWS = "/api/shows";
-static const char* API_PATH_SHOW = "/api/show";
-static const char* API_PATH_BRIGHTNESS = "/api/brightness";
-static const char* API_PATH_LAYOUT = "/api/layout";
-static const char* API_PATH_PRESETS = "/api/presets";
-static const char* API_PATH_PRESETS_LOAD = "/api/presets/load";
-static const char* API_PATH_TIMERS = "/api/timers";
-static const char* API_PATH_RESTART = "/api/restart";
-static const char* API_PATH_RESET = "/api/reset";
-static const char* API_PATH_OTA_CHECK = "/api/ota/check";
-static const char* API_PATH_OTA_UPDATE = "/api/ota/update";
+constexpr static auto API_PATH_WIFI = "/api/wifi";
+constexpr static auto API_PATH_STATUS = "/api/status";
+constexpr static auto API_PATH_SHOWS = "/api/shows";
+constexpr static auto API_PATH_SHOW = "/api/show";
+constexpr static auto API_PATH_BRIGHTNESS = "/api/brightness";
+constexpr static auto API_PATH_LAYOUT = "/api/layout";
+constexpr static auto API_PATH_PRESETS = "/api/presets";
+constexpr static auto API_PATH_PRESETS_LOAD = "/api/presets/load";
+constexpr static auto API_PATH_TIMERS = "/api/timers";
+constexpr static auto API_PATH_RESTART = "/api/restart";
+constexpr static auto API_PATH_RESET = "/api/reset";
+constexpr static auto API_PATH_OTA_CHECK = "/api/ota/check";
+constexpr static auto API_PATH_OTA_UPDATE = "/api/ota/update";
 #endif
 
 // Helper functions to send gzipped responses
