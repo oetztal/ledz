@@ -8,7 +8,7 @@ The timers page currently shows two adjacent sections that do the same thing: "Q
 - Delete the standalone "Quick Off Timer" section.
 - Inside the Countdown timer section, add a row of four secondary-style preset buttons (15 min, 30 min, 1 hour, 2 hours) above the existing form fields.
 - Change the preset buttons from one-click submit to pre-fill: each click writes the duration (in minutes) into the form's `countdownMinutes` input, sets the action to "Turn Off LEDs", hides the preset selector and focuses the duration input. The form's existing "Set Countdown Timer" submit button remains the only path that actually creates a timer.
-- Rename the `setQuickTimer(seconds)` JS helper to `applyCountdownPreset(seconds)` so the name matches its new pre-fill semantics.
+- Rename the `setQuickTimer(seconds)` JS helper to `applyCountdownPreset(minutes)` so the name matches its new pre-fill semantics.
 
 ## Capabilities
 

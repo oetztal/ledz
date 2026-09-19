@@ -7,7 +7,7 @@
 
 ## 2. Update timers.html JavaScript
 
-- [x] 2.1 Replace the body of `setQuickTimer(seconds)` with `applyCountdownPreset(seconds)` whose body sets `countdownMinutes.value = seconds / 60`, sets `countdownAction.value = "off"`, sets `countdownPresetGroup.style.display = "none"`, then calls `countdownMinutes.focus()` and `countdownMinutes.select()`.
+- [x] 2.1 Replace the body of `setQuickTimer(seconds)` with `applyCountdownPreset(minutes)` whose body sets `countdownMinutes.value = minutes`, sets `countdownAction.value = "off"`, sets `countdownPresetGroup.style.display = "none"`, then calls `countdownMinutes.focus()` and `countdownMinutes.select()`.
 - [x] 2.2 Leave `setCustomCountdown` unchanged: it remains the only path that POSTs to `/api/timers/countdown`.
 
 ## 3. Verify

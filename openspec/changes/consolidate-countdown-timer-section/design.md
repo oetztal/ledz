@@ -54,7 +54,7 @@ This change touches one HTML file. No backend, no payload, no scheduling semanti
 
 ### Decision 4: Rename `setQuickTimer` to `applyCountdownPreset`
 
-**Chosen:** Rename the JS helper to `applyCountdownPreset(seconds)`.
+**Chosen:** Rename the JS helper to `applyCountdownPreset(minutes)`.
 
 **Considered:** Keep the existing name.
 

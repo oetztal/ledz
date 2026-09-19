@@ -418,12 +418,12 @@
 
         // Pre-fill the countdown form from a preset row click. Does not submit:
         // the user still has to press "Set Countdown Timer" to actually arm it.
-        function applyCountdownPreset(seconds) {
+        function applyCountdownPreset(minutes) {
             const minutesInput = document.getElementById('countdownMinutes');
             const actionSelect = document.getElementById('countdownAction');
             const presetGroup = document.getElementById('countdownPresetGroup');
 
-            minutesInput.value = seconds / 60;
+            minutesInput.value = minutes;
             actionSelect.value = 'off';
             presetGroup.style.display = 'none';
 
