@@ -6,7 +6,7 @@
 #include "Log.h"
 #include "Network.h"
 #include "ShowController.h"
-#include "ShowFactory.h"
+#include "show/factory/ShowFactory.h"
 #include "DeviceId.h"
 #include "OTAUpdater.h"
 #include "OTAConfig.h"
@@ -216,7 +216,7 @@ void WebServerManager::setupAPIRoutes() {
         JsonDocument doc;
         JsonArray shows = doc["shows"].to<JsonArray>();
 
-        const std::vector<ShowFactory::ShowInfo> &showList = showController.listShows();
+        const std::vector<Show::Factory::ShowFactory::ShowInfo> &showList = showController.listShows();
         for (const auto &showInfo: showList) {
             JsonObject show = shows.add<JsonObject>();
             show[JSON_KEY_NAME] = showInfo.name;

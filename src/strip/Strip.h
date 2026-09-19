@@ -16,9 +16,9 @@ namespace Strip {
 
         virtual void fill(Color color) = 0;
 
-        virtual void setPixelColor(PixelIndex pixel_index, Color color);
+        virtual void setPixelColor(PixelIndex pixel_index, Color color) = 0;
 
-        [[nodiscard]] virtual Color getPixelColor(PixelIndex pixel_index) const;
+        [[nodiscard]] virtual Color getPixelColor(PixelIndex pixel_index) const = 0;
 
         [[nodiscard]] virtual PixelIndex length() const = 0;
 
@@ -26,7 +26,7 @@ namespace Strip {
 
         virtual void setBrightness(Brightness brightness) = 0;
 
-        [[nodiscard]] virtual Brightness getBrightness() const;
+        [[nodiscard]] virtual Brightness getBrightness() const = 0;
     };
 }
 

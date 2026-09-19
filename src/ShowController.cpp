@@ -13,7 +13,7 @@ static constexpr size_t SHOW_COMMAND_QUEUE_SIZE = 5;
 
 static const char* TAG = "ctrl";
 
-ShowController::ShowController(ShowFactory &factory, Config::ConfigManager &config)
+ShowController::ShowController(Show::Factory::ShowFactory &factory, Config::ConfigManager &config)
     : factory(factory), config(config), brightness(128),
       layout(), baseStrip()
 #ifdef ARDUINO
@@ -370,7 +370,7 @@ ShowController::~ShowController() {
 #endif
 }
 
-const std::vector<ShowFactory::ShowInfo> &ShowController::listShows() const {
+const std::vector<Show::Factory::ShowFactory::ShowInfo> &ShowController::listShows() const {
     return factory.listShows();
 }
 

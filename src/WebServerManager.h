@@ -18,7 +18,6 @@ namespace Config {
 
 class Network;
 class ShowController;
-class ShowFactory;
 
 class AccessLogger : public AsyncMiddleware {
 public:

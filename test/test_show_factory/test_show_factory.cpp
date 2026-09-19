@@ -1,5 +1,5 @@
 #include "unity.h"
-#include "ShowFactory.h"
+#include "show/factory/ShowFactory.h"
 #include "color.h"
 #include "../MockStrip.h"
 #include <chrono>
@@ -8,6 +8,8 @@
 #include <string>
 #include <thread>
 #include <vector>
+
+using Show::Factory::ShowFactory;
 
 // Exercises ShowFactory through its real JSON entry point, createShow(name,
 // paramsJson). Before the ArduinoJson v7 migration ShowFactory was excluded
@@ -73,8 +75,7 @@ static void renderAll() {
     std::vector<std::unique_ptr<Show::Show>> shows;
     std::vector<std::string> labels;
 
-    // Phase 1: construct and execute once. The first execute() is what builds
-    // the SmoothBlend and stamps its start_time, so all blends start together.
+    // Phase 1: construct all shows.
     for (const auto &entry: scenarios) {
         auto strip = std::unique_ptr<MockStrip>(new MockStrip(entry.second.pixelCount));
         auto show = entry.second.params.empty()
@@ -83,19 +84,28 @@ static void renderAll() {
         if (show == nullptr) {
             continue;  // asserted separately; skip rather than crash here
         }
-        show->execute(*strip, 0);
         labels.push_back(entry.first);
         shows.push_back(std::move(show));
         strips.push_back(std::move(strip));
     }
 
+    // Phase 1b: execute once in a tight loop. The first execute() is what builds
+    // the SmoothBlend and stamps its start_time, so all blends start together.
+    for (size_t i = 0; i < shows.size(); i++) {
+        shows[i]->execute(*strips[i], 0);
+    }
+
     // Phase 2: one sleep for all of them.
     std::this_thread::sleep_for(std::chrono::milliseconds(SETTLE_MS));
 
-    // Phase 3: one more step, now near the end of the blend, so each strip
+    // Phase 3: one more step in a tight loop, now near the end of the blend, so each strip
     // holds its target colour scaled by the shared remaining progress.
     for (size_t i = 0; i < shows.size(); i++) {
         shows[i]->execute(*strips[i], 1);
+    }
+
+    // Phase 4: read back captured pixels.
+    for (size_t i = 0; i < shows.size(); i++) {
         std::vector<Strip::Color> pixels;
         for (Strip::PixelIndex p = 0; p < strips[i]->length(); p++) {
             pixels.push_back(strips[i]->getPixelColor(p));

@@ -1,18 +1,14 @@
 // ShowFactory - Manages show registration and creation
 //
 
-#ifndef LEDZ_SHOWFACTORY_H
-#define LEDZ_SHOWFACTORY_H
+#ifndef LEDZ_SHOW_FACTORY_SHOWFACTORY_H
+#define LEDZ_SHOW_FACTORY_SHOWFACTORY_H
 
 #include <map>
 #include <vector>
 #include <functional>
 #include <memory>
 #include <string>
-
-// ArduinoJson is unconditional: ShowConstructor names JsonDocument in this
-// header's public interface, so guarding the include never made the header
-// self-contained on non-Arduino builds — it only deferred the error.
 #include <ArduinoJson.h>
 
 #ifdef ARDUINO
@@ -21,18 +17,17 @@
 
 #include "show/Show.h"
 #include "Config.h"
+#include "ColorRangesFactory.h"
 
-/**
- * ShowFactory
- * Factory pattern for creating LED shows by name
- * Supports show registration and parameter parsing
- */
+namespace Show::Factory {
+
 class ShowFactory {
+
 public:
     /**
      * Show constructor function type that takes JSON parameters
      */
-    using ShowConstructor = std::function<std::unique_ptr<Show::Show>(const JsonDocument &)>;
+    using ShowConstructor = std::function<std::unique_ptr<Show>(const JsonDocument &)>;
 
     /**
      * Show metadata for listing available shows
@@ -65,7 +60,7 @@ public:
      * @param name Show name
      * @return Show instance (caller owns pointer) or nullptr if not found
      */
-    std::unique_ptr<Show::Show> createShow(const std::string &name);
+    std::unique_ptr<Show> createShow(const std::string &name);
 
     /**
      * Create a show by name with JSON parameters
@@ -73,7 +68,7 @@ public:
      * @param paramsJson JSON string with parameters (e.g., {"r":255,"g":0,"b":0})
      * @return Show instance (caller owns pointer) or nullptr if not found
      */
-    std::unique_ptr<Show::Show> createShow(const std::string &name, const std::string &paramsJson);
+    std::unique_ptr<Show> createShow(const std::string &name, const std::string &paramsJson);
 
     /**
      * Get list of all registered shows
@@ -89,4 +84,6 @@ public:
     bool hasShow(const std::string &name) const;
 };
 
-#endif //LEDZ_SHOWFACTORY_H
+} // namespace Show::Factory
+
+#endif //LEDZ_SHOW_FACTORY_SHOWFACTORY_H
