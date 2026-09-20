@@ -296,13 +296,13 @@ void test_gradient_flag_changes_the_result() {
 
 // --- Wave parameter parsing -------------------------------------------------
 
-void test_wave_parses_all_three_parameters_from_json() {
+void test_wave_parses_all_parameters_from_json() {
     // The show exposes no accessors for its parsed parameters, so verify
     // behaviourally: Wave with decay_rate=8.0 must produce a much darker strip
     // than Wave with the default decay_rate=2.0, because brightness decays
     // exponentially from the source.
     const std::string params =
-        R"({"decay_rate":8.0,"brightness_frequency":0.1,"wavelength":6.0})";
+        R"({"decay_rate":8.0,"brightness_frequency":0.1})";
 
     auto fast = factory->createShow("Wave", params);
     auto slow = factory->createShow("Wave", "{}");
@@ -333,17 +333,18 @@ void test_wave_parses_all_three_parameters_from_json() {
 }
 
 void test_wave_partial_parameters_use_defaults() {
-    // Only wavelength supplied; decay_rate and brightness_frequency default.
-    auto show = factory->createShow("Wave", R"({"wavelength":12.0})");
+    // Only brightness_frequency supplied; mode and decay_rate default.
+    auto show = factory->createShow("Wave", R"({"brightness_frequency":0.2})");
     TEST_ASSERT_NOT_NULL(show.get());
 }
 
-void test_wave_ignores_wave_speed_legacy_field() {
-    // wave_speed is no longer accepted: extra legacy field must not break
-    // construction, and the resulting pixels must match a default-config run
-    // because the three real parameters all default to the same values.
+void test_wave_ignores_legacy_fields() {
+    // wave_speed and wavelength are no longer accepted: extra legacy fields
+    // must not break construction, and the resulting pixels must match a
+    // default-config run because the remaining real parameters all default
+    // to the same values.
     auto with_legacy = factory->createShow("Wave",
-        R"({"wave_speed":5.0,"wavelength":6.0})");
+        R"({"wave_speed":5.0,"wavelength":12.0,"decay_rate":2.0,"brightness_frequency":0.1})");
     auto with_defaults = factory->createShow("Wave", "{}");
     TEST_ASSERT_NOT_NULL(with_legacy.get());
     TEST_ASSERT_NOT_NULL(with_defaults.get());
@@ -356,22 +357,20 @@ void test_wave_ignores_wave_speed_legacy_field() {
     for (Strip::PixelIndex i = 0; i < 20; i++) {
         TEST_ASSERT_EQUAL_HEX32_MESSAGE(strip_b.getPixelColor(i),
                                         strip_a.getPixelColor(i),
-                                        "wave_speed should be silently ignored");
+                                        "wave_speed and wavelength should be silently ignored");
     }
 }
 
-void test_wave_parses_mode_from_json() {
-    // Show exposes no accessor for its parsed mode, so the test verifies it
-    // behaviourally: a Wave built with mode="traveling" must produce a
-    // rendered strip that differs from a Wave built with mode="bounce"
-    // when both are advanced past t=0. (At t=0 both happen to write the
-    // same first frame because source position and hue start out the same
-    // and the wave phase differs only by a constant — the strip only
-    // becomes visibly different once the time term accumulates.)
+void test_wave_bounce_and_traveling_modes_are_identical() {
+    // Both modes are accepted by the JSON contract but currently produce
+    // identical output (the wavelength-based stripe layer they used to
+    // differentiate was removed). A Wave built with mode="traveling" must
+    // produce a rendered strip identical to a Wave built with mode="bounce"
+    // when both are advanced past t=0.
     const std::string traveling_params =
-        R"({"mode":"traveling","decay_rate":2.0,"brightness_frequency":0.1,"wavelength":6.0})";
+        R"({"mode":"traveling","decay_rate":2.0,"brightness_frequency":0.1})";
     const std::string bouncing_params =
-        R"({"mode":"bounce","decay_rate":2.0,"brightness_frequency":0.1,"wavelength":6.0})";
+        R"({"mode":"bounce","decay_rate":2.0,"brightness_frequency":0.1})";
 
     auto traveling = factory->createShow("Wave", traveling_params);
     auto bouncing = factory->createShow("Wave", bouncing_params);
@@ -385,14 +384,11 @@ void test_wave_parses_mode_from_json() {
         bouncing->execute(strip_b, t);
     }
 
-    int differing_pixels = 0;
     for (Strip::PixelIndex i = 0; i < 60; i++) {
-        if (strip_t.getPixelColor(i) != strip_b.getPixelColor(i)) {
-            differing_pixels++;
-        }
+        TEST_ASSERT_EQUAL_HEX32_MESSAGE(strip_b.getPixelColor(i),
+                                        strip_t.getPixelColor(i),
+                                        "bounce and traveling modes must produce identical pixels");
     }
-    TEST_ASSERT_TRUE_MESSAGE(differing_pixels > 10,
-                             "mode=\"traveling\" produced output too similar to mode=\"bounce\"");
 }
 
 void test_wave_unknown_mode_falls_back_to_bounce() {
@@ -438,10 +434,10 @@ int runUnityTests() {
     RUN_TEST(test_many_colors_are_all_parsed);
     RUN_TEST(test_gradient_flag_changes_the_result);
 
-    RUN_TEST(test_wave_parses_all_three_parameters_from_json);
+    RUN_TEST(test_wave_parses_all_parameters_from_json);
     RUN_TEST(test_wave_partial_parameters_use_defaults);
-    RUN_TEST(test_wave_ignores_wave_speed_legacy_field);
-    RUN_TEST(test_wave_parses_mode_from_json);
+    RUN_TEST(test_wave_ignores_legacy_fields);
+    RUN_TEST(test_wave_bounce_and_traveling_modes_are_identical);
     RUN_TEST(test_wave_unknown_mode_falls_back_to_bounce);
 
     return UNITY_END();

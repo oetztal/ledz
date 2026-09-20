@@ -21,7 +21,7 @@
 #include <memory>
 #include <new>
 
-static const char* TAG = "ota";
+constexpr static const char* TAG = "ota";
 
 #ifdef ARDUINO
 #include <esp_http_client.h>

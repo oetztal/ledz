@@ -227,11 +227,6 @@
                         <input type="number" id="waveBrightnessFreq" step="0.01" min="0.01" max="1" value="0.1">
                         <small id="waveBrightnessFreqHint" style="display:block; margin-top:4px; color:#666;">Bounces per second</small>
                     </div>
-                    <div class="param-row">
-                        <label class="param-label" for="waveWavelength">Wavelength</label>
-                        <input type="number" id="waveWavelength" step="0.5" min="1" max="20" value="6.0">
-                        <small style="display:block; margin-top:4px; color:#666;">Higher = longer, more spread out waves</small>
-                    </div>
                     <button class="apply-button" onclick="applyWaveParams()">Apply Parameters</button>
                 </div>
 
@@ -649,16 +644,14 @@
 
         // Update the help text under the brightness-frequency input to match the
         // selected Wave mode. The hint id is stable so the same element is
-        // re-targeted regardless of which mode is currently shown.
+        // re-targeted regardless of which mode is currently shown. Both modes
+        // render identically today (the wavelength-based stripe layer they
+        // used to differentiate was removed), so the hint just describes the
+        // shared behaviour.
         function updateWaveBrightnessFreqHint() {
             const hint = document.getElementById('waveBrightnessFreqHint');
             if (!hint) return;
-            const mode = document.getElementById('waveMode').value;
-            if (mode === 'traveling') {
-                hint.textContent = 'Phase cycles per second — drift = freq × wavelength px/s';
-            } else {
-                hint.textContent = 'Bounces per second';
-            }
+            hint.textContent = 'Bounces per second';
         }
 
         // Apply Wave parameters
@@ -666,7 +659,6 @@
             const mode = document.getElementById('waveMode').value;
             const decay_rate = parseFloat(document.getElementById('waveDecay').value);
             const brightness_frequency = parseFloat(document.getElementById('waveBrightnessFreq').value);
-            const wavelength = parseFloat(document.getElementById('waveWavelength').value);
 
             try {
                 pendingParameterConfig = true;
@@ -675,7 +667,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         name: 'Wave',
-                        params: { mode, decay_rate, brightness_frequency, wavelength }
+                        params: { mode, decay_rate, brightness_frequency }
                     })
                 });
                 pendingParameterConfig = false;  // Applied successfully
@@ -895,7 +887,6 @@
                     }
                     if (params.decay_rate !== undefined) document.getElementById('waveDecay').value = params.decay_rate;
                     if (params.brightness_frequency !== undefined) document.getElementById('waveBrightnessFreq').value = params.brightness_frequency;
-                    if (params.wavelength !== undefined) document.getElementById('waveWavelength').value = params.wavelength;
                     break;
 
                 case 'MorseCode':
@@ -1054,9 +1045,9 @@
             setStripOff(e.currentTarget);
         });
 
-        // Wave mode dropdown swaps the brightness-frequency hint text between
-        // bounces/sec (Bounce) and phase cycles/sec (Traveling). Only the hint
-        // changes; the numeric input itself is shared.
+        // Wave mode dropdown swaps the brightness-frequency hint text. Both
+        // modes render identically today, so the hint just confirms the
+        // shared behaviour; the numeric input itself is shared.
         document.getElementById('waveMode').addEventListener('change', () => {
             updateWaveBrightnessFreqHint();
         });
