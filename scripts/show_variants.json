@@ -193,7 +193,7 @@
         "params": {}
       },
       {
-        "name": "static",
+        "name": "timefreeze",
         "label": "Frozen in time",
         "params": {
           "time_step": 0,
@@ -209,7 +209,7 @@
         }
       },
       {
-        "name": "static",
+        "name": "spacefreeze",
         "label": "Frozen in space",
         "params": {
           "time_step": 1,
