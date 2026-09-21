@@ -47,8 +47,8 @@
       },
       {
         "name": "cool",
-        "label": "Cool blue stars",
-        "params": { "r": 80, "g": 160, "b": 255 }
+        "label": "Cool blue sparks",
+        "params": { "r": 80, "g": 160, "b": 255 , "hold_time":  100, "fade_time": 300}
       }
     ]
   },
@@ -146,8 +146,8 @@
     "variants": [
       {
         "name": "hello",
-        "label": "HELLO",
-        "params": { "message": "HELLO" }
+        "label": "HELLO WORLD",
+        "params": { "message": "HELLO WORLD" }
       },
       {
         "name": "sos",
