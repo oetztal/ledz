@@ -316,27 +316,75 @@
         "params": {}
       },
       {
-        "name": "classic",
-        "label": "Classic full view",
+        "name": "overview",
+        "label": "Whole Set Overview",
         "params": {
           "Cre0": -2.0,
           "Cim0": -1.2,
           "Cim1": 1.2,
-          "scale": 3,
-          "max_iterations": 100,
-          "color_scale": 3
+          "scale": 4,
+          "max_iterations": 40,
+          "color_scale": 4
         }
       },
       {
-        "name": "zoom",
-        "label": "Seahorse-valley zoom",
+        "name": "mini-mandelbrot",
+        "label": "Mini Mandelbrot in colorful surround",
         "params": {
-          "Cre0": -0.745,
-          "Cim0": 0.15,
-          "Cim1": -0.15,
-          "scale": 1,
-          "max_iterations": 150,
-          "color_scale": 4
+          "Cre0": -1.809,
+          "Cim0": -0.04,
+          "Cim1": 0.04,
+          "scale": 5,
+          "max_iterations": 80,
+          "color_scale": 6
+        }
+      },
+      {
+        "name": "elephant-valley",
+        "label": "Elephant Valley tendrils",
+        "params": {
+          "Cre0": -0.355,
+          "Cim0": 0.6,
+          "Cim1": 0.8,
+          "scale": 5,
+          "max_iterations": 80,
+          "color_scale": 6
+        }
+      },
+      {
+        "name": "starfield",
+        "label": "Star Field (right of the set, all color)",
+        "params": {
+          "Cre0": 0.2,
+          "Cim0": -0.15,
+          "Cim1": 0.15,
+          "scale": 5,
+          "max_iterations": 50,
+          "color_scale": 8
+        }
+      },
+      {
+        "name": "spiral-arms",
+        "label": "Spiral Arms filaments",
+        "params": {
+          "Cre0": -0.18,
+          "Cim0": 0.62,
+          "Cim1": 0.74,
+          "scale": 5,
+          "max_iterations": 70,
+          "color_scale": 8
+        }
+      },
+      {
+        "name": "seahorse-edge",
+        "label": "Seahorse Edge",
+        "params": {
+          "Cre0": -0.768,
+          "Cim0": 0.099,
+          "Cim1": 0.131,
+          "scale": 5,
+          "max_iterations": 100,
+          "color_scale": 8
         }
       }
     ]

@@ -60,6 +60,20 @@
                 <!-- Parameter controls (shown based on selected show) -->
                 <div id="mandelbrotParams" class="params-section">
                     <div class="param-row">
+                        <label class="param-label" for="mandelbrotPreset">Preset</label>
+                        <select id="mandelbrotPreset" onchange="loadMandelbrotPreset(this.value)">
+                            <option value="">-- select a preset --</option>
+                            <option value="default">&#128312; Default (factory)</option>
+                            <option value="overview">&#127760; Whole Set Overview</option>
+                            <option value="mini">&#127754; Mini Mandelbrot</option>
+                            <option value="elephant">&#128024; Elephant Valley</option>
+                            <option value="starfield">&#11088; Star Field</option>
+                            <option value="spiral">&#128736; Spiral Arms</option>
+                            <option value="seahorse">&#128009; Seahorse Edge</option>
+                        </select>
+                        <small style="display:block; margin-top:4px; color:#666;">Picked to keep the dark Mandelbrot-set interior small. Click "Apply Parameters" to use.</small>
+                    </div>
+                    <div class="param-row">
                         <label class="param-label" for="mandelbrotCre0">Cre0 (Real min)</label>
                         <input type="number" id="mandelbrotCre0" step="0.01" value="-1.05">
                     </div>
@@ -377,6 +391,29 @@
             } else if (showName === 'Rainbow') {
                 document.getElementById('rainbowParams').classList.add('visible');
             }
+        }
+
+        // Mandelbrot presets - locations tuned to minimize black (inside-set) pixels
+        const mandelbrotPresets = {
+            default:   { Cre0: -1.05,   Cim0: -0.3616, Cim1: -0.3156, scale: 5, max_iterations: 50,  color_scale: 10 },
+            overview:  { Cre0: -2.0,   Cim0: -1.2,  Cim1: 1.2,   scale: 4, max_iterations: 40,  color_scale: 4 },
+            mini:      { Cre0: -1.809, Cim0: -0.04, Cim1: 0.04,  scale: 5, max_iterations: 80,  color_scale: 6 },
+            elephant:  { Cre0: -0.355, Cim0: 0.6,   Cim1: 0.8,   scale: 5, max_iterations: 80,  color_scale: 6 },
+            starfield: { Cre0: 0.2,    Cim0: -0.15, Cim1: 0.15,  scale: 5, max_iterations: 50,  color_scale: 8 },
+            spiral:    { Cre0: -0.18,  Cim0: 0.62,  Cim1: 0.74,  scale: 5, max_iterations: 70,  color_scale: 8 },
+            seahorse:  { Cre0: -0.768, Cim0: 0.099, Cim1: 0.131, scale: 5, max_iterations: 100, color_scale: 8 }
+        };
+
+        function loadMandelbrotPreset(value) {
+            if (!value) return;
+            const p = mandelbrotPresets[value];
+            if (!p) return;
+            document.getElementById('mandelbrotCre0').value = p.Cre0;
+            document.getElementById('mandelbrotCim0').value = p.Cim0;
+            document.getElementById('mandelbrotCim1').value = p.Cim1;
+            document.getElementById('mandelbrotScale').value = p.scale;
+            document.getElementById('mandelbrotMaxIter').value = p.max_iterations;
+            document.getElementById('mandelbrotColorScale').value = p.color_scale;
         }
 
         // Apply Mandelbrot parameters
@@ -904,6 +941,7 @@
                     break;
 
                 case 'Mandelbrot':
+                    document.getElementById('mandelbrotPreset').value = '';
                     if (params.Cre0 !== undefined) document.getElementById('mandelbrotCre0').value = params.Cre0;
                     if (params.Cim0 !== undefined) document.getElementById('mandelbrotCim0').value = params.Cim0;
                     if (params.Cim1 !== undefined) document.getElementById('mandelbrotCim1').value = params.Cim1;
