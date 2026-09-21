@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <sstream>
 
 #include "Mandelbrot.h"
@@ -29,7 +30,7 @@ namespace Show {
     }
 
     void Mandelbrot::execute(Strip::Strip &strip, Iteration iteration) {
-        float cDelta = abs(c_im_max - c_im_min) / strip.length();
+        float cDelta = std::abs(c_im_max - c_im_min) / strip.length();
 
         auto j = iteration % (strip.length() * scale);
         float cre = c_re_min + (cDelta / scale) * j;
