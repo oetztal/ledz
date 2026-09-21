@@ -11,6 +11,7 @@ __pycache__
 src/generated/
 
 docs/show_previews
+docs/*.html
 
 # Coverage output (scripts/coverage_report.py)
 coverage.info

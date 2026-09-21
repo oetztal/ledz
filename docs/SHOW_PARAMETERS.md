@@ -261,7 +261,7 @@ In gradient mode, colors are treated as evenly-spaced waypoints across the strip
 ### Wave
 **Behavior**: A rainbow source that bounces smoothly between the two ends of the strip using a cosine motion. Wavefronts are emitted in the source's current direction; when the source reverses at an end, the wavefronts it previously emitted keep propagating in the other direction, so the strip fills with overlapping wavefronts that self-interfere. Brightness decays exponentially with distance from the (moving) source, so the whole strip is meaningfully lit at all times. Each pixel's hue is determined by the time at which the wavefront currently sitting on it was emitted by the source, producing a rainbow that drifts as wavefronts age.
 
-Two modes are accepted by the JSON contract (`bounce` and `traveling`) but currently produce identical output — the wavelength-based stripe layer they used to differentiate was removed to match the reference implementation in `scripts/wave_show.py`. The mode parameter is kept for future expansion.
+Two modes are accepted by the JSON contract (`bounce` and `traveling`) but currently produce identical output — the wavelength-based stripe layer they used to differentiate was removed to match the reference implementation in `scripts/build_pages.py`. The mode parameter is kept for future expansion.
 
 **Parameters**:
 - `mode` (string, default: `"bounce"`): Phase mode, either `"bounce"` or `"traveling"`. Currently a no-op — both modes render identically. Unknown values fall back to `"bounce"`.
@@ -539,7 +539,7 @@ Monitor serial output to verify parameters are being parsed correctly.
 
 ## Host-side simulation and preview
 
-`scripts/wave_show.py` produces a PNG preview of any registered show by
+`scripts/build_pages.py` produces a PNG preview of any registered show by
 driving the same C++ source that runs on the device against a host-only
 `MockStrip` (see `docs/SHOW_PREVIEWS.md` for the full story). The script's
 `--list` flag reads the show list from the live `ShowFactory` registration,

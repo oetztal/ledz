@@ -17,7 +17,7 @@ namespace Show {
      * Two modes are accepted by the JSON contract (Bounce, Traveling) but
      * currently produce identical output - the wavelength-based stripe layer
      * they used to differentiate was removed to match the reference
-     * implementation in scripts/wave_show.py, and no replacement modulation
+     * implementation in scripts/build_pages.py, and no replacement modulation
      * has been added. The mode parameter is kept for future expansion.
      */
     enum class WaveMode { Bounce, Traveling };

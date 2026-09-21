@@ -71,18 +71,24 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pages-pio-
 
-      - name: Install PlatformIO
+      - name: Install PlatformIO and Markdown
         run: |
           python -m pip install --upgrade pip
           pip install platformio
+          pip install markdown
 
       - name: Build show simulator
         run: pio run -e native_show_sim
 
-      - name: Render preview gallery
+      - name: Render preview gallery and site pages
         env:
           SEED: ${{ github.event.inputs.seed || '42' }}
-        run: python3 scripts/wave_show.py --all docs/show_previews --seed "$SEED"
+        run: |
+          python3 scripts/build_pages.py \
+            --all docs/show_previews \
+            --seed "$SEED" \
+            --landing \
+            --readme README.md
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

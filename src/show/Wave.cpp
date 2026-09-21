@@ -40,7 +40,7 @@ namespace Show {
             // source and decays symmetrically toward both ends. The envelope
             // is the only spatial modulation - the wavelength-based |sin(phase)|
             // layer that used to sit on top of it was removed to match the
-            // reference implementation in scripts/wave_show.py.
+            // reference implementation in scripts/build_pages.py.
             float distance = static_cast<float>(i) - source_pos;
             float abs_distance = fabsf(distance);
             float envelope = expf(-decay_rate * abs_distance * inv_num_leds);
