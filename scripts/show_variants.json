@@ -377,7 +377,7 @@
           "Cim0": 0.5780971139366687,
           "Cim1": 0.5781394701627564,
           "scale": 5,
-          "max_iterations": 100,
+          "max_iterations": 1000,
           "color_scale": 10
         }
       },
@@ -390,7 +390,7 @@
           "Cim0": 0.5806524876727829,
           "Cim1": 0.5812713680048681,
           "scale": 5,
-          "max_iterations": 100,
+          "max_iterations": 1000,
           "color_scale": 10
         }
       }
