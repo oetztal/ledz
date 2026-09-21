@@ -2,7 +2,7 @@
 #include "strip/Strip.h"
 
 #include "ColorRangesFactory.h"
-#include "color.h"
+#include "../../support/color.h"
 
 
 namespace Show::Factory {
@@ -11,7 +11,7 @@ namespace Show::Factory {
         auto r = colorArray[0].as<uint8_t>();
         auto g = colorArray[1].as<uint8_t>();
         auto b = colorArray[2].as<uint8_t>();
-        colors.push_back(color(r, g, b));
+        colors.push_back(Support::Color::from_rgb(r, g, b));
     }
 
     static void extract_colors_from_json_array(std::vector<Strip::Color> &colors,
@@ -42,7 +42,7 @@ namespace Show::Factory {
 
     static void set_default_if_empty(std::vector<Strip::Color> &colors) {
         if (colors.empty()) {
-            colors.push_back(color(255, 250, 230)); // Warm white
+            colors.push_back(Support::Color::from_rgb(255, 250, 230)); // Warm white
         }
     }
 

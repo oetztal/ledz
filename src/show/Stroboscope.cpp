@@ -1,5 +1,5 @@
 #include "Stroboscope.h"
-#include "../color.h"
+#include "../support/color.h"
 
 namespace Show {
     Stroboscope::Stroboscope(uint8_t r, uint8_t g, uint8_t b,
@@ -18,11 +18,11 @@ namespace Show {
         // Check if we're in the "on" phase
         if (cycle_position < on_cycles) {
             // Flash the color
-            Strip::Color flash_color = color(r, g, b);
+            Strip::Color flash_color = Support::Color::from_rgb(r, g, b);
             strip.fill(flash_color);
         } else {
             // Stay black
-            Strip::Color black = color(0, 0, 0);
+            Strip::Color black = Support::Color::from_rgb(0, 0, 0);
             strip.fill(black);
         }
 

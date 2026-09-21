@@ -7,7 +7,7 @@
 #include <USBCDC.h>
 #endif
 
-#include "color.h"
+#include "../support/color.h"
 
 static const char* TAG = "show";
 
@@ -55,7 +55,7 @@ namespace Show {
 
             Strip::Color color;
             if (iterations < max_iterations) {
-                color = wheel((iterations * color_scale) % 255);
+                color = Support::Color::wheel((iterations * color_scale) % 255);
             } else {
                 color = 0x000000;
             }

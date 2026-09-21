@@ -1,4 +1,4 @@
-#include "color.h"
+#include "../support/color.h"
 #include "Rainbow.h"
 
 namespace Show {
@@ -11,7 +11,7 @@ namespace Show {
             float hue_position = static_cast<float>(iteration) * time_step
                                + static_cast<float>(index) * pixel_step;
 
-            strip.setPixelColor(index, wheel(hue_position));
+            strip.setPixelColor(index, Support::Color::wheel(hue_position));
         }
     }
 }

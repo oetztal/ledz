@@ -1,5 +1,5 @@
 #include "Wave.h"
-#include "../color.h"
+#include "../support/color.h"
 #include <cmath>
 
 #ifndef M_PI
@@ -49,15 +49,15 @@ namespace Show {
             // pixel i was emitted. The wavefront at pixel i was emitted about
             // |i - source_pos| / propagation_speed seconds ago.
             float emission_time = color_time - abs_distance / propagation_speed;
-            Strip::Color pixel_color = wheel(emission_time * 20.0f);
+            Strip::Color pixel_color = Support::Color::wheel(emission_time * 20.0f);
 
             float final_brightness = source_brightness * envelope;
 
-            uint8_t r = static_cast<uint8_t>(red(pixel_color) * final_brightness);
-            uint8_t g = static_cast<uint8_t>(green(pixel_color) * final_brightness);
-            uint8_t b = static_cast<uint8_t>(blue(pixel_color) * final_brightness);
+            uint8_t r = static_cast<uint8_t>(Support::Color::red(pixel_color) * final_brightness);
+            uint8_t g = static_cast<uint8_t>(Support::Color::green(pixel_color) * final_brightness);
+            uint8_t b = static_cast<uint8_t>(Support::Color::blue(pixel_color) * final_brightness);
 
-            strip.setPixelColor(i, color(r, g, b));
+            strip.setPixelColor(i, Support::Color::from_rgb(r, g, b));
         }
     }
 } // namespace Show

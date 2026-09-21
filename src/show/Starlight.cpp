@@ -1,5 +1,5 @@
 #include "Starlight.h"
-#include "../color.h"
+#include "../support/color.h"
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -11,7 +11,7 @@ namespace Show {
     Starlight::Starlight(float probability, unsigned long length_ms, unsigned long fade_ms,
                          uint8_t r, uint8_t g, uint8_t b)
         : probability(probability), length_ms(length_ms), fade_ms(fade_ms),
-          star_color(color(r, g, b)) {
+          star_color(Support::Color::from_rgb(r, g, b)) {
     }
 
     float Starlight::calculateBrightness(unsigned long elapsed_ms) {
@@ -68,7 +68,7 @@ namespace Show {
 
         // Clear the strip
         for (uint16_t i = 0; i < num_leds; i++) {
-            strip.setPixelColor(i, color(0, 0, 0));
+            strip.setPixelColor(i, Support::Color::from_rgb(0, 0, 0));
         }
 
         // Update and render all active stars
@@ -86,11 +86,11 @@ namespace Show {
 
             // Calculate brightness and apply to LED
             float brightness = calculateBrightness(elapsed);
-            auto r = (uint8_t)(red(star_color) * brightness);
-            auto g = (uint8_t)(green(star_color) * brightness);
-            auto b = (uint8_t)(blue(star_color) * brightness);
+            auto r = (uint8_t)(Support::Color::red(star_color) * brightness);
+            auto g = (uint8_t)(Support::Color::green(star_color) * brightness);
+            auto b = (uint8_t)(Support::Color::blue(star_color) * brightness);
 
-            strip.setPixelColor(led, color(r, g, b));
+            strip.setPixelColor(led, Support::Color::from_rgb(r, g, b));
             ++it;
         }
     }

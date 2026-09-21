@@ -1,6 +1,6 @@
 #include "unity.h"
 #include "show/factory/ShowFactory.h"
-#include "color.h"
+#include "support/color.h"
 #include "../MockStrip.h"
 #include <chrono>
 #include <map>
@@ -125,7 +125,7 @@ static const std::vector<Strip::Color> &pixelsOf(const std::string &label) {
 // that factor from the pure-red scenario rather than deriving it from the
 // clock, which makes the assertions immune to timing jitter.
 static float blendScale() {
-    return static_cast<float>(red(pixelsOf("single")[0])) / 255.0f;
+    return static_cast<float>(Support::Color::red(pixelsOf("single")[0])) / 255.0f;
 }
 
 // Assert a captured pixel matches the requested colour once the shared blend
@@ -133,8 +133,8 @@ static float blendScale() {
 // black, so 0 * anything is 0 regardless of progress.
 static void assertColor(Strip::Color expected, Strip::Color actual, const char *what) {
     const float s = blendScale();
-    const Strip::ColorComponent ec[3] = {red(expected), green(expected), blue(expected)};
-    const Strip::ColorComponent ac[3] = {red(actual), green(actual), blue(actual)};
+    const Strip::ColorComponent ec[3] = {Support::Color::red(expected), Support::Color::green(expected), Support::Color::blue(expected)};
+    const Strip::ColorComponent ac[3] = {Support::Color::red(actual), Support::Color::green(actual), Support::Color::blue(actual)};
 
     for (int c = 0; c < 3; c++) {
         if (ec[c] == 0) {
@@ -223,7 +223,7 @@ void test_empty_params_give_warm_white() {
     assertBlendProgressed();
     const auto &px = pixelsOf("defaults");
     for (Strip::PixelIndex i = 0; i < PIXELS; i++) {
-        assertColor(color(255, 250, 230), px[i], "warm white default");
+        assertColor(Support::Color::from_rgb(255, 250, 230), px[i], "warm white default");
     }
 }
 
@@ -233,7 +233,7 @@ void test_single_color_fills_the_strip() {
     assertBlendProgressed();
     const auto &px = pixelsOf("single");
     for (Strip::PixelIndex i = 0; i < PIXELS; i++) {
-        assertColor(color(255, 0, 0), px[i], "single colour");
+        assertColor(Support::Color::from_rgb(255, 0, 0), px[i], "single colour");
     }
 }
 
@@ -241,10 +241,10 @@ void test_two_colors_split_the_strip_evenly() {
     assertBlendProgressed();
     const auto &px = pixelsOf("two_even");
     for (Strip::PixelIndex i = 0; i < PIXELS / 2; i++) {
-        assertColor(color(255, 0, 0), px[i], "first half red");
+        assertColor(Support::Color::from_rgb(255, 0, 0), px[i], "first half red");
     }
     for (Strip::PixelIndex i = PIXELS / 2; i < PIXELS; i++) {
-        assertColor(color(0, 0, 255), px[i], "second half blue");
+        assertColor(Support::Color::from_rgb(0, 0, 255), px[i], "second half blue");
     }
 }
 
@@ -252,10 +252,10 @@ void test_ranges_move_the_boundary() {
     // 30% boundary: pixels 0-2 red, 3-9 blue.
     assertBlendProgressed();
     const auto &px = pixelsOf("two_ranges_30");
-    assertColor(color(255, 0, 0), px[0], "pixel 0 red");
-    assertColor(color(255, 0, 0), px[2], "pixel 2 red");
-    assertColor(color(0, 0, 255), px[3], "pixel 3 blue");
-    assertColor(color(0, 0, 255), px[9], "pixel 9 blue");
+    assertColor(Support::Color::from_rgb(255, 0, 0), px[0], "pixel 0 red");
+    assertColor(Support::Color::from_rgb(255, 0, 0), px[2], "pixel 2 red");
+    assertColor(Support::Color::from_rgb(0, 0, 255), px[3], "pixel 3 blue");
+    assertColor(Support::Color::from_rgb(0, 0, 255), px[9], "pixel 9 blue");
 }
 
 void test_malformed_color_entries_are_skipped() {
@@ -263,8 +263,8 @@ void test_malformed_color_entries_are_skipped() {
     // ignored; the two valid colours still split the strip.
     assertBlendProgressed();
     const auto &px = pixelsOf("bad_entries");
-    assertColor(color(255, 0, 0), px[0], "first valid colour");
-    assertColor(color(0, 0, 255), px[PIXELS - 1], "last valid colour");
+    assertColor(Support::Color::from_rgb(255, 0, 0), px[0], "first valid colour");
+    assertColor(Support::Color::from_rgb(0, 0, 255), px[PIXELS - 1], "last valid colour");
 }
 
 // The payload that motivated the JSON_DOC_LARGE parse buffer at the old
@@ -276,7 +276,7 @@ void test_many_colors_are_all_parsed() {
     const auto &px = pixelsOf("many");
     TEST_ASSERT_EQUAL(WIDE_PIXELS, px.size());
     for (int i = 0; i < WIDE_PIXELS; i++) {
-        assertColor(color(i * 10, 0, 255 - i * 10), px[i], "gradient stop");
+        assertColor(Support::Color::from_rgb(i * 10, 0, 255 - i * 10), px[i], "gradient stop");
     }
 }
 
@@ -321,7 +321,7 @@ void test_wave_parses_all_parameters_from_json() {
         int lit = 0;
         for (Strip::PixelIndex i = 0; i < s.length(); i++) {
             auto c = s.getPixelColor(i);
-            if (red(c) > 0 || green(c) > 0 || blue(c) > 0) lit++;
+            if (Support::Color::red(c) > 0 || Support::Color::green(c) > 0 || Support::Color::blue(c) > 0) lit++;
         }
         return lit;
     };

@@ -1,6 +1,6 @@
 #include "ShowController.h"
 #include "Log.h"
-#include "color.h"
+#include "support/color.h"
 
 #include <cstring> // strlen, strncpy
 
@@ -352,7 +352,7 @@ void ShowController::setStrip(std::unique_ptr<Strip::Strip> &&base) {
 void ShowController::clearStrip() {
 #ifdef ARDUINO
     if (layout) {
-        Strip::Color black = color(0, 0, 0);
+        Strip::Color black = Support::Color::from_rgb(0, 0, 0);
         layout->fill(black);
         layout->show();
 

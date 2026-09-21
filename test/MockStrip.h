@@ -2,8 +2,7 @@
 #define UNTITLED_MOCKSTRIP_H
 
 #include <vector>
-
-#include "color.h"
+#include "strip/Strip.h"
 
 // Mock strip for testing
 class MockStrip : public Strip::Strip {

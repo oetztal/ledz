@@ -1,19 +1,18 @@
-# color-wheel Specification
+## ADDED Requirements
 
-## Purpose
-TBD - created by archiving change wheel-float-input. Update Purpose after archive.
-## Requirements
 ### Requirement: wheel() lives in the Support::Color namespace
 
-`wheel()` SHALL be reachable as `Support::Color::wheel(float)`. The header declaring it SHALL be `src/support/Color.h`. The unqualified name `wheel()` SHALL NOT be reachable outside the `Support::Color` namespace — i.e. no `using namespace Support::Color;` or equivalent is introduced at any call site.
+`wheel()` SHALL be reachable as `Support::Color::wheel(float)`. The header declaring it SHALL be `src/support/color.h`. The unqualified name `wheel()` SHALL NOT be reachable outside the `Support::Color` namespace — i.e. no `using namespace Support::Color;` or equivalent is introduced at any call site.
 
 #### Scenario: Header location
 - **WHEN** the ledz source tree is searched for the declaration of `wheel()`
-- **THEN** it appears in `src/support/Color.h`, not `src/color.h`
+- **THEN** it appears in `src/support/color.h`, not `src/color.h`
 
 #### Scenario: Call sites use the qualified name
 - **WHEN** every call to `wheel()` is searched across `src/` and `test/`
 - **THEN** every match is prefixed with `Support::Color::`
+
+## MODIFIED Requirements
 
 ### Requirement: wheel() accepts a float hue index
 

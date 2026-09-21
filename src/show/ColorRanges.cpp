@@ -1,6 +1,6 @@
 #include "ColorRanges.h"
 #include "../Log.h"
-#include "../color.h"
+#include "../support/color.h"
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -22,7 +22,7 @@ namespace Show {
             // Init-time dump — debug only; silenced in production.
             ESP_LOGD(TAG, "colors (%zu):", colors.size());
             for (auto c: colors) {
-                ESP_LOGD(TAG, "  RGB(%d,%d,%d)", red(c), green(c), blue(c));
+                ESP_LOGD(TAG, "  RGB(%d,%d,%d)", Support::Color::red(c), Support::Color::green(c), Support::Color::blue(c));
             }
             ESP_LOGD(TAG, "ranges (%zu):", ranges.size());
             for (auto range: ranges) {
@@ -97,11 +97,11 @@ namespace Show {
                     Strip::Color colorA = colors[segment];
                     Strip::Color colorB = colors[segment + 1];
 
-                    uint8_t r = (uint8_t) (red(colorA) * (1.0f - ratio) + red(colorB) * ratio);
-                    uint8_t g = (uint8_t) (green(colorA) * (1.0f - ratio) + green(colorB) * ratio);
-                    uint8_t b = (uint8_t) (blue(colorA) * (1.0f - ratio) + blue(colorB) * ratio);
+                    uint8_t r = (uint8_t) (Support::Color::red(colorA) * (1.0f - ratio) + Support::Color::red(colorB) * ratio);
+                    uint8_t g = (uint8_t) (Support::Color::green(colorA) * (1.0f - ratio) + Support::Color::green(colorB) * ratio);
+                    uint8_t b = (uint8_t) (Support::Color::blue(colorA) * (1.0f - ratio) + Support::Color::blue(colorB) * ratio);
 
-                    target_colors.push_back(color(r, g, b));
+                    target_colors.push_back(Support::Color::from_rgb(r, g, b));
                 }
             } else {
                 // Solid mode: colors fill sections with sharp boundaries

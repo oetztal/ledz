@@ -1,6 +1,5 @@
 #include "unity.h"
 #include "support/Palette.h"
-#include "color.h"
 
 void setUp() {}
 void tearDown() {}

@@ -1,5 +1,5 @@
 #include "MorseCode.h"
-#include "../color.h"
+#include "../support/color.h"
 #include <algorithm>
 #include <cctype>
 
@@ -92,7 +92,7 @@ namespace Show {
         for (size_t word_idx = 0; word_idx < words.size(); word_idx++) {
             // Assign color from wheel based on word index
             uint8_t color_index = (uint8_t) ((word_idx * 255) / std::max(1, (int) words.size()));
-            Strip::Color word_color = wheel(color_index);
+            Strip::Color word_color = Support::Color::wheel(color_index);
 
             const std::string &word = words[word_idx];
 
@@ -114,7 +114,7 @@ namespace Show {
                     // Add symbol space (except after last symbol in letter)
                     if (morse[symbol_idx + 1] != '\0') {
                         for (unsigned int i = 0; i < symbol_space; i++) {
-                            pattern.push_back(color(0, 0, 0));
+                            pattern.push_back(Support::Color::from_rgb(0, 0, 0));
                         }
                     }
                 }
@@ -122,7 +122,7 @@ namespace Show {
                 // Add letter space (except after last letter in word)
                 if (char_idx < word.length() - 1) {
                     for (unsigned int i = 0; i < letter_space; i++) {
-                        pattern.push_back(color(0, 0, 0));
+                        pattern.push_back(Support::Color::from_rgb(0, 0, 0));
                     }
                 }
             }
@@ -130,14 +130,14 @@ namespace Show {
             // Add word space (except after last word)
             if (word_idx < words.size() - 1) {
                 for (unsigned int i = 0; i < word_space; i++) {
-                    pattern.push_back(color(0, 0, 0));
+                    pattern.push_back(Support::Color::from_rgb(0, 0, 0));
                 }
             }
         }
 
         // Ensure pattern is not empty
         if (pattern.empty()) {
-            pattern.push_back(color(255, 255, 255));
+            pattern.push_back(Support::Color::from_rgb(255, 255, 255));
         }
     }
 

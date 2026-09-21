@@ -1,15 +1,15 @@
 #include "Palette.h"
-#include "../color.h"
+#include "Color.h"
 #include <cmath>
 
 namespace Support {
 
     namespace {
         Strip::Color linear_blend(Strip::Color start_color, Strip::Color end_color, float progress) {
-            auto r = static_cast<Strip::ColorComponent>(red(start_color) * (1.0f - progress) + red(end_color) * progress);
-            auto g = static_cast<Strip::ColorComponent>(green(start_color) * (1.0f - progress) + green(end_color) * progress);
-            auto b = static_cast<Strip::ColorComponent>(blue(start_color) * (1.0f - progress) + blue(end_color) * progress);
-            return color(r, g, b);
+            auto r = static_cast<Strip::ColorComponent>(Support::Color::red(start_color) * (1.0f - progress) + Support::Color::red(end_color) * progress);
+            auto g = static_cast<Strip::ColorComponent>(Support::Color::green(start_color) * (1.0f - progress) + Support::Color::green(end_color) * progress);
+            auto b = static_cast<Strip::ColorComponent>(Support::Color::blue(start_color) * (1.0f - progress) + Support::Color::blue(end_color) * progress);
+            return Support::Color::from_rgb(r, g, b);
         }
     }
 

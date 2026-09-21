@@ -1,5 +1,5 @@
 #include "TheaterChase.h"
-#include "../color.h"
+#include "../support/color.h"
 
 namespace Show {
     TheaterChase::TheaterChase(unsigned int num_steps_per_cycle)
@@ -11,7 +11,7 @@ namespace Show {
 
         // Calculate color progression through the wheel
         float cycle_position = (float) (index % num_steps_per_cycle) / (float) num_steps_per_cycle;
-        Strip::Color chase_color = wheel(cycle_position * 255.0f);
+        Strip::Color chase_color = Support::Color::wheel(cycle_position * 255.0f);
 
         // Apply theater chase pattern
         // Pattern: 2 LEDs dark, 5 LEDs lit in each 7-LED segment
@@ -22,7 +22,7 @@ namespace Show {
 
             // Set pixel: dark for first 2 positions in each 7-LED segment, colored otherwise
             if (offset < 2) {
-                strip.setPixelColor(i, color(0, 0, 0));
+                strip.setPixelColor(i, Support::Color::from_rgb(0, 0, 0));
             } else {
                 strip.setPixelColor(i, chase_color);
             }

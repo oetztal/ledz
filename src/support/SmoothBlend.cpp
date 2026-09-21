@@ -1,5 +1,5 @@
 #include "SmoothBlend.h"
-#include "../color.h"
+#include "Color.h"
 #include "../Timer.h"
 #include <algorithm>
 #include <cmath>
@@ -37,10 +37,10 @@ namespace Support {
          * @return Blended color
          */
         Strip::Color linear_blend(Strip::Color start_color, Strip::Color end_color, float fade_progress) {
-            Strip::ColorComponent r = blend_component(red(start_color), red(end_color), fade_progress);
-            Strip::ColorComponent g = blend_component(green(start_color), green(end_color), fade_progress);
-            Strip::ColorComponent b = blend_component(blue(start_color), blue(end_color), fade_progress);
-            return color(r, g, b);
+            Strip::ColorComponent r = blend_component(Support::Color::red(start_color), Support::Color::red(end_color), fade_progress);
+            Strip::ColorComponent g = blend_component(Support::Color::green(start_color), Support::Color::green(end_color), fade_progress);
+            Strip::ColorComponent b = blend_component(Support::Color::blue(start_color), Support::Color::blue(end_color), fade_progress);
+            return Support::Color::from_rgb(r, g, b);
         }
     }
 

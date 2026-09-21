@@ -1,6 +1,6 @@
 #include "Chaos.h"
 
-#include "color.h"
+#include "../support/color.h"
 
 namespace Show {
     float Chaos::func(float x) const {
@@ -33,7 +33,7 @@ namespace Show {
             x = func(x);
 
             auto led = static_cast<int16_t>(x * pixel_scale);
-            Strip::Color color = wheel((i * color_factor) % 255);
+            Strip::Color color = Support::Color::wheel((i * color_factor) % 255);
             strip.setPixelColor(led, color);
         }
 

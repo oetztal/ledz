@@ -1,6 +1,6 @@
 #include "unity.h"
 #include "show/ColorRanges.h"
-#include "color.h"
+#include "support/color.h"
 #include <vector>
 
 // Mock strip for testing
@@ -63,7 +63,7 @@ void tearDown() {
 // Test single color (all LEDs same color)
 void test_color_ranges_single_color() {
     std::vector<::Strip::Color> colors;
-    colors.push_back(color(255, 0, 0)); // Red
+    colors.push_back(Support::Color::from_rgb(255, 0, 0)); // Red
 
     Show::ColorRanges show(colors);
 
@@ -82,8 +82,8 @@ void test_color_ranges_single_color() {
 // Test two colors with equal distribution
 void test_color_ranges_two_colors_equal() {
     std::vector<::Strip::Color> colors;
-    colors.push_back(color(255, 0, 0));   // Red
-    colors.push_back(color(0, 0, 255));   // Blue
+    colors.push_back(Support::Color::from_rgb(255, 0, 0));   // Red
+    colors.push_back(Support::Color::from_rgb(0, 0, 255));   // Blue
 
     Show::ColorRanges show(colors);
 
@@ -99,9 +99,9 @@ void test_color_ranges_two_colors_equal() {
 // Test three colors with equal distribution
 void test_color_ranges_three_colors_equal() {
     std::vector<::Strip::Color> colors;
-    colors.push_back(color(255, 0, 0));     // Red
-    colors.push_back(color(0, 255, 0));     // Green
-    colors.push_back(color(0, 0, 255));     // Blue
+    colors.push_back(Support::Color::from_rgb(255, 0, 0));     // Red
+    colors.push_back(Support::Color::from_rgb(0, 255, 0));     // Green
+colors.push_back(Support::Color::from_rgb(0, 0, 255));   // Blue
 
     Show::ColorRanges show(colors);
 
@@ -118,8 +118,8 @@ void test_color_ranges_three_colors_equal() {
 // Test two colors with custom ranges
 void test_color_ranges_custom_ranges() {
     std::vector<::Strip::Color> colors;
-    colors.push_back(color(255, 0, 0));   // Red
-    colors.push_back(color(0, 0, 255));   // Blue
+    colors.push_back(Support::Color::from_rgb(255, 0, 0));   // Red
+    colors.push_back(Support::Color::from_rgb(0, 0, 255));   // Blue
 
     std::vector<float> ranges;
     ranges.push_back(30.0f); // 30% boundary - first 30% red, rest blue
@@ -138,8 +138,8 @@ void test_color_ranges_custom_ranges() {
 // Test three colors with custom ranges (flag pattern)
 void test_color_ranges_flag_pattern() {
     std::vector<::Strip::Color> colors;
-    colors.push_back(color(0, 87, 183));    // Blue (Ukraine)
-    colors.push_back(color(255, 215, 0));   // Yellow
+    colors.push_back(Support::Color::from_rgb(0, 87, 183));    // Blue (Ukraine)
+    colors.push_back(Support::Color::from_rgb(255, 215, 0));   // Yellow
 
     std::vector<float> ranges;
     ranges.push_back(50.0f); // 50% boundary
@@ -158,8 +158,8 @@ void test_color_ranges_flag_pattern() {
 // Test that show executes multiple iterations without crashing
 void test_color_ranges_multiple_iterations() {
     std::vector<::Strip::Color> colors;
-    colors.push_back(color(255, 0, 0));
-    colors.push_back(color(0, 255, 0));
+    colors.push_back(Support::Color::from_rgb(255, 0, 0));
+    colors.push_back(Support::Color::from_rgb(0, 255, 0));
 
     Show::ColorRanges show(colors);
 
@@ -174,8 +174,8 @@ void test_color_ranges_multiple_iterations() {
 // Test with invalid ranges (more ranges than needed)
 void test_color_ranges_invalid_ranges() {
     std::vector<::Strip::Color> colors;
-    colors.push_back(color(255, 0, 0));   // Red
-    colors.push_back(color(0, 0, 255));   // Blue
+    colors.push_back(Support::Color::from_rgb(255, 0, 0));   // Red
+    colors.push_back(Support::Color::from_rgb(0, 0, 255));   // Blue
 
     std::vector<float> ranges;
     ranges.push_back(30.0f);
