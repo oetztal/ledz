@@ -10,8 +10,12 @@ __pycache__
 # Auto-generated compressed web content
 src/generated/
 
+docs/show_previews
+
 # Coverage output (scripts/coverage_report.py)
 coverage.info
 coverage_filtered.info
 coverage_report/
 coverage-generic.xml
+
+
