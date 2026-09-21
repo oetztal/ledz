@@ -36,22 +36,6 @@ The brightness envelope at pixel `i` and iteration `t` SHALL be `exp(-decay_rate
 - **WHEN** source position is near the middle of the strip (e.g., `N/2`) in any mode
 - **THEN** pixels at equal distance on either side of the source have equal envelope factors
 
-### Requirement: Wave amplitude uses signed sine with absolute brightness
-
-The wave amplitude at pixel `i` and iteration `t` SHALL be `|sin(phase(i, t))|`, where `phase(i, t)` is mode-dependent (see the per-mode phase requirements). The brightness contribution from the wave SHALL be non-negative so the strip stays lit.
-
-#### Scenario: Whole strip is non-negative brightness
-
-- **WHEN** the show executes for any iteration in any mode
-- **THEN** every pixel has non-negative brightness contribution from the wave term
-
-#### Scenario: Wavelength controls wave density
-
-- **WHEN** `wavelength` is small (e.g., 2 pixels) in any mode
-- **THEN** more local maxima and minima are visible per unit length
-- **WHEN** `wavelength` is large (e.g., 20 pixels) in any mode
-- **THEN** fewer local maxima and minima are visible per unit length
-
 ### Requirement: Wave produces reflected waves at the strip ends
 
 When `mode == "bounce"` and the source is moving toward one end, the wavefronts it emits travel in the direction of motion. When the source reverses at an end, NEW wavefronts are emitted in the opposite direction while OLD wavefronts from previous source positions continue propagating. The result SHALL be that, at any moment after the first bounce, wavefronts traveling in both directions coexist on the strip.
@@ -70,29 +54,39 @@ Each pixel's color SHALL be derived from a `wheel()` hue index based on the time
 - **WHEN** the show is executing at any iteration
 - **THEN** pixels at different positions have different hue indices (proving each pixel's hue is tied to its own emission time, not stripe-uniformly)
 
-### Requirement: Wave accepts three parameters
+### Requirement: Wave accepts parameters
 
-The Wave show SHALL accept exactly these parameters: `mode` (string, default `"bounce"`), `decay_rate` (float, default `2.0`), `brightness_frequency` (float, default `0.1`), `wavelength` (float, default `6.0`).
+The Wave show SHALL accept exactly these parameters: `mode` (string, default `"bounce"`), `decay_rate` (float, default `2.0`), `brightness_frequency` (float, default `0.1`). The `wavelength` parameter is no longer accepted; JSON input containing a `wavelength` field SHALL be silently ignored. The `mode` parameter is currently accepted but unused — both `"bounce"` and `"traveling"` produce identical output today, matching the reference implementation.
 
 #### Scenario: Default parameters when params_json is empty
 
 - **WHEN** Wave is constructed with no parameters or `params_json == "{}"`
-- **THEN** `mode` is `"bounce"`, `decay_rate` is `2.0`, `brightness_frequency` is `0.1`, `wavelength` is `6.0`
+- **THEN** `mode` is `"bounce"`, `decay_rate` is `2.0`, `brightness_frequency` is `0.1`
 
-#### Scenario: All four parameters parsed from JSON
+#### Scenario: All parameters parsed from JSON
 
-- **WHEN** Wave is created with `params_json == "{\"mode\":\"traveling\",\"decay_rate\":3.5,\"brightness_frequency\":0.5,\"wavelength\":10.0}"`
-- **THEN** the constructed show has `mode="traveling"`, `decay_rate=3.5`, `brightness_frequency=0.5`, `wavelength=10.0`
+- **WHEN** Wave is created with `params_json == "{\"mode\":\"bounce\",\"decay_rate\":3.5,\"brightness_frequency\":0.5}"`
+- **THEN** the constructed show has `mode="bounce"`, `decay_rate=3.5`, `brightness_frequency=0.5`
 
 #### Scenario: Partial parameters use defaults
 
-- **WHEN** Wave is created with `params_json == "{\"wavelength\":12.0}"`
-- **THEN** `wavelength` is `12.0` and `mode` defaults to `"bounce"`, `decay_rate` to `2.0`, `brightness_frequency` to `0.1`
+- **WHEN** Wave is created with `params_json == "{\"brightness_frequency\":0.2}"`
+- **THEN** `brightness_frequency` is `0.2` and `mode` defaults to `"bounce"`, `decay_rate` to `2.0`
 
 #### Scenario: Unknown mode values fall back to bounce
 
 - **WHEN** Wave is created with `params_json == "{\"mode\":\"bogus\"}"`
 - **THEN** the constructed show has `mode="bounce"` (no error is raised)
+
+#### Scenario: wavelength is silently ignored
+
+- **WHEN** Wave is created with `params_json == "{\"wavelength\":12.0}"`
+- **THEN** the show constructs successfully and `wavelength` has no effect on the rendered pixels
+
+#### Scenario: bounce and traveling modes produce identical pixels
+
+- **WHEN** two Wave shows are created with the same `decay_rate` and `brightness_frequency` but different `mode` values, and both are executed against strips of the same length for the same number of iterations
+- **THEN** every pixel is identical between the two strips
 
 ### Requirement: wave_speed is no longer accepted
 
@@ -110,16 +104,16 @@ The Wave show SHALL NOT use a `wave_speed` parameter. JSON input containing a `w
 
 ### Requirement: Wave persistence
 
-The Wave show's parameters SHALL persist across reboots via the existing `params_json` NVS storage, following the same mechanism as other configurable shows.
+The Wave show's parameters SHALL persist across reboots via the existing `params_json` NVS storage, following the same mechanism as other configurable shows. Only `mode`, `decay_rate`, and `brightness_frequency` are stored and restored; any other field (including the legacy `wavelength` and the older `wave_speed`) is silently dropped.
 
 #### Scenario: Parameters restored after reboot
 
-- **WHEN** Wave is active with `decay_rate=3.5, brightness_frequency=0.5, wavelength=10.0` and the device reboots
-- **THEN** on next boot, Wave is reconstructed with `decay_rate=3.5, brightness_frequency=0.5, wavelength=10.0`
+- **WHEN** Wave is active with `decay_rate=3.5, brightness_frequency=0.5` and the device reboots
+- **THEN** on next boot, Wave is reconstructed with `decay_rate=3.5, brightness_frequency=0.5`
 
 ### Requirement: Computational profile unchanged
 
-The Wave show's `execute()` SHALL perform at most one `sin`, one `exp`, one `fabs`, and one `wheel` call per pixel per iteration, and SHALL NOT allocate memory inside `execute()`.
+The Wave show's `execute()` SHALL perform at most one `exp`, one `fabs`, and one `wheel` call per pixel per iteration, and SHALL NOT allocate memory inside `execute()`.
 
 #### Scenario: No per-pixel allocation
 
@@ -127,46 +121,20 @@ The Wave show's `execute()` SHALL perform at most one `sin`, one `exp`, one `fab
 - **THEN** zero heap allocations occur per pixel per iteration
 - **THEN** `strip.setPixelColor` is called exactly `N` times per iteration
 
-### Requirement: Bounce mode phase is source-relative
+### Requirement: Web UI exposes the Wave parameters
 
-When `mode == "bounce"`, the wave phase at pixel `i` and iteration `t` SHALL be `2π * (i - source_pos(t)) / wavelength`. Wavefronts are therefore phase-locked to the source and move with it.
+The Wave parameter section of the control page SHALL include a `Mode` selector with options `Bounce` and `Traveling`, a `Decay Rate` input, and a `Brightness Frequency` input. Selecting a mode and clicking Apply SHALL POST `{name: "Wave", params: {mode, decay_rate, brightness_frequency}}` to `/api/show`. The page SHALL NOT include a `Wavelength` (or `wavelength`) input. The page SHALL NOT include a `Wave Speed` (or `wave_speed`) input.
 
-#### Scenario: Bounce mode stripes follow source motion
-
-- **WHEN** mode is `"bounce"` and source position moves from pixel `M₁` at iteration `t₁` to pixel `M₂` at iteration `t₂` (where `M₂ - M₁ > 0`)
-- **THEN** the bright stripes of the wave amplitude have shifted by approximately `M₂ - M₁` pixels over the same interval (in the same direction as the source)
-
-### Requirement: Traveling mode phase drifts at the documented rate
-
-When `mode == "traveling"`, the wave phase at pixel `i` and iteration `t` SHALL be `2π * (i / wavelength - t * brightness_frequency)`. Stripes SHALL drift across the strip at `brightness_frequency × wavelength` pixels per second, independent of source motion.
-
-#### Scenario: Traveling mode stripes drift at the documented rate
-
-- **WHEN** mode is `"traveling"` with `brightness_frequency = 0.5` and `wavelength = 4.0`
-- **THEN** between any two iterations separated by one second, the bright stripes of the wave amplitude have shifted by `0.5 × 4.0 = 2.0` pixels
-
-#### Scenario: Traveling mode drift direction follows sign of frequency
-
-- **WHEN** mode is `"traveling"` with `brightness_frequency < 0`
-- **THEN** stripes drift in the opposite direction along the strip compared to the same configuration with `brightness_frequency > 0`
-
-#### Scenario: Traveling mode keeps the bouncing envelope
-
-- **WHEN** mode is `"traveling"` and source position is at pixel `M`
-- **THEN** pixels adjacent to `M` are brightest and pixels at `M ± k` are dimmer (the bouncing envelope still applies)
-
-### Requirement: Web UI exposes the Wave mode parameter
-
-The Wave parameter section of the control page SHALL include a `Mode` selector with options `Bounce` and `Traveling`. Selecting a mode and clicking Apply SHALL POST `{name: "Wave", params: {mode, decay_rate, brightness_frequency, wavelength}}` to `/api/show`. The page SHALL NOT include a `Wave Speed` (or `wave_speed`) input.
-
-#### Scenario: Mode dropdown is shown when Wave is selected
+#### Scenario: Parameter section is shown when Wave is selected
 
 - **WHEN** the user selects `Wave` from the show dropdown
 - **THEN** the parameter section contains a `Mode` selector with `Bounce` and `Traveling` options visible
+- **THEN** the parameter section contains a `Decay Rate` input and a `Brightness Frequency` input
+- **THEN** the parameter section does not contain a `Wavelength` (or `wavelength`) input
 - **THEN** the parameter section does not contain a `Wave Speed` (or `wave_speed`) input
 
-#### Scenario: Apply Parameters sends the four-param payload
+#### Scenario: Apply Parameters sends the three-param payload
 
-- **WHEN** the user selects `Traveling`, adjusts decay/freq/wavelength, and clicks Apply Parameters
-- **THEN** a `POST /api/show` request is sent with body `{"name":"Wave","params":{"mode":"traveling", "decay_rate":..., "brightness_frequency":..., "wavelength":...}}`
-
+- **WHEN** the user selects `Traveling`, adjusts decay/frequency, and clicks Apply Parameters
+- **THEN** a `POST /api/show` request is sent with body `{"name":"Wave","params":{"mode":"traveling", "decay_rate":..., "brightness_frequency":...}}`
+- **THEN** the request body does not contain a `wavelength` field
