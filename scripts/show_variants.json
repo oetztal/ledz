@@ -1,42 +1,123 @@
 {
   "_comment": "Show preview variants rendered by scripts/build_pages.py --all. Each entry is a list of parameter sets that showcase the show's behaviour, plus a one-line description that mirrors the source-code registration in src/show/factory/ShowFactory.cpp. A show that is omitted here falls back to a single 'default' variant using empty params. Adding a new entry here gives the gallery a new preview on the next regeneration; no source-code changes are required.",
-
   "Solid": {
     "description": "Static light: one color, or the strip split into sections with optional gradient blending (flags, patterns)",
     "variants": [
       {
         "name": "white",
         "label": "Warm white",
-        "params": { "colors": [[255, 250, 230]] }
+        "params": {
+          "colors": [
+            [
+              255,
+              250,
+              230
+            ]
+          ]
+        }
       },
       {
         "name": "ukraine",
         "label": "Ukraine flag",
-        "params": { "colors": [[0, 87, 183], [255, 215, 0]] }
+        "params": {
+          "colors": [
+            [
+              0,
+              87,
+              183
+            ],
+            [
+              255,
+              215,
+              0
+            ]
+          ]
+        }
       },
       {
         "name": "italy",
         "label": "Italian flag",
-        "params": { "colors": [[0, 140, 69], [255, 255, 255], [205, 33, 42]] }
+        "params": {
+          "colors": [
+            [
+              0,
+              140,
+              69
+            ],
+            [
+              255,
+              255,
+              255
+            ],
+            [
+              205,
+              33,
+              42
+            ]
+          ]
+        }
       },
       {
         "name": "rainbow",
         "label": "Rainbow gradient",
         "params": {
-          "colors": [[255, 0, 0], [255, 127, 0], [255, 255, 0], [0, 255, 0], [0, 0, 255], [75, 0, 130]],
+          "colors": [
+            [
+              255,
+              0,
+              0
+            ],
+            [
+              255,
+              127,
+              0
+            ],
+            [
+              255,
+              255,
+              0
+            ],
+            [
+              0,
+              255,
+              0
+            ],
+            [
+              0,
+              0,
+              255
+            ],
+            [
+              75,
+              0,
+              130
+            ]
+          ],
           "gradient": true
         }
       }
     ]
   },
-
   "Fire": {
     "description": "Flickering flames rising from one end, fed by random sparks and cooling into embers",
     "variants": [
-      { "name": "default", "label": "Default flames", "params": {} }
+      {
+        "name": "default",
+        "label": "Default flames",
+        "params": {}
+      },
+      {
+        "name": "high",
+        "label": "High flames",
+        "params": {
+          "cooling": 0.05,
+          "spread": 10.0,
+          "ignition": 0.5,
+          "spark_amount": 0.5
+        }
+      }
     ]
   },
-
   "Starlight": {
     "description": "Single pixels light up at random and slowly fade away, like stars in a night sky",
     "variants": [
@@ -48,11 +129,16 @@
       {
         "name": "cool",
         "label": "Cool blue sparks",
-        "params": { "r": 80, "g": 160, "b": 255 , "length":  100, "fade": 300}
+        "params": {
+          "r": 80,
+          "g": 160,
+          "b": 255,
+          "length": 100,
+          "fade": 300
+        }
       }
     ]
   },
-
   "Stroboscope": {
     "description": "Hard on/off flashes of a single color at an adjustable rhythm",
     "variants": [
@@ -64,25 +150,36 @@
       {
         "name": "red-slow",
         "label": "Red slow strobe",
-        "params": { "r": 255, "g": 0, "b": 0, "on_cycles": 1, "off_cycles": 30 }
+        "params": {
+          "r": 255,
+          "g": 0,
+          "b": 0,
+          "on_cycles": 1,
+          "off_cycles": 30
+        }
       }
     ]
   },
-
   "ColorRun": {
     "description": "Colored dots appear at random and race along the strip at their own speed",
     "variants": [
-      { "name": "default", "label": "Default", "params": {} }
+      {
+        "name": "default",
+        "label": "Default",
+        "params": {}
+      }
     ]
   },
-
   "Jump": {
     "description": "Several balls bounce along the strip at different heights and speeds, swapping colors at each bounce",
     "variants": [
-      { "name": "default", "label": "Default", "params": {} }
+      {
+        "name": "default",
+        "label": "Default",
+        "params": {}
+      }
     ]
   },
-
   "Rainbow": {
     "description": "The full color spectrum drifting smoothly along the strip",
     "variants": [
@@ -94,37 +191,53 @@
       {
         "name": "static",
         "label": "Frozen in time",
-        "params": { "time_step": 0, "pixel_step": 1 }
+        "params": {
+          "time_step": 0,
+          "pixel_step": 1
+        }
       },
       {
         "name": "compressed",
         "label": "Compressed cycles",
-        "params": { "time_step": 1, "pixel_step": 3 }
+        "params": {
+          "time_step": 1,
+          "pixel_step": 3
+        }
       }
     ]
   },
-
   "Wave": {
     "description": "Cosine-bouncing rainbow source with exponential brightness decay",
     "variants": [
       {
         "name": "default",
         "label": "Default bounce",
-        "params": { "mode": "bounce", "decay_rate": 2.0, "brightness_frequency": 0.1 }
+        "params": {
+          "mode": "bounce",
+          "decay_rate": 2.0,
+          "brightness_frequency": 0.1
+        }
       },
       {
         "name": "tight",
         "label": "Tight fast",
-        "params": { "mode": "bounce", "decay_rate": 4.0, "brightness_frequency": 0.4 }
+        "params": {
+          "mode": "bounce",
+          "decay_rate": 4.0,
+          "brightness_frequency": 0.4
+        }
       },
       {
         "name": "calm",
         "label": "Calm broad",
-        "params": { "mode": "bounce", "decay_rate": 1.0, "brightness_frequency": 0.05 }
+        "params": {
+          "mode": "bounce",
+          "decay_rate": 1.0,
+          "brightness_frequency": 0.05
+        }
       }
     ]
   },
-
   "TheaterChase": {
     "description": "Evenly spaced rainbow dots march along the strip, like lights around a theater marquee",
     "variants": [
@@ -136,27 +249,31 @@
       {
         "name": "tight",
         "label": "Tight fast chase",
-        "params": { "num_steps_per_cycle": 8 }
+        "params": {
+          "num_steps_per_cycle": 8
+        }
       }
     ]
   },
-
   "MorseCode": {
     "description": "Your own message spelled out in Morse code, scrolling across the strip as dots and dashes",
     "variants": [
       {
         "name": "hello",
         "label": "HELLO WORLD",
-        "params": { "message": "HELLO WORLD" }
+        "params": {
+          "message": "HELLO WORLD"
+        }
       },
       {
         "name": "sos",
         "label": "SOS",
-        "params": { "message": "SOS" }
+        "params": {
+          "message": "SOS"
+        }
       }
     ]
   },
-
   "Chaos": {
     "description": "The logistic map drawn live: steady points split again and again until they dissolve into chaos",
     "variants": [
@@ -168,11 +285,14 @@
       {
         "name": "chaotic",
         "label": "Mostly chaotic",
-        "params": { "Rmin": 3.5, "Rmax": 4.0, "Rdelta": 0.001 }
+        "params": {
+          "Rmin": 3.5,
+          "Rmax": 4.0,
+          "Rdelta": 0.001
+        }
       }
     ]
   },
-
   "Mandelbrot": {
     "description": "A slow scan across the Mandelbrot set, one fractal slice at a time, colored by escape time",
     "variants": [
@@ -184,12 +304,26 @@
       {
         "name": "classic",
         "label": "Classic full view",
-        "params": { "Cre0": -2.0, "Cim0": -1.2, "Cim1": 1.2, "scale": 3, "max_iterations": 100, "color_scale": 3 }
+        "params": {
+          "Cre0": -2.0,
+          "Cim0": -1.2,
+          "Cim1": 1.2,
+          "scale": 3,
+          "max_iterations": 100,
+          "color_scale": 3
+        }
       },
       {
         "name": "zoom",
         "label": "Seahorse-valley zoom",
-        "params": { "Cre0": -0.745, "Cim0": 0.15, "Cim1": -0.15, "scale": 1, "max_iterations": 150, "color_scale": 4 }
+        "params": {
+          "Cre0": -0.745,
+          "Cim0": 0.15,
+          "Cim1": -0.15,
+          "scale": 1,
+          "max_iterations": 150,
+          "color_scale": 4
+        }
       }
     ]
   }
