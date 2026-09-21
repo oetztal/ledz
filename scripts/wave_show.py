@@ -1,208 +1,176 @@
 #!/usr/bin/env python3
 """
-Simulate the ledz "Wave" show as a 2D pixel image.
+Render LED show previews as PNG images by driving the host-side C++ simulator.
 
-The reference implementation lives at https://github.com/oetztal/ledz
-(src/show/Wave.cpp). This script is a faithful, stdlib-only Python port:
-the per-iteration pixel values match what the C++ version would write to
-the strip when sampled at the same iteration index.
+The simulator binary at ``.pio/build/native_show_sim/program`` is built by
+PlatformIO and runs the same ``src/show/*.cpp`` files that run on the device,
+so every preview is byte-for-byte identical to what the strip would receive.
+There is intentionally no parallel Python implementation of any show: this
+script is a thin renderer that pipes the simulator's raw RGB stream into the
+PNG writer and emits a gallery of previews for the GitHub Pages site.
 
-The output picture is WIDTH pixels wide (default 300, matching a typical
-LED strip); each row is one iteration of the show, so the y-axis is time.
-
-Per-iteration model (one row y):
-  - time and color_time advance by TIME_STEP (0.05) per iteration
-  - a single source position bounces between the two ends of the strip:
-        source_pos = (W-1)/2 * (1 - cos(time * brightness_frequency * 2π))
-  - brightness decays exponentially with distance from the source
-  - the source brightness oscillates subtly (0.65 + 0.35 * sin(...))
-  - hue comes from the NeoPixel rainbow wheel indexed by the time at
-    which the wavefront currently at pixel i was emitted
-  - the final pixel = wheel(emission_index) * source_brightness * envelope
-
-The ledz reference additionally modulates brightness by |sin(phase)|
-where phase is `distance * 2π / wavelength`, producing fine stripes.
-The wavelength parameter is intentionally omitted here: with a typical
-strip width the resulting structure is too short to be useful in the
-preview, so the picture shows only the bouncing source, its decay
-envelope, and the hue trail.
-
-The script exists to experiment with parameter sets and to preview new
-show types before any firmware work. It is stdlib-only: it writes PNG
-itself (no numpy / Pillow required). For larger grids or many presets,
-swap the inner loop of ``render`` for numpy.
-
-Adding new shows: write a ``(x, y, params) -> (r, g, b)`` function and
-register it in WAVES; expose its parameters in build_parser().
+For the full gallery and regeneration instructions see ``docs/SHOW_PREVIEWS.md``.
 """
 
 from __future__ import annotations
 
 import argparse
-import math
+import html
+import json
+import shutil
 import struct
+import subprocess
 import sys
 import zlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Iterable, Sequence
 
 TAG = "wave_show"
 WIDTH = 300
+DEFAULT_SHOW = "Wave"
 
-# Per-iteration time advance; matches ledz Wave.cpp's `time += 0.05f`.
-# Kept as a module constant so the default picture is byte-for-byte
-# reproducible against the reference.
+DEFAULT_SIMULATOR_BINARY = Path(".pio/build/native_show_sim/program")
+
+# Per-iteration time advance in the legacy Python port matched Wave.cpp's
+# ``time += 0.05f``. The simulator binary uses the same source file, so no
+# tuning is needed here.
 TIME_STEP = 0.05
 
-# Wave mode constants. Names match ledz's WaveMode enum.
-MODE_BOUNCE = "bounce"
-MODE_TRAVELING = "traveling"
-MODES = (MODE_BOUNCE, MODE_TRAVELING)
-
 
 # ---------------------------------------------------------------------------
-# Colour
-# ---------------------------------------------------------------------------
-
-
-def wheel(wheel_pos: int) -> tuple[int, int, int]:
-    """HSV rainbow wheel at full saturation/brightness.
-
-    wheel_pos in [0, 254] -> (r, g, b).
-    Walks the faces of the RGB cube, so complementary colours (yellow at
-    pos~42, cyan at ~127, magenta at ~212) get the same weight as the
-    primaries. Replaces the Adafruit edge-walking wheel from ledz, which
-    cannot produce pure yellow/cyan/magenta.
-    """
-    if wheel_pos > 254:
-        wheel_pos = 254
-    if wheel_pos < 0:
-        wheel_pos = 0
-    h = wheel_pos * 360.0 / 255.0
-    c = 1.0                                # chroma = v*s with v=s=1
-    x = c * (1.0 - abs((h / 60.0) % 2.0 - 1.0))
-    m = 0.0
-    if   h <  60: rp, gp, bp = c, x, 0.0
-    elif h < 120: rp, gp, bp = x, c, 0.0
-    elif h < 180: rp, gp, bp = 0.0, c, x
-    elif h < 240: rp, gp, bp = 0.0, x, c
-    elif h < 300: rp, gp, bp = x, 0.0, c
-    else:        rp, gp, bp = c, 0.0, x
-    return (
-        min(255, int(rp * 255 + 0.5)),
-        min(255, int(gp * 255 + 0.5)),
-        min(255, int(bp * 255 + 0.5)),
-    )
-
-
-# ---------------------------------------------------------------------------
-# Wave show
-# ---------------------------------------------------------------------------
-
-
-def wave_show(x: int, y: int, p: "WaveParams") -> tuple[int, int, int]:
-    """Compute the (r, g, b) for pixel (x, y) under the ledz Wave show.
-
-    y is the iteration index (0-based); x is the LED index in [0, WIDTH-1].
-    The wavelength-based |sin(phase)| modulation from the ledz reference
-    is intentionally omitted (see module docstring).
-    """
-    w = p.width_in
-    time = (y + 1) * TIME_STEP
-    color_time = time
-
-    omega = p.brightness_frequency * 2.0 * math.pi
-    # cosine bounce: oscillates between 0 and W-1 with continuous velocity
-    source_pos = (w - 1) / 2.0 * (1.0 - math.cos(time * omega))
-
-    # subtle source brightness oscillation: in [0.30, 1.00]
-    source_brightness = 0.65 + 0.35 * math.sin(time * omega)
-
-    inv_num_leds = 1.0 / float(w)
-
-    distance = x - source_pos
-    abs_distance = abs(distance)
-    envelope = math.exp(-p.decay_rate * abs_distance * inv_num_leds)
-
-    # Hue from emission time: wavefront at pixel x was emitted
-    # ~|x - source_pos| / (W * brightness_frequency) seconds ago.
-    propagation_speed = float(w) * p.brightness_frequency
-    emission_time = color_time - abs_distance / propagation_speed
-    # ledz uses `int(emission_time * 20) % 255`; Python's % on negatives
-    # differs from C's, so normalise into [0, 254] explicitly.
-    color_index = int(emission_time * 20.0) % 255
-    if color_index < 0:
-        color_index += 255
-    r0, g0, b0 = wheel(color_index)
-
-    final = source_brightness * envelope
-    return (
-        min(255, int(r0 * final)),
-        min(255, int(g0 * final)),
-        min(255, int(b0 * final)),
-    )
-
-
-WAVES: dict[str, callable] = {
-    "wave": wave_show,
-}
-
-
-# ---------------------------------------------------------------------------
-# Rendering
+# Data
 # ---------------------------------------------------------------------------
 
 
 @dataclass
-class WaveParams:
-    # picture
+class RenderParams:
+    # Output grid
     iterations: int = 1000
     width_in: int = WIDTH
 
-    # show selection (registry key; only "wave" exists today)
-    wave: str = "wave"
+    # Show selection
+    show: str = DEFAULT_SHOW
+    params_json: str = "{}"
 
-    # ledz Wave constructor parameters (wavelength intentionally omitted;
-    # see wave_show() and the module docstring)
+    # Wave-specific convenience flags. Applied on top of params_json so
+    # existing invocations keep working without --params.
     decay_rate: float = 2.0
     brightness_frequency: float = 0.1
-    mode: str = MODE_BOUNCE
+    mode: str = "bounce"
 
+    # Deterministic renders for random shows
+    seed: int | None = None
+
+    # Output paths and behaviour
     output: str = "wave_show.png"
+    all_dir: str | None = None
+    simulator_binary: Path = DEFAULT_SIMULATOR_BINARY
     verbose: bool = False
 
+    extra_params: dict = field(default_factory=dict)
 
-def _validate(params: WaveParams) -> None:
-    if params.wave not in WAVES:
-        raise SystemExit(
-            f"{TAG}: unknown wave {params.wave!r}; choose from {sorted(WAVES)}"
-        )
-    if params.mode not in MODES:
-        raise SystemExit(
-            f"{TAG}: unknown mode {params.mode!r}; choose from {MODES}"
-        )
+
+# ---------------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------------
+
+
+def _validate(params: RenderParams) -> None:
     if params.iterations < 1:
         raise SystemExit(f"{TAG}: --iterations must be >= 1")
     if params.width_in < 1:
         raise SystemExit(f"{TAG}: --width must be >= 1")
+    if params.all_dir is None and not params.output:
+        raise SystemExit(f"{TAG}: --output is required when not using --all")
 
 
-def render(params: WaveParams) -> bytes:
-    """Render the wave to ``width * height * 3`` RGB bytes (row-major)."""
-    fn = WAVES[params.wave]
-    w, h = params.width_in, params.iterations
-    out = bytearray(w * h * 3)
-    for y in range(h):
-        row = y * w * 3
-        for x in range(w):
-            r, g, b = fn(x, y, params)
-            o = row + x * 3
-            out[o] = r
-            out[o + 1] = g
-            out[o + 2] = b
-        if params.verbose and y % max(1, h // 10) == 0:
-            print(f"{TAG}: row {y}/{h}", file=sys.stderr)
-    return bytes(out)
+# ---------------------------------------------------------------------------
+# Simulator invocation
+# ---------------------------------------------------------------------------
+
+
+def ensure_simulator_built(params: RenderParams) -> Path:
+    """Build the simulator binary if it is not already on disk.
+
+    The first invocation of ``pio run -e native_show_sim`` pays the full
+    compile cost (~10s on a warm cache, longer on a cold one). Subsequent
+    runs hit PlatformIO's incremental cache and finish in well under a second.
+    """
+    binary = params.simulator_binary
+    if binary.exists():
+        return binary
+
+    if not shutil.which("pio"):
+        raise SystemExit(
+            f"{TAG}: 'pio' was not found on $PATH. Install PlatformIO "
+            "(https://platformio.org/install) and retry."
+        )
+
+    if params.verbose:
+        print(f"{TAG}: building simulator via pio run -e native_show_sim",
+              file=sys.stderr)
+
+    try:
+        result = subprocess.run(
+            ["pio", "run", "-e", "native_show_sim"],
+            check=False,
+        )
+    except FileNotFoundError as e:
+        raise SystemExit(f"{TAG}: failed to launch pio: {e}")
+
+    if result.returncode != 0:
+        raise SystemExit(
+            f"{TAG}: pio run -e native_show_sim failed (exit {result.returncode}); "
+            "the simulator binary was not produced."
+        )
+
+    if not binary.exists():
+        raise SystemExit(
+            f"{TAG}: pio reported success but {binary} is still missing"
+        )
+    return binary
+
+
+def invoke_simulator(params: RenderParams) -> bytes:
+    """Run the simulator binary and return its raw RGB stream.
+
+    The wire format is exactly ``params.width_in * params.iterations * 3``
+    bytes — one row per iteration, three bytes per LED (R, G, B left-to-right).
+    No header, no per-row framing. A short read is a simulator bug; a long
+    read is a renderer bug, but we tolerate extra trailing bytes.
+    """
+    binary = ensure_simulator_built(params)
+    argv = [
+        str(binary),
+        "--show", params.show,
+        "--width", str(params.width_in),
+        "--iterations", str(params.iterations),
+        "--params", params.params_json,
+    ]
+    if params.seed is not None:
+        argv += ["--seed", str(params.seed)]
+
+    if params.verbose:
+        print(f"{TAG}: invoking simulator: {' '.join(argv)}", file=sys.stderr)
+
+    try:
+        completed = subprocess.run(argv, check=True, capture_output=True)
+    except subprocess.CalledProcessError as e:
+        stderr = e.stderr.decode(errors="replace") if e.stderr else ""
+        raise SystemExit(
+            f"{TAG}: simulator exited {e.returncode}: {stderr.strip()}"
+        )
+
+    rgb = completed.stdout
+    expected = params.width_in * params.iterations * 3
+    if len(rgb) < expected:
+        raise SystemExit(
+            f"{TAG}: simulator emitted {len(rgb)} bytes, expected {expected}"
+        )
+    if len(rgb) > expected:
+        rgb = rgb[:expected]
+    return rgb
 
 
 # ---------------------------------------------------------------------------
@@ -237,6 +205,99 @@ def write_png(path: Path, width: int, height: int, rgb: bytes) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Orchestration
+# ---------------------------------------------------------------------------
+
+
+def render_one(params: RenderParams) -> Path:
+    """Build the simulator if needed, invoke it, write the PNG.
+
+    Returns the path of the PNG that was written.
+    """
+    rgb = invoke_simulator(params)
+    out_path = Path(params.output)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    write_png(out_path, params.width_in, params.iterations, rgb)
+    print(f"{TAG}: wrote {out_path} ({params.width_in}x{params.iterations})")
+    return out_path
+
+
+def list_registered_shows(binary: Path) -> list[str]:
+    completed = subprocess.run(
+        [str(binary), "--list"],
+        check=True, capture_output=True,
+    )
+    return [line.strip() for line in completed.stdout.decode().splitlines() if line.strip()]
+
+
+def render_all(params: RenderParams) -> list[Path]:
+    """Render one PNG per registered show into ``params.all_dir``.
+
+    Each show is rendered in a separate simulator process so per-process state
+    (--seed, construction-time RNG) starts clean. An ``index.html`` enumerates
+    every preview with a hyperlink.
+    """
+    out_dir = Path(params.all_dir or "show_previews")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    binary = ensure_simulator_built(params)
+    names = list_registered_shows(binary)
+
+    written: list[Path] = []
+    for name in names:
+        per_show = RenderParams(
+            iterations=params.iterations,
+            width_in=params.width_in,
+            show=name,
+            params_json="{}",
+            seed=params.seed,
+            simulator_binary=binary,
+            output=str(out_dir / f"{name}.png"),
+            verbose=params.verbose,
+        )
+        if params.verbose:
+            print(f"{TAG}: rendering {name}", file=sys.stderr)
+        render_one(per_show)
+        written.append(out_dir / f"{name}.png")
+
+    _write_index_html(out_dir, written, params)
+    return written
+
+
+def _write_index_html(out_dir: Path, pngs: Sequence[Path], params: RenderParams) -> None:
+    rows = []
+    for png in pngs:
+        show_name = png.stem
+        rows.append(
+            f'<li><a href="{html.escape(png.name)}">{html.escape(show_name)}</a></li>'
+        )
+    seed_text = f"seed={params.seed}" if params.seed is not None else "no seed"
+    doc = (
+        "<!doctype html>\n"
+        '<html lang="en">\n'
+        "<head>\n"
+        '  <meta charset="utf-8">\n'
+        "  <title>ledz show previews</title>\n"
+        "  <style>\n"
+        "    body { font-family: system-ui, sans-serif; max-width: 60rem; margin: 2rem auto; padding: 0 1rem; }\n"
+        "    h1 { margin-bottom: 0.2rem; }\n"
+        "    .meta { color: #666; margin-bottom: 1.5rem; }\n"
+        "    ul { list-style: none; padding: 0; display: grid; gap: 0.5rem; }\n"
+        "    li a { display: inline-block; padding: 0.4rem 0.6rem; background: #f4f4f4; border-radius: 4px; text-decoration: none; color: #0645ad; }\n"
+        "    li a:hover { background: #e8e8e8; }\n"
+        "  </style>\n"
+        "</head>\n"
+        "<body>\n"
+        "  <h1>ledz show previews</h1>\n"
+        f'  <p class="meta">Generated from <code>src/show/*.cpp</code> via <code>native_show_sim</code> &middot; {seed_text} &middot; width={params.width_in} &middot; iterations={params.iterations}</p>\n'
+        f"  <ul>\n    {' '.join(rows)}\n  </ul>\n"
+        "</body>\n"
+        "</html>\n"
+    )
+    (out_dir / "index.html").write_text(doc)
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -244,46 +305,86 @@ def write_png(path: Path, width: int, height: int, rgb: bytes) -> None:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="wave_show",
-        description=__doc__.splitlines()[0] if __doc__ else "wave show simulator",
+        description="Render ledz show previews via the host-side C++ simulator.",
     )
     p.add_argument("-n", "--iterations", type=int, default=1000,
-                   help="number of rows (iterations); default 1000 "
-                        "(five full bounces at the default frequency)")
+                   help="number of rows (iterations); default 1000")
     p.add_argument("-W", "--width", type=int, default=WIDTH,
                    help=f"image width in pixels; default {WIDTH}")
     p.add_argument("-o", "--output", default="wave_show.png",
                    help="output PNG path; default wave_show.png")
-    p.add_argument("--wave", choices=sorted(WAVES), default="wave",
-                   help="show type; default wave")
 
-    g = p.add_argument_group("wave parameters (ledz Wave constructor defaults)")
+    p.add_argument("--show", default=DEFAULT_SHOW,
+                   help=f"show to render; default {DEFAULT_SHOW}")
+    p.add_argument("--params", default=None,
+                   help='JSON parameters for the show; default "{}"')
+    p.add_argument("--seed", type=int, default=None,
+                   help="RNG seed for deterministic random shows (Fire, Starlight, ...)")
+
+    p.add_argument("--wave", dest="wave", default=None,
+                   help="deprecated: legacy alias for --show wave")
+    g = p.add_argument_group("wave parameters (only used when --show=Wave)")
     g.add_argument("--decay-rate", dest="decay_rate", type=float, default=2.0,
                    help="exponential decay with distance from source; default 2.0")
     g.add_argument("--brightness-frequency", dest="brightness_frequency",
                    type=float, default=0.1,
-                   help="Hz of source bounce and hue cycling; default 0.1 "
-                        "(200-iteration period)")
-    g.add_argument("--mode", choices=MODES, default=MODE_BOUNCE,
-                   help="phase mode (kept for future expansion; "
-                        "currently both modes render identically since "
-                        "the wavelength modulation is omitted)")
+                   help="Hz of source bounce and hue cycling; default 0.1")
+    g.add_argument("--mode", default="bounce",
+                   help="phase mode (no-op; kept for backward compatibility)")
 
+    p.add_argument("--simulator-binary", dest="simulator_binary",
+                   default=str(DEFAULT_SIMULATOR_BINARY),
+                   help="path to the simulator binary; default "
+                        f"{DEFAULT_SIMULATOR_BINARY}")
+    p.add_argument("--all", dest="all_dir", default=None, metavar="DIR",
+                   help="render one PNG per registered show into DIR and "
+                        "emit DIR/index.html")
     p.add_argument("--list", action="store_true",
-                   help="list available wave types and modes and exit")
+                   help="list every show currently registered in the "
+                        "ShowFactory and exit")
     p.add_argument("-v", "--verbose", action="store_true")
     return p
 
 
-def params_from_args(args: argparse.Namespace) -> WaveParams:
-    return WaveParams(
+def _resolve_params_json(args: argparse.Namespace) -> str:
+    if args.params is not None:
+        return args.params
+    # Build the Wave param JSON from the legacy CLI flags. Other shows ignore
+    # the Wave-specific fields, so passing them is harmless; the renderer
+    # still respects --params when supplied.
+    payload = {
+        "decay_rate": args.decay_rate,
+        "brightness_frequency": args.brightness_frequency,
+        "mode": args.mode,
+    }
+    return json.dumps(payload)
+
+
+def _resolve_show(args: argparse.Namespace) -> str:
+    if args.wave is not None:
+        if args.wave != "wave":
+            raise SystemExit(
+                f"{TAG}: --wave {args.wave!r} is no longer supported; "
+                "use --show <name> instead"
+            )
+        return "Wave"
+    return args.show
+
+
+def params_from_args(args: argparse.Namespace) -> RenderParams:
+    return RenderParams(
         iterations=args.iterations,
         width_in=args.width,
+        show=_resolve_show(args),
+        params_json=_resolve_params_json(args),
         decay_rate=args.decay_rate,
         brightness_frequency=args.brightness_frequency,
         mode=args.mode,
+        seed=args.seed,
         output=args.output,
+        all_dir=args.all_dir,
+        simulator_binary=Path(args.simulator_binary),
         verbose=args.verbose,
-        wave=args.wave,
     )
 
 
@@ -292,25 +393,19 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.list:
-        print("waves:")
-        for name in WAVES:
-            print(f"  {name}")
-        print("modes:")
-        for name in MODES:
-            print(f"  {name}")
+        binary = ensure_simulator_built(RenderParams(verbose=args.verbose))
+        for name in list_registered_shows(binary):
+            print(name)
         return 0
 
     params = params_from_args(args)
     _validate(params)
 
-    if params.verbose:
-        print(f"{TAG}: rendering {params.width_in}x{params.iterations} "
-              f"mode={params.mode}", file=sys.stderr)
+    if params.all_dir is not None:
+        render_all(params)
+        return 0
 
-    rgb = render(params)
-    out_path = Path(params.output)
-    write_png(out_path, params.width_in, params.iterations, rgb)
-    print(f"{TAG}: wrote {out_path} ({params.width_in}x{params.iterations})")
+    render_one(params)
     return 0
 
 

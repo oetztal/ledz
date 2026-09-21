@@ -1,0 +1,97 @@
+# ---------------------------------------------------------------------------
+# pages.yml — regenerates the show previews gallery and deploys to Pages.
+#
+# Repository setting prerequisite:
+#
+#   Before this workflow can deploy, Pages must be configured to use
+#   "GitHub Actions" as its source. Open the repository's Settings page,
+#   navigate to Pages in the sidebar, pick "GitHub Actions" under Source,
+#   and save. Until that is set, the build itself succeeds but the deploy
+#   step fails with:
+#
+#       Failed to create deployment (status: 403)
+#
+#   That 403 is the only blocker — every other step runs even when the
+#   setting is off, so the workflow is safe to merge before the toggle is
+#   flipped. The previously-deployed gallery remains live on Pages until a
+#   successful deploy overwrites it.
+#
+# Triggers:
+#   - push to main: regenerate on every merge to main
+#   - workflow_dispatch: manual re-render with a custom seed (defaults to 42)
+# ---------------------------------------------------------------------------
+
+name: Pages
+
+on:
+  push:
+#    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: 'RNG seed for deterministic random shows'
+        required: false
+        default: '42'
+        type: string
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  pages:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.platformio
+            .pio
+          key: ${{ runner.os }}-pages-pio-${{ hashFiles('**/platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pages-pio-
+
+      - name: Install PlatformIO
+        run: |
+          python -m pip install --upgrade pip
+          pip install platformio
+
+      - name: Build show simulator
+        run: pio run -e native_show_sim
+
+      - name: Render preview gallery
+        env:
+          SEED: ${{ github.event.inputs.seed || '42' }}
+        run: python3 scripts/wave_show.py --all docs/show_previews --seed "$SEED"
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
