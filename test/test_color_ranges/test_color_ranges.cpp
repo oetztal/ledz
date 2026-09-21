@@ -1,6 +1,6 @@
 #include "unity.h"
 #include "show/ColorRanges.h"
-#include "support/color.h"
+#include "support/Color.h"
 #include <vector>
 
 // Mock strip for testing

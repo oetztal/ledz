@@ -4,7 +4,7 @@
 #include <ostream>
 
 #include "unity.h"
-#include "support/color.h"
+#include "support/Color.h"
 
 void setUp() {
 }

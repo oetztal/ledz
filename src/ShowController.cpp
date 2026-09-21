@@ -1,6 +1,6 @@
 #include "ShowController.h"
 #include "Log.h"
-#include "support/color.h"
+#include "support/Color.h"
 
 #include <cstring> // strlen, strncpy
 

@@ -1,5 +1,5 @@
 #include "Layout.h"
-#include "../support/color.h"
+#include "../support/Color.h"
 #include <cmath>
 #ifdef ARDUINO
 #include <esp32-hal.h>

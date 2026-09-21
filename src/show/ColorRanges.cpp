@@ -1,6 +1,6 @@
 #include "ColorRanges.h"
 #include "../Log.h"
-#include "../support/color.h"
+#include "../support/Color.h"
 
 #ifdef ARDUINO
 #include <Arduino.h>

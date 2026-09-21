@@ -1,5 +1,5 @@
 #include "MorseCode.h"
-#include "../support/color.h"
+#include "../support/Color.h"
 #include <algorithm>
 #include <cctype>
 

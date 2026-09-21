@@ -1,6 +1,6 @@
 #include "Chaos.h"
 
-#include "../support/color.h"
+#include "../support/Color.h"
 
 namespace Show {
     float Chaos::func(float x) const {

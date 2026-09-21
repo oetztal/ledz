@@ -2,7 +2,7 @@
 #include "strip/Strip.h"
 
 #include "ColorRangesFactory.h"
-#include "../../support/color.h"
+#include "../../support/Color.h"
 
 
 namespace Show::Factory {

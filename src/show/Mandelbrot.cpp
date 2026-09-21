@@ -7,7 +7,7 @@
 #include <USBCDC.h>
 #endif
 
-#include "../support/color.h"
+#include "../support/Color.h"
 
 static const char* TAG = "show";
 

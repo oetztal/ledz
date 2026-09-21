@@ -1,5 +1,5 @@
 #include "Wave.h"
-#include "../support/color.h"
+#include "../support/Color.h"
 #include <cmath>
 
 #ifndef M_PI

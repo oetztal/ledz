@@ -1,4 +1,4 @@
-#include "../support/color.h"
+#include "../support/Color.h"
 #include "Rainbow.h"
 
 namespace Show {

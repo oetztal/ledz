@@ -1,5 +1,5 @@
 #include "TheaterChase.h"
-#include "../support/color.h"
+#include "../support/Color.h"
 
 namespace Show {
     TheaterChase::TheaterChase(unsigned int num_steps_per_cycle)

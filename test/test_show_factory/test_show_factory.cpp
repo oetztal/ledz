@@ -1,6 +1,6 @@
 #include "unity.h"
 #include "show/factory/ShowFactory.h"
-#include "support/color.h"
+#include "support/Color.h"
 #include "../MockStrip.h"
 #include <chrono>
 #include <map>

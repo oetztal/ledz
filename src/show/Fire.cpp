@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <utility>
 
-#include "support/color.h"
+#include "support/Color.h"
 
 
 namespace Show {
