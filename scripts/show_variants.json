@@ -313,11 +313,13 @@
       {
         "name": "default",
         "label": "Spiral slice (factory default)",
+        "iterations": 1500,
         "params": {}
       },
       {
         "name": "overview",
         "label": "Whole Set Overview",
+        "iterations": 1200,
         "params": {
           "Cre0": -2.0,
           "Cim0": -1.2,
@@ -330,6 +332,7 @@
       {
         "name": "mini-mandelbrot",
         "label": "Mini Mandelbrot in colorful surround",
+        "iterations": 1500,
         "params": {
           "Cre0": -1.809,
           "Cim0": -0.04,
@@ -342,6 +345,7 @@
       {
         "name": "elephant-valley",
         "label": "Elephant Valley tendrils",
+        "iterations": 1500,
         "params": {
           "Cre0": -0.355,
           "Cim0": 0.6,
@@ -354,6 +358,7 @@
       {
         "name": "starfield",
         "label": "Star Field (right of the set, all color)",
+        "iterations": 1500,
         "params": {
           "Cre0": 0.2,
           "Cim0": -0.15,
@@ -366,6 +371,7 @@
       {
         "name": "spiral-arms",
         "label": "Spiral Arms filaments",
+        "iterations": 1500,
         "params": {
           "Cre0": -0.18,
           "Cim0": 0.62,
@@ -378,6 +384,7 @@
       {
         "name": "seahorse-edge",
         "label": "Seahorse Edge",
+        "iterations": 1500,
         "params": {
           "Cre0": -0.768,
           "Cim0": 0.099,
