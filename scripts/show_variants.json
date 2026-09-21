@@ -330,45 +330,6 @@
         }
       },
       {
-        "name": "deep-zoom-2",
-        "label": "Deep zoom near period-2 bulb",
-        "iterations": 1500,
-        "params": {
-          "Cre0": -0.6191897358962228,
-          "Cim0": 0.404772156077224,
-          "Cim1": 0.40478197422321477,
-          "scale": 5,
-          "max_iterations": 500,
-          "color_scale": 10
-        }
-      },
-      {
-        "name": "deep-zoom-3",
-        "label": "Deep zoom on cardioid boundary",
-        "iterations": 1500,
-        "params": {
-          "Cre0": 0.2542098954644496,
-          "Cim0": -0.00043747132901484823,
-          "Cim1": -0.0004374463674464804,
-          "scale": 5,
-          "max_iterations": 1000,
-          "color_scale": 10
-        }
-      },
-      {
-        "name": "deep-zoom-4",
-        "label": "Deep zoom above period-2 bulb",
-        "iterations": 1500,
-        "params": {
-          "Cre0": -1.1876459623874636,
-          "Cim0": 0.30330251579892575,
-          "Cim1": 0.30330546667263913,
-          "scale": 5,
-          "max_iterations": 500,
-          "color_scale": 10
-        }
-      },
-      {
         "name": "wide-overview",
         "label": "Wide overview of the set",
         "iterations": 1500,
@@ -378,6 +339,58 @@
           "Cim1": 2.5352358984008734,
           "scale": 5,
           "max_iterations": 40,
+          "color_scale": 10
+        }
+      },
+      {
+        "name": "mid-zoom",
+        "label": "Mid-zoom near period-2 bulb",
+        "iterations": 1500,
+        "params": {
+          "Cre0": -0.549968185623812,
+          "Cim0": 0.6273713969274161,
+          "Cim1": 0.6333550137946945,
+          "scale": 5,
+          "max_iterations": 100,
+          "color_scale": 10
+        }
+      },
+      {
+        "name": "mid-zoom-2",
+        "label": "Mid-zoom above period-2 bulb",
+        "iterations": 1500,
+        "params": {
+          "Cre0": -0.4844641513949024,
+          "Cim0": 0.6243075234718344,
+          "Cim1": 0.6267793437010146,
+          "scale": 5,
+          "max_iterations": 100,
+          "color_scale": 10
+        }
+      },
+      {
+        "name": "intermediate-zoom",
+        "label": "Intermediate zoom on period-2 bulb",
+        "iterations": 1500,
+        "params": {
+          "Cre0": -0.4176640723972577,
+          "Cim0": 0.5780971139366687,
+          "Cim1": 0.5781394701627564,
+          "scale": 5,
+          "max_iterations": 100,
+          "color_scale": 10
+        }
+      },
+      {
+        "name": "spiral",
+        "label": "Spiral on period-2 bulb",
+        "iterations": 1500,
+        "params": {
+          "Cre0": -0.4154272772697746,
+          "Cim0": 0.5806524876727829,
+          "Cim1": 0.5812713680048681,
+          "scale": 5,
+          "max_iterations": 100,
           "color_scale": 10
         }
       }
