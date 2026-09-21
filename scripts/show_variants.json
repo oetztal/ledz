@@ -367,6 +367,19 @@
           "max_iterations": 500,
           "color_scale": 10
         }
+      },
+      {
+        "name": "wide-overview",
+        "label": "Wide overview of the set",
+        "iterations": 1500,
+        "params": {
+          "Cre0": -3.028449302036049,
+          "Cim0": -2.5330279833053484,
+          "Cim1": 2.5352358984008734,
+          "scale": 5,
+          "max_iterations": 40,
+          "color_scale": 10
+        }
       }
     ]
   }
