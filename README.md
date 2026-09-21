@@ -1,11 +1,13 @@
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=oetztal_ledz&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=oetztal_ledz)
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=oetztal_ledz&metric=bugs)](https://sonarcloud.io/summary/new_code?id=oetztal_ledz)
-[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=oetztal_ledz&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=oetztal_ledz)
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=oetztal_ledz&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=oetztal_ledz)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=oetztal_ledz&metric=coverage)](https://sonarcloud.io/summary/new_code?id=oetztal_ledz)
 [![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=oetztal_ledz&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=oetztal_ledz)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=oetztal_ledz&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=oetztal_ledz)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=oetztal_ledz&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=oetztal_ledz)
 
 # ledz
 
-ESP32-based LED controller with web interface for WS2812B/NeoPixel LED strips.
+[ESP32-based LED controller](https://oetztal.github.io/ledz/)
+with web interface for WS2812B/NeoPixel LED strips.
 
 ## Features
 
@@ -221,4 +223,5 @@ Web files in `data/` are automatically minified and gzip-compressed into C++ hea
 
 ## License
 
-MIT
+[Apache License 2.0](LICENSE)
+
