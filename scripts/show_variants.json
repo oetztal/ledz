@@ -1,7 +1,8 @@
 {
-  "_comment": "Show preview variants rendered by scripts/build_pages.py --all. Each entry is a list of parameter sets that showcase the show's behaviour, plus a one-line description that mirrors the source-code registration in src/show/factory/ShowFactory.cpp. A show that is omitted here falls back to a single 'default' variant using empty params. Adding a new entry here gives the gallery a new preview on the next regeneration; no source-code changes are required.",
+  "_comment": "Show preview variants rendered by scripts/build_pages.py --all. Each entry is a list of parameter sets that showcase the show's behaviour, plus a one-line description that mirrors the source-code registration in src/show/factory/ShowFactory.cpp. A show that is omitted here falls back to a single 'default' variant using empty params. Adding a new entry here gives the gallery a new preview on the next regeneration; no source-code changes are required. Each show body and each variant entry may also carry an optional positive integer 'iterations' (default: the --iterations CLI value) that overrides the row count for that show or that single variant — useful for shows whose pattern repeats inside a much shorter window than the default 1000 rows.",
   "Solid": {
     "description": "Static light: one color, or the strip split into sections with optional gradient blending (flags, patterns)",
+    "iterations": 300,
     "variants": [
       {
         "name": "white",
@@ -100,6 +101,7 @@
   },
   "Fire": {
     "description": "Flickering flames rising from one end, fed by random sparks and cooling into embers",
+    "iterations": 300,
     "variants": [
       {
         "name": "default",
@@ -141,6 +143,7 @@
   },
   "Stroboscope": {
     "description": "Hard on/off flashes of a single color at an adjustable rhythm",
+    "iterations": 300,
     "variants": [
       {
         "name": "white-fast",
@@ -182,6 +185,7 @@
   },
   "Rainbow": {
     "description": "The full color spectrum drifting smoothly along the strip",
+    "iterations": 300,
     "variants": [
       {
         "name": "scroll",
@@ -240,6 +244,7 @@
   },
   "TheaterChase": {
     "description": "Evenly spaced rainbow dots march along the strip, like lights around a theater marquee",
+    "iterations": 300,
     "variants": [
       {
         "name": "default",
@@ -257,6 +262,7 @@
   },
   "MorseCode": {
     "description": "Your own message spelled out in Morse code, scrolling across the strip as dots and dashes",
+    "iterations": 300,
     "variants": [
       {
         "name": "hello",

@@ -111,6 +111,27 @@ want to extend:
 Re-run `python3 scripts/build_pages.py --all docs/show_previews` and a new
 `Wave_tight.png` plus an updated `index.html` appear in the gallery.
 
+### Per-show / per-variant row count
+
+Both the show body and each variant entry accept an optional positive integer
+`iterations` field that overrides the global `--iterations` CLI value for the
+preview PNGs they describe. The renderer resolves the override in this order:
+
+1. `variant["iterations"]` — applied only to that single variant
+2. `body["iterations"]` — applied to every variant of the show
+3. `--iterations` CLI value (default 1000)
+
+This is useful for shows whose pattern repeats inside a much shorter window
+than the default 10 s — `Solid`, `Fire`, `Stroboscope`, `Rainbow`,
+`TheaterChase`, and `MorseCode` all opt in to `300` at the show body so their
+previews are 300×300 instead of 300×1000. The gallery CSS uses
+`height: auto; image-rendering: pixelated`, so the mixed heights lay out
+without any further tweaks.
+
+Note that `MorseCode`'s `HELLO WORLD` variant takes longer than 3 s to scroll
+across the strip, so its 300-row preview intentionally shows only the first
+3 s slice; the shorter `SOS` variant fits comfortably in the same window.
+
 ## Gallery regeneration via GitHub Actions
 
 `.github/workflows/pages.yml` runs on every push to `main` and on manual

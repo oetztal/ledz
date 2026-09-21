@@ -92,6 +92,7 @@ class Variant:
     name: str
     label: str
     params: dict
+    iterations: int | None = None
 
     def png_filename(self, show: str) -> str:
         # ``{show}_{variant}.png``. Avoid duplicating the show name when the
@@ -140,12 +141,15 @@ def load_variants(path: Path) -> dict[str, list[Variant]]:
                 out[show] = [Variant(**{k: v for k, v in v.items() if k != "description"})
                              for v in body]
             continue
+        body_iterations = body.get("iterations")
         variants = []
         for v in body["variants"]:
+            resolved = v["iterations"] if "iterations" in v else body_iterations
             variants.append(Variant(
                 name=str(v["name"]),
                 label=str(v.get("label", v["name"])),
                 params=dict(v.get("params", {})),
+                iterations=resolved,
             ))
         out[show] = variants
     return out
@@ -358,7 +362,7 @@ def render_all(params: RenderParams) -> list[VariantEntry]:
         variants, description = _resolve_variants(name, variants_by_show, descriptions)
         for variant in variants:
             per_variant = RenderParams(
-                iterations=params.iterations,
+                iterations=variant.iterations if variant.iterations is not None else params.iterations,
                 width_in=params.width_in,
                 show=name,
                 params_json=json.dumps(variant.params),
