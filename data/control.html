@@ -395,13 +395,13 @@
 
         // Mandelbrot presets - locations tuned to minimize black (inside-set) pixels
         const mandelbrotPresets = {
-            default:   { Cre0: -1.05,   Cim0: -0.3616, Cim1: -0.3156, scale: 5, max_iterations: 50,  color_scale: 10 },
-            overview:  { Cre0: -2.0,   Cim0: -1.2,  Cim1: 1.2,   scale: 4, max_iterations: 40,  color_scale: 4 },
+            default:   { Cre0: -1.05, Cim0: -0.3616, Cim1: -0.3156, scale: 5, max_iterations: 50,  color_scale: 10 },
+            overview:  { Cre0: -2.5,  Cim0: -0.6,  Cim1: 0.6,   scale: 4, max_iterations: 40,  color_scale: 4 },
             mini:      { Cre0: -1.809, Cim0: -0.04, Cim1: 0.04,  scale: 5, max_iterations: 80,  color_scale: 6 },
-            elephant:  { Cre0: -0.355, Cim0: 0.6,   Cim1: 0.8,   scale: 5, max_iterations: 80,  color_scale: 6 },
-            starfield: { Cre0: 0.2,    Cim0: -0.15, Cim1: 0.15,  scale: 5, max_iterations: 50,  color_scale: 8 },
-            spiral:    { Cre0: -0.18,  Cim0: 0.62,  Cim1: 0.74,  scale: 5, max_iterations: 70,  color_scale: 8 },
-            seahorse:  { Cre0: -0.768, Cim0: 0.099, Cim1: 0.131, scale: 5, max_iterations: 100, color_scale: 8 }
+            elephant:  { Cre0: -0.8,  Cim0: 0.5,   Cim1: 0.7,   scale: 5, max_iterations: 80,  color_scale: 6 },
+            starfield: { Cre0: 0.35,  Cim0: -0.15, Cim1: 0.15,  scale: 5, max_iterations: 50,  color_scale: 8 },
+            spiral:    { Cre0: -1.6,  Cim0: -0.1,  Cim1: 0.1,   scale: 5, max_iterations: 70,  color_scale: 8 },
+            seahorse:  { Cre0: -0.768, Cim0: 0.1,  Cim1: 0.12,  scale: 5, max_iterations: 100, color_scale: 8 }
         };
 
         function loadMandelbrotPreset(value) {

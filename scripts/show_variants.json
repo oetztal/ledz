@@ -318,12 +318,12 @@
       },
       {
         "name": "overview",
-        "label": "Whole Set Overview",
+        "label": "Set's West (wide)",
         "iterations": 1200,
         "params": {
-          "Cre0": -2.0,
-          "Cim0": -1.2,
-          "Cim1": 1.2,
+          "Cre0": -2.5,
+          "Cim0": -0.6,
+          "Cim1": 0.6,
           "scale": 4,
           "max_iterations": 40,
           "color_scale": 4
@@ -344,12 +344,12 @@
       },
       {
         "name": "elephant-valley",
-        "label": "Elephant Valley tendrils",
+        "label": "Above Cardioid",
         "iterations": 1500,
         "params": {
-          "Cre0": -0.355,
-          "Cim0": 0.6,
-          "Cim1": 0.8,
+          "Cre0": -0.8,
+          "Cim0": 0.5,
+          "Cim1": 0.7,
           "scale": 5,
           "max_iterations": 80,
           "color_scale": 6
@@ -360,7 +360,7 @@
         "label": "Star Field (right of the set, all color)",
         "iterations": 1500,
         "params": {
-          "Cre0": 0.2,
+          "Cre0": 0.35,
           "Cim0": -0.15,
           "Cim1": 0.15,
           "scale": 5,
@@ -373,9 +373,9 @@
         "label": "Spiral Arms filaments",
         "iterations": 1500,
         "params": {
-          "Cre0": -0.18,
-          "Cim0": 0.62,
-          "Cim1": 0.74,
+          "Cre0": -1.6,
+          "Cim0": -0.1,
+          "Cim1": 0.1,
           "scale": 5,
           "max_iterations": 70,
           "color_scale": 8
@@ -387,8 +387,8 @@
         "iterations": 1500,
         "params": {
           "Cre0": -0.768,
-          "Cim0": 0.099,
-          "Cim1": 0.131,
+          "Cim0": 0.1,
+          "Cim1": 0.12,
           "scale": 5,
           "max_iterations": 100,
           "color_scale": 8
