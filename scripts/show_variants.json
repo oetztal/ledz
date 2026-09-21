@@ -207,6 +207,14 @@
           "time_step": 1,
           "pixel_step": 3
         }
+      },
+      {
+        "name": "static",
+        "label": "Frozen in space",
+        "params": {
+          "time_step": 1,
+          "pixel_step": 0
+        }
       }
     ]
   },
