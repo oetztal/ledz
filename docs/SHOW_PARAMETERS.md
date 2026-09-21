@@ -537,6 +537,16 @@ ShowController: Switched to show: Solid with params: {"r":255,"g":0,"b":0}
 
 Monitor serial output to verify parameters are being parsed correctly.
 
+## Host-side simulation and preview
+
+`scripts/wave_show.py` produces a PNG preview of any registered show by
+driving the same C++ source that runs on the device against a host-only
+`MockStrip` (see `docs/SHOW_PREVIEWS.md` for the full story). The script's
+`--list` flag reads the show list from the live `ShowFactory` registration,
+so the output always reflects whatever shows are currently compiled into
+the firmware — adding a new show to `src/show/factory/ShowFactory.cpp` makes
+it appear in `--list` and on the GitHub Pages gallery with no further work.
+
 ## Next Steps
 
 1. ✅ ~~Add color picker UI to web interface~~ (Completed)
