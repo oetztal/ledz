@@ -49,10 +49,7 @@ namespace Show {
             // pixel i was emitted. The wavefront at pixel i was emitted about
             // |i - source_pos| / propagation_speed seconds ago.
             float emission_time = color_time - abs_distance / propagation_speed;
-            int color_index_raw = static_cast<int>(emission_time * 20.0f) % 255;
-            if (color_index_raw < 0) color_index_raw += 255;
-            uint8_t color_index = static_cast<uint8_t>(color_index_raw);
-            Strip::Color pixel_color = wheel(color_index);
+            Strip::Color pixel_color = wheel(emission_time * 20.0f);
 
             float final_brightness = source_brightness * envelope;
 

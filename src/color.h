@@ -3,7 +3,7 @@
 
 #include "strip/Strip.h"
 
-Strip::Color wheel(unsigned char wheel_pos);
+Strip::Color wheel(float wheel_pos);
 
 Strip::Color color(Strip::ColorComponent red, Strip::ColorComponent green, Strip::ColorComponent blue);
 

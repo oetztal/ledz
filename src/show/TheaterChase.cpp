@@ -11,8 +11,7 @@ namespace Show {
 
         // Calculate color progression through the wheel
         float cycle_position = (float) (index % num_steps_per_cycle) / (float) num_steps_per_cycle;
-        uint8_t color_index = (uint8_t)(cycle_position * 255.0f);
-        Strip::Color chase_color = wheel(color_index);
+        Strip::Color chase_color = wheel(cycle_position * 255.0f);
 
         // Apply theater chase pattern
         // Pattern: 2 LEDs dark, 5 LEDs lit in each 7-LED segment
