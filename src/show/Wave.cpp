@@ -52,9 +52,9 @@ namespace Show {
 
             float final_brightness = source_brightness * envelope;
 
-            uint8_t r = static_cast<uint8_t>(Support::Color::red(pixel_color) * final_brightness);
-            uint8_t g = static_cast<uint8_t>(Support::Color::green(pixel_color) * final_brightness);
-            uint8_t b = static_cast<uint8_t>(Support::Color::blue(pixel_color) * final_brightness);
+            auto r = static_cast<uint8_t>(Support::Color::red(pixel_color) * final_brightness);
+            auto g = static_cast<uint8_t>(Support::Color::green(pixel_color) * final_brightness);
+            auto b = static_cast<uint8_t>(Support::Color::blue(pixel_color) * final_brightness);
 
             strip.setPixelColor(i, Support::Color::from_rgb(r, g, b));
         }

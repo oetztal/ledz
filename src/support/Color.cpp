@@ -20,7 +20,7 @@ namespace Support::Color {
         // the prior unsigned-char body byte-for-byte at every integer input
         // h ∈ [0, 254] (algebra: 255 * X / 255 == X for integer X < 2^24).
         float pos = wheel_pos * 6.0f / 255.0f;     // ∈ [0, ~5.976]
-        int section = static_cast<int>(pos);        // ∈ {0..5}
+        auto section = static_cast<int>(pos);        // ∈ {0..5}
         float frac = pos - static_cast<float>(section); // ∈ [0, 1)
 
         switch (section) {
@@ -73,12 +73,12 @@ namespace Support::Color {
 
         // Green: 99.4708025861 * ln(temp) - 161.1195681661
         float green_f = 99.4708025861f * std::log(temp) - 161.1195681661f;
-        uint8_t green = static_cast<uint8_t>(std::max(0.0f, std::min(255.0f, green_f)));
+        auto green = static_cast<uint8_t>(std::max(0.0f, std::min(255.0f, green_f)));
 
         // Blue: 138.5177312231 * ln(temp - 10) - 305.0447927307
         // (0 for temp <= 19, i.e., below 1900K)
         float blue_f = (temp <= 19.0f) ? 0.0f : 138.5177312231f * std::log(temp - 10.0f) - 305.0447927307f;
-        uint8_t blue = static_cast<uint8_t>(std::max(0.0f, std::min(255.0f, blue_f)));
+        auto blue = static_cast<uint8_t>(std::max(0.0f, std::min(255.0f, blue_f)));
 
         // Apply brightness scaling for low temperatures
         // At temp=0.0, brightness=0 (black)

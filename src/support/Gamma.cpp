@@ -47,7 +47,7 @@ namespace Support {
     }
 
     uint32_t Gamma::correct32(uint32_t color) {
-        uint8_t *bytes = (uint8_t *)&color;
+        auto *bytes = (uint8_t *)&color;
         // Apply gamma correction to each color channel
         // Adafruit NeoPixel format: 0xRRGGBB (bytes[2]=R, bytes[1]=G, bytes[0]=B)
         bytes[0] = gammaTable[bytes[0]]; // Blue (least significant byte)
@@ -62,7 +62,7 @@ namespace Support {
     }
 
     uint32_t Gamma::uncorrect32(uint32_t color) {
-        uint8_t *bytes = (uint8_t *)&color;
+        auto *bytes = (uint8_t *)&color;
         // Apply inverse gamma correction to each color channel
         bytes[0] = invGammaTable[bytes[0]]; // Blue (least significant byte)
         bytes[1] = invGammaTable[bytes[1]]; // Green

@@ -89,7 +89,7 @@ namespace Support {
 #endif
 
         // Calculate fade progress (1.0 at start, 0.0 at end)
-        float elapsed = static_cast<float>(now - start_time);
+        auto elapsed = static_cast<float>(now - start_time);
         float fade_progress = 1.0f - std::min(elapsed / static_cast<float>(duration_ms), 1.0f);
 
         // Update each LED

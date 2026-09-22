@@ -91,7 +91,7 @@ namespace Show {
         // Encode each word with a unique color
         for (size_t word_idx = 0; word_idx < words.size(); word_idx++) {
             // Assign color from wheel based on word index
-            uint8_t color_index = (uint8_t) ((word_idx * 255) / std::max(1, (int) words.size()));
+            auto color_index = (uint8_t) ((word_idx * 255) / std::max(1, (int) words.size()));
             Strip::Color word_color = Support::Color::wheel(color_index);
 
             const std::string &word = words[word_idx];

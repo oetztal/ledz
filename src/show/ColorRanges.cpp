@@ -57,7 +57,7 @@ namespace Show {
                 ESP_LOGD(TAG, "Using equal distribution for %zu colors", colors.size());
 #endif
                 for (size_t i = 1; i < colors.size(); i++) {
-                    uint16_t boundary = static_cast<uint16_t>(static_cast<float>(num_leds) * static_cast<float>(i) / static_cast<float>(colors.size()));
+                    auto boundary = static_cast<uint16_t>(static_cast<float>(num_leds) * static_cast<float>(i) / static_cast<float>(colors.size()));
                     boundaries.push_back(boundary);
                 }
             } else {
@@ -69,7 +69,7 @@ namespace Show {
                 }
 #endif
                 for (float range: ranges) {
-                    uint16_t boundary = (uint16_t) ((float) num_leds * range / 100.0f);
+                    auto boundary = (uint16_t) ((float) num_leds * range / 100.0f);
                     boundaries.push_back(boundary);
                 }
             }
@@ -85,7 +85,7 @@ namespace Show {
 
                     // Find which segment this LED is in
                     float segment_size = 1.0f / (float) (colors.size() - 1);
-                    size_t segment = (size_t) (position / segment_size);
+                    auto segment = (size_t) (position / segment_size);
                     if (segment >= colors.size() - 1) segment = colors.size() - 2;
 
                     // Calculate position within segment (0.0 to 1.0)
@@ -97,9 +97,9 @@ namespace Show {
                     Strip::Color colorA = colors[segment];
                     Strip::Color colorB = colors[segment + 1];
 
-                    uint8_t r = (uint8_t) (Support::Color::red(colorA) * (1.0f - ratio) + Support::Color::red(colorB) * ratio);
-                    uint8_t g = (uint8_t) (Support::Color::green(colorA) * (1.0f - ratio) + Support::Color::green(colorB) * ratio);
-                    uint8_t b = (uint8_t) (Support::Color::blue(colorA) * (1.0f - ratio) + Support::Color::blue(colorB) * ratio);
+                    auto r = (uint8_t) (Support::Color::red(colorA) * (1.0f - ratio) + Support::Color::red(colorB) * ratio);
+                    auto g = (uint8_t) (Support::Color::green(colorA) * (1.0f - ratio) + Support::Color::green(colorB) * ratio);
+                    auto b = (uint8_t) (Support::Color::blue(colorA) * (1.0f - ratio) + Support::Color::blue(colorB) * ratio);
 
                     target_colors.push_back(Support::Color::from_rgb(r, g, b));
                 }

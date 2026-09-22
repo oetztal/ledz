@@ -953,7 +953,7 @@ bool doPerformUpdate(const String &downloadUrl, size_t expectedSize,
             totalRead += written;
             lastDataReceived = millis();
 
-            int percent = static_cast<int>((totalRead * 100ULL) / expectedSize);
+            auto percent = static_cast<int>((totalRead * 100ULL) / expectedSize);
             if (onProgress) onProgress(percent, totalRead);
             esp_task_wdt_reset();
             vTaskDelay(1);

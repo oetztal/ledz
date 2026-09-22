@@ -38,7 +38,7 @@ namespace LocalTime {
 
         struct tm localParts(uint32_t epoch, const char *tz) {
             applyTz(tz);
-            const time_t when = static_cast<time_t>(epoch);
+            const auto when = static_cast<time_t>(epoch);
             struct tm parts = {};
             localtime_r(&when, &parts);
             return parts;
@@ -70,7 +70,7 @@ namespace LocalTime {
         // tm_gmtoff and tm_zone are BSD/GNU extensions, and the ESP32's
         // newlib compiles struct tm without either. Both are derived here
         // instead, from fields the C standard guarantees.
-        const time_t when = static_cast<time_t>(epoch);
+        const auto when = static_cast<time_t>(epoch);
         struct tm utc = {};
         gmtime_r(&when, &utc);
 
@@ -110,7 +110,7 @@ namespace LocalTime {
         if (length == 0 || length > TZ_MAX_LEN) return false;
 
         for (size_t i = 0; i < length; i++) {
-            const unsigned char c = static_cast<unsigned char>(tz[i]);
+            const auto c = static_cast<unsigned char>(tz[i]);
             if (c < 0x20 || c > 0x7E) return false; // printable ASCII only
             if (c == '=') return false;             // would corrupt the environment entry
         }
@@ -122,7 +122,7 @@ namespace LocalTime {
         }
 
         for (size_t i = 0; i < 3; i++) {
-            const unsigned char c = static_cast<unsigned char>(tz[i]);
+            const auto c = static_cast<unsigned char>(tz[i]);
             const bool alphabetic = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
             if (!alphabetic) return false;
         }
