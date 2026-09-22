@@ -18,18 +18,26 @@ The control page SHALL render a banner element between the status bar and the Br
 - **WHEN** `GET /api/timers` reports zero entries with `enabled=true`
 - **THEN** the banner's `display` is `none` and the page flow continues uninterrupted from the status bar to the Brightness control group
 
-### Requirement: Banner shows the next active timer using the existing timers sort key
+### Requirement: Banner shows the next timer that will actually fire
 
-The banner SHALL display the timer that would head the `/timers` page's Active Timers list: countdown timers first, soonest to expire on top; then schedules sorted by time of day; with slot index breaking ties. The banner SHALL display at most one timer at a time.
+The banner SHALL display, at most, one timer: the one that will fire next across all enabled timers, regardless of whether it is a countdown or a schedule. Paused schedules SHALL be sorted to the end (they do not actually fire), so an active timer is preferred whenever one exists. The slot index SHALL break ties. For countdowns, the next firing moment is `timersFetchedAt + remaining_seconds`; for schedules it is the next occurrence of `target_time` on or after the current local time.
 
 #### Scenario: One countdown and one schedule exist
-- **WHEN** `GET /api/timers` reports a countdown with remaining time 0:30 and a schedule for 22:00
+- **WHEN** `GET /api/timers` reports a countdown with remaining time 0:30 and a schedule for 22:00 (current local time is 14:00, so the schedule fires in 8 hours)
 - **THEN** the banner displays the countdown
 - **THEN** the banner does not show the schedule
 
 #### Scenario: Two schedules exist
-- **WHEN** `GET /api/timers` reports a schedule for 22:00 in slot 0 and a schedule for 07:00 in slot 1
-- **THEN** the banner displays the 07:00 schedule
+- **WHEN** `GET /api/timers` reports a schedule for 22:00 (later today) and a schedule for 07:00 (already past today's 07:00, so it fires tomorrow) and current local time is 14:00
+- **THEN** the banner displays the 22:00 schedule (next firing is in 8 hours, not tomorrow's 07:00)
+
+#### Scenario: Paused schedule is sorted after an active one
+- **WHEN** `GET /api/timers` reports an active schedule for 22:00 and a paused schedule for 07:00, and current local time is 14:00
+- **THEN** the banner displays the 22:00 schedule (active wins, even though the paused one's time-of-day is earlier)
+
+#### Scenario: Only paused schedules exist
+- **WHEN** `GET /api/timers` reports only paused schedules
+- **THEN** the banner still displays one of them, with a `PAUSED` badge
 
 ### Requirement: Banner displays type badge, mono time, action description, and day dots
 

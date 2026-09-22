@@ -1170,6 +1170,10 @@
                         `<option value="${p.index}">${p.name} (${p.show_name})</option>`
                     ).join('');
                 }
+
+                // Preset names are needed to render a LOAD_PRESET timer in the
+                // next-timer banner. Refresh it now that they're in memory.
+                updateTimerDisplay();
             } catch (error) {
                 console.error('Failed to load presets:', error);
             }
@@ -1310,6 +1314,11 @@
         // Timer status display
         let cachedTimers = [];
         let timersFetchedAt = 0;
+        // Local seconds since midnight at last fetch, or -1 if NTP was
+        // unsynced. Used to compute the next firing moment of a daily
+        // schedule so the banner doesn't shadow a 22:00 with a 07:00 whose
+        // time-of-day has already passed today.
+        let cachedNowSeconds = -1;
 
         // Banner helpers: weekday mask (bit n = tm_wday n, Sunday = 0).
         // The UI is Monday-first; this table is where the two orders meet.
@@ -1355,10 +1364,30 @@
                 const data = await response.json();
                 cachedTimers = (data.timers || []).filter(t => t.enabled);
                 timersFetchedAt = Date.now();
+                cachedNowSeconds = (data.current_epoch && data.current_epoch !== 0)
+                    ? data.local_seconds_since_midnight
+                    : -1;
                 updateTimerDisplay();
             } catch (error) {
                 console.error('Failed to load timers:', error);
             }
+        }
+
+        // Seconds from "now" until this timer fires next, or null when it has
+        // already fired. Paused schedules return Infinity so they sort last
+        // — they don't actually fire — but stay in the list so a paused-only
+        // device still shows something. When NTP is unsynced we fall back to
+        // target_time alone so the banner doesn't go blank.
+        function secondsUntilFire(timer, nowLocalSeconds, elapsedSeconds) {
+            if (timer.type_name === 'countdown') {
+                const remaining = timer.remaining_seconds - elapsedSeconds;
+                return remaining > 0 ? remaining : null;
+            }
+            if (timer.paused) return Infinity;
+            if (nowLocalSeconds < 0) return timer.target_time;
+            let next = timer.target_time;
+            if (next <= nowLocalSeconds) next += 86400;
+            return next - nowLocalSeconds;
         }
 
         function updateTimerDisplay() {
@@ -1369,11 +1398,10 @@
             const daysEl = document.getElementById('timerBannerDays');
             const elapsedSeconds = Math.floor((Date.now() - timersFetchedAt) / 1000);
 
-            // Drop expired countdowns; schedules always count as active.
-            const activeTimers = cachedTimers.filter(t => {
-                if (t.type_name === 'alarm_daily') return true;
-                return t.remaining_seconds - elapsedSeconds > 0;
-            });
+            // Drop expired countdowns. Paused schedules stay (sort last).
+            const activeTimers = cachedTimers.filter(t =>
+                secondsUntilFire(t, cachedNowSeconds, elapsedSeconds) !== null
+            );
 
             if (activeTimers.length === 0) {
                 banner.hidden = true;
@@ -1385,15 +1413,12 @@
                 return;
             }
 
-            // Same sort key as the timers page: countdowns first by remaining
-            // seconds, then schedules by target time; slot index breaks ties.
+            // Soonest-to-fire first across countdowns and schedules. Slot
+            // index breaks ties so the order stays stable across renders.
             activeTimers.sort((a, b) => {
-                const aCountdown = a.type_name === 'countdown';
-                const bCountdown = b.type_name === 'countdown';
-                if (aCountdown !== bCountdown) return aCountdown ? -1 : 1;
-                const aKey = aCountdown ? a.remaining_seconds : a.target_time;
-                const bKey = bCountdown ? b.remaining_seconds : b.target_time;
-                return (aKey - bKey) || (a.index - b.index);
+                const aFire = secondsUntilFire(a, cachedNowSeconds, elapsedSeconds);
+                const bFire = secondsUntilFire(b, cachedNowSeconds, elapsedSeconds);
+                return (aFire - bFire) || (a.index - b.index);
             });
 
             const timer = activeTimers[0];

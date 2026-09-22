@@ -15,7 +15,7 @@
 ## 3. JavaScript refactor
 
 - [x] 3.1 In `data/control.html`, add a local `renderDayDots(mask)` helper inside the script block (same algorithm as `data/timers.html:225-230`).
-- [x] 3.2 In `data/control.html`, rewrite `updateTimerDisplay()` to write into the new banner DOM nodes: hide the banner when no timers, otherwise update `#timerBannerBadge`, `#timerBannerTime`, `#timerBannerAction`, and `#timerBannerDays` from the head of the sorted list, using the same sort key as the timers page (`control.html:336-343`).
+- [x] 3.2 In `data/control.html`, rewrite `updateTimerDisplay()` to write into the new banner DOM nodes: hide the banner when no timers, otherwise update `#timerBannerBadge`, `#timerBannerTime`, `#timerBannerAction`, and `#timerBannerDays` from the head of the sorted list. Sort by soonest-to-fire across countdown and schedule timers, considering the current local time so a passed-today time-of-day doesn't shadow a later-time-of-day that actually fires next. Paused schedules sort last.
 - [x] 3.3 In `data/control.html`, ensure the 1 s `setInterval(updateTimerDisplay, 1000)` at `control.html:780` still drives the banner; remove the now-dead references to `#timerStatus` and `#timerStatusItem`.
 
 ## 4. Off-button behaviour
