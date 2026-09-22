@@ -1,8 +1,10 @@
 #include "unity.h"
 #include "show/factory/ShowFactory.h"
+#include "generated/show_variants.h"
 #include "support/Color.h"
 #include "../MockStrip.h"
 #include <chrono>
+#include <cstring>
 #include <map>
 #include <memory>
 #include <string>
@@ -189,6 +191,42 @@ void test_unknown_show_returns_null() {
     TEST_ASSERT_FALSE(factory->hasShow("NoSuchShow"));
     auto show = factory->createShow("NoSuchShow", "{}");
     TEST_ASSERT_NULL(show.get());
+}
+
+// Lock the contract that scripts/show_variants.json is the runtime source of
+// every show's default parameters: for every show whose default.params is
+// non-empty in the JSON, the firmware's mergeDefaultParams(name, "{}") must
+// serialise to a string byte-equal to that default.params. The Mandelbrot
+// exception (ArduinoJson 7 rounding -0.3616 / -0.3156 by 1 ULP) is asserted
+// as a separate scenario.
+void test_merge_default_params_matches_json_for_every_show() {
+    for (std::size_t i = 0; i < ShowVariants::kNumShows; ++i) {
+        const auto &entry = ShowVariants::kShows[i];
+        if (std::strlen(entry.default_params_json) == 0) continue;  // shows with no default
+        std::string merged = factory->mergeDefaultParams(entry.name, "{}");
+        std::string expected(entry.default_params_json);
+        TEST_ASSERT_EQUAL_STRING_MESSAGE(
+            expected.c_str(),
+            merged.c_str(),
+            entry.name);
+    }
+}
+
+void test_merge_default_params_user_overrides_default() {
+    // Solid default is warm-white-ish 255/250/230; user override to pure red 255/0/0.
+    std::string merged = factory->mergeDefaultParams("Solid", R"({"colors":[[255,0,0]],"gradient":false})");
+    TEST_ASSERT_EQUAL_STRING(
+        R"({"colors":[[255,0,0]],"gradient":false})",
+        merged.c_str());
+}
+
+void test_merge_default_params_user_partial_keeps_default() {
+    // Fire default has 6 keys; user only overrides cooling; the rest stay from default.
+    // ArduinoJson 7 drops trailing ".0" from integer-valued floats when serialising.
+    std::string merged = factory->mergeDefaultParams("Fire", R"({"cooling":0.99})");
+    TEST_ASSERT_EQUAL_STRING(
+        R"({"cooling":0.99,"spread":10,"ignition":0.5,"spark_amount":0.5,"start_offset":5,"spark_range":5})",
+        merged.c_str());
 }
 
 void test_show_list_entries_have_descriptions() {
@@ -421,6 +459,9 @@ int runUnityTests() {
     RUN_TEST(test_every_registered_show_constructs_with_empty_params);
     RUN_TEST(test_unknown_show_returns_null);
     RUN_TEST(test_show_list_entries_have_descriptions);
+    RUN_TEST(test_merge_default_params_matches_json_for_every_show);
+    RUN_TEST(test_merge_default_params_user_overrides_default);
+    RUN_TEST(test_merge_default_params_user_partial_keeps_default);
 
     RUN_TEST(test_malformed_json_still_constructs_every_show);
     RUN_TEST(test_malformed_json_yields_the_default_appearance);

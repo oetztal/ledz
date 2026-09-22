@@ -97,6 +97,146 @@
           ],
           "gradient": true
         }
+      },
+      {
+        "name": "warm-white",
+        "label": "Warm white",
+        "params": {
+          "colors": [
+            [
+              255,
+              170,
+              120
+            ]
+          ],
+          "gradient": false
+        }
+      },
+      {
+        "name": "pure-white",
+        "label": "Pure white",
+        "params": {
+          "colors": [
+            [
+              255,
+              255,
+              255
+            ]
+          ],
+          "gradient": false
+        }
+      },
+      {
+        "name": "red",
+        "label": "Red",
+        "params": {
+          "colors": [
+            [
+              255,
+              0,
+              0
+            ]
+          ],
+          "gradient": false
+        }
+      },
+      {
+        "name": "orange",
+        "label": "Orange",
+        "params": {
+          "colors": [
+            [
+              255,
+              127,
+              0
+            ]
+          ],
+          "gradient": false
+        }
+      },
+      {
+        "name": "yellow",
+        "label": "Yellow",
+        "params": {
+          "colors": [
+            [
+              255,
+              255,
+              0
+            ]
+          ],
+          "gradient": false
+        }
+      },
+      {
+        "name": "green",
+        "label": "Green",
+        "params": {
+          "colors": [
+            [
+              0,
+              255,
+              0
+            ]
+          ],
+          "gradient": false
+        }
+      },
+      {
+        "name": "cyan",
+        "label": "Cyan",
+        "params": {
+          "colors": [
+            [
+              0,
+              255,
+              255
+            ]
+          ],
+          "gradient": false
+        }
+      },
+      {
+        "name": "sky-blue",
+        "label": "Sky blue",
+        "params": {
+          "colors": [
+            [
+              0,
+              127,
+              255
+            ]
+          ],
+          "gradient": false
+        }
+      },
+      {
+        "name": "blue",
+        "label": "Blue",
+        "params": {
+          "colors": [
+            [
+              0,
+              0,
+              255
+            ]
+          ],
+          "gradient": false
+        }
+      },
+      {
+        "name": "magenta",
+        "label": "Magenta",
+        "params": {
+          "colors": [
+            [
+              255,
+              0,
+              255
+            ]
+          ],
+          "gradient": false
+        }
       }
     ]
   },

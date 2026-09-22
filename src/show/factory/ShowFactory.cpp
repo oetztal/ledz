@@ -1,4 +1,5 @@
 #include "ShowFactory.h"
+#include "generated/show_variants.h"
 #include "Log.h"
 #include "show/Rainbow.h"
 #include "show/ColorRanges.h"
@@ -149,6 +150,38 @@ std::unique_ptr<Show> ShowFactory::createShow(const std::string &name) {
     return createShow(name, "{}"); // Default to empty params
 }
 
+std::string ShowFactory::mergeDefaultParams(const std::string &name, const std::string &paramsJson) const {
+    JsonDocument merged;
+    const char *defaultJson = ShowVariants::findDefaultParamsJson(name.c_str());
+    if (defaultJson != nullptr && defaultJson[0] != '\0') {
+        DeserializationError defaultError = deserializeJson(merged, defaultJson);
+        if (defaultError) {
+            ESP_LOGW(TAG, "Failed to parse generated default for %s: %s; falling back to user payload",
+                           name.c_str(), defaultError.c_str());
+            merged.clear();
+        }
+    }
+
+    JsonDocument user;
+    DeserializationError error = deserializeJson(user, paramsJson.c_str());
+    if (error) {
+        ESP_LOGW(TAG, "Failed to parse params for %s: %s; using default parameters",
+                       name.c_str(), error.c_str());
+    } else {
+        // ArduinoJson 7's JsonDocument::set() replaces the destination with
+        // the source (not a deep-merge), so manually copy each user key onto
+        // the merged doc to get the desired "user overrides, default fills"
+        // semantics. Works for flat scalars and one-level arrays.
+        for (JsonPairConst kv : user.as<JsonObjectConst>()) {
+            merged[kv.key().c_str()] = kv.value();
+        }
+    }
+
+    std::string out;
+    serializeJson(merged, out);
+    return out;
+}
+
 std::unique_ptr<Show> ShowFactory::createShow(const std::string &name, const std::string &paramsJson) {
     // Check if show exists
     auto it = showConstructors.find(name);
@@ -157,18 +190,38 @@ std::unique_ptr<Show> ShowFactory::createShow(const std::string &name, const std
         return {};
     }
 
-    JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, paramsJson.c_str());
+    // Merge JSON default (from the generated header) with the user-supplied
+    // paramsJson. The default is the source of truth at runtime; the user's
+    // payload is overlaid on top via per-key copy, so explicit user keys
+    // override the default and omitted user keys fall back to it.
+    JsonDocument merged;
+    const char *defaultJson = ShowVariants::findDefaultParamsJson(name.c_str());
+    if (defaultJson != nullptr && defaultJson[0] != '\0') {
+        DeserializationError defaultError = deserializeJson(merged, defaultJson);
+        if (defaultError) {
+            ESP_LOGW(TAG, "Failed to parse generated default for %s: %s; continuing without default",
+                           name.c_str(), defaultError.c_str());
+            merged.clear();
+        }
+    }
 
-    // If JSON parsing fails, log warning and use empty document (will use defaults)
+    JsonDocument user;
+    DeserializationError error = deserializeJson(user, paramsJson.c_str());
     if (error) {
         ESP_LOGW(TAG, "Failed to parse params for %s: %s; using default parameters",
                        name.c_str(), error.c_str());
-        doc.clear(); // Empty document will trigger all defaults via | operator
+    } else {
+        for (JsonPairConst kv : user.as<JsonObjectConst>()) {
+            merged[kv.key().c_str()] = kv.value();
+        }
     }
 
-    // Call the stored factory function with the parsed (or empty) JSON document
-    return it->second(doc);
+    // Call the stored factory function with the merged JSON document.
+    // The factory lambdas still carry `|` fallbacks as defense-in-depth
+    // (a missing JSON entry, an ArduinoJson 7 1-ULP rounding exception,
+    // etc.) but those branches are unreachable for any key the JSON default
+    // declares.
+    return it->second(merged);
 }
 
 const std::vector<ShowFactory::ShowInfo> &ShowFactory::listShows() const {

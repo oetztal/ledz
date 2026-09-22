@@ -3,6 +3,7 @@
 //
 
 #include "TouchController.h"
+#include "generated/show_variants.h"
 #include "Log.h"
 #include "ShowController.h"
 
@@ -13,66 +14,78 @@
 static const char* TAG = "touch";
 
 
-const char* SOLID_VARIANTS[] = {
-    "{\"colors\":[[255,170,120]]}",
-    "{\"colors\":[[255,255,255]]}",
-    "{\"colors\":[[255,0,0]]}",
-    "{\"colors\":[[255,127,0]]}",
-    "{\"colors\":[[255,255,0]]}",
-    "{\"colors\":[[0,255,0]]}",
-    "{\"colors\":[[0,255,255]]}",
-    "{\"colors\":[[0,127,255]]}",
-    "{\"colors\":[[0,0,255]]}",
-    "{\"colors\":[[255,0,255]]}"
+// Solid variants come from scripts/show_variants.json via the generated header.
+// Keep this in lockstep with Solid.variants[] in scripts/show_variants.json —
+// the touch controller, the gallery, and ShowFactory all read from the same
+// canonical JSON entry.
+static const char* const SOLID_VARIANTS[] = {
+    ShowVariants::kSolidVariants[0].params_json,
+    ShowVariants::kSolidVariants[1].params_json,
+    ShowVariants::kSolidVariants[2].params_json,
+    ShowVariants::kSolidVariants[3].params_json,
+    ShowVariants::kSolidVariants[4].params_json,
+    ShowVariants::kSolidVariants[5].params_json,
+    ShowVariants::kSolidVariants[6].params_json,
+    ShowVariants::kSolidVariants[7].params_json,
+    ShowVariants::kSolidVariants[8].params_json,
+    ShowVariants::kSolidVariants[9].params_json,
+    ShowVariants::kSolidVariants[10].params_json,
+    ShowVariants::kSolidVariants[11].params_json,
+    ShowVariants::kSolidVariants[12].params_json,
 };
-const char* COLORRANGES_VARIANTS[] = {
+
+// Touch-UX-curated presets for the other touch entries. These do not appear in
+// scripts/show_variants.json (the gallery) because they are curated for the
+// one-button-press cycling experience on hardware, not for the gallery
+// preview. Renamed TOUCH_ONLY_* to make the boundary explicit.
+const char* TOUCH_ONLY_COLORRANGES_VARIANTS[] = {
     "{\"colors\":[[0,0,255],[255,255,0]]}",
     "{\"colors\":[[255,0,0],[255,255,255],[0,255,0]]}",
     R"({"colors":[[170,21,27],[241,191,0],[170,21,27]],"ranges":[25,75]})"
 };
-const char* TWOCOLORBLEND_VARIANTS[] = {
+const char* TOUCH_ONLY_TWOCOLORBLEND_VARIANTS[] = {
     R"({"colors":[[0,0,255],[255,0,0]],"gradient":true})",
     R"({"colors":[[0,255,0],[255,0,0]],"gradient":true})",
     R"({"colors":[[0,255,0],[0,0,255]],"gradient":true})",
 };
-const char* COLORRUN_VARIANTS[] = {"{}"};
-const char* JUMP_VARIANTS[] = {"{}"};
-const char* RAINBOW_VARIANTS[] = {
+const char* TOUCH_ONLY_COLORRUN_VARIANTS[] = {"{}"};
+const char* TOUCH_ONLY_JUMP_VARIANTS[] = {"{}"};
+const char* TOUCH_ONLY_RAINBOW_VARIANTS[] = {
     "{}",
     R"({"time_step":0.3,"pixel_step":1.0})",
     R"({"time_step":0.05,"pixel_step":0})"
 };
-const char* WAVE_VARIANTS[] = {"{}"};
-const char* FIRE_VARIANTS[] = {
+const char* TOUCH_ONLY_WAVE_VARIANTS[] = {"{}"};
+const char* TOUCH_ONLY_FIRE_VARIANTS[] = {
     R"({})",
     R"({"cooling":0.05})"
 };
-const char* STARLIGHT_VARIANTS[] = {
+const char* TOUCH_ONLY_STARLIGHT_VARIANTS[] = {
     R"({"probability":0.1,"length":0,"fade":250})",
     R"({"probability":0.02,"length":5000,"fade":1000})"
 };
-const char* THEATERCHASE_VARIANTS[] = {
+const char* TOUCH_ONLY_THEATERCHASE_VARIANTS[] = {
     "{\"num_steps_per_cycle\":21}",
     "{\"num_steps_per_cycle\":42}",
     "{\"num_steps_per_cycle\":84}"
 };
-const char* MORSECODE_VARIANTS[] = {
+const char* TOUCH_ONLY_MORSECODE_VARIANTS[] = {
     R"({"message":"foo bar baz"})",
     R"({"message":"gutes neues"})"
 };
 
 const TouchController::ShowVariantGroup TouchController::SHOW_VARIANTS[] = {
-    {"Solid", SOLID_VARIANTS, 10},
-    {"Solid", COLORRANGES_VARIANTS, 3},
-    {"Solid", TWOCOLORBLEND_VARIANTS, 3},
-    {"ColorRun", COLORRUN_VARIANTS, 1},
-    {"Jump", JUMP_VARIANTS, 1},
-    {"Rainbow", RAINBOW_VARIANTS, 3},
-    {"Wave", WAVE_VARIANTS, 1},
-    {"Fire", FIRE_VARIANTS, 2},
-    {"Starlight", STARLIGHT_VARIANTS, 2},
-    {"TheaterChase", THEATERCHASE_VARIANTS, 3},
-    {"MorseCode", MORSECODE_VARIANTS, 2}
+    {"Solid", SOLID_VARIANTS, sizeof(SOLID_VARIANTS) / sizeof(SOLID_VARIANTS[0])},
+    {"Solid", TOUCH_ONLY_COLORRANGES_VARIANTS, 3},
+    {"Solid", TOUCH_ONLY_TWOCOLORBLEND_VARIANTS, 3},
+    {"ColorRun", TOUCH_ONLY_COLORRUN_VARIANTS, 1},
+    {"Jump", TOUCH_ONLY_JUMP_VARIANTS, 1},
+    {"Rainbow", TOUCH_ONLY_RAINBOW_VARIANTS, 3},
+    {"Wave", TOUCH_ONLY_WAVE_VARIANTS, 1},
+    {"Fire", TOUCH_ONLY_FIRE_VARIANTS, 2},
+    {"Starlight", TOUCH_ONLY_STARLIGHT_VARIANTS, 2},
+    {"TheaterChase", TOUCH_ONLY_THEATERCHASE_VARIANTS, 3},
+    {"MorseCode", TOUCH_ONLY_MORSECODE_VARIANTS, 2}
 };
 
 const size_t TouchController::NUM_SHOW_VARIANTS = sizeof(TouchController::SHOW_VARIANTS) / sizeof(TouchController::SHOW_VARIANTS[0]);
