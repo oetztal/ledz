@@ -223,6 +223,10 @@ label.checkbox-row,
     background-color: #f8f9fa;
     border-radius: 10px;
     margin-bottom: 30px;
+    /* Leave space on the right for the floating Off button (48px + 24px
+       right offset + 8px gap). Without this the button sits on top of the
+       bar's right edge. */
+    margin-right: 80px;
 }
 
 /* Floating Off action button on the control page. Lives inside .content
