@@ -105,8 +105,8 @@ def _strip_comment_key(d: dict) -> dict:
     return {k: v for k, v in d.items() if not k.startswith("_")}
 
 
-def load_variants(path: Path) -> dict[str, list[Variant]]:
-    """Return ``{show_name: [Variant, ...]}`` from the variants file.
+def load_variants(path: Path) -> dict[str, tuple[Variant | None, list[Variant]]]:
+    """Return ``{show_name: (default_variant_or_None, [Variant, ...])}``.
 
     The file format groups everything under each show name:
 
@@ -115,12 +115,21 @@ def load_variants(path: Path) -> dict[str, list[Variant]]:
         {
             "Wave": {
                 "description": "...",
+                "default": {"params": {...}, "iterations": 100},
                 "variants": [
-                    {"name": "default", "label": "...", "params": {}},
+                    {"name": "tight", "label": "Tight", "params": {...}},
                     ...
                 ]
             }
         }
+
+    The ``default`` object holds the factory default parameters, structurally
+    distinct from the curated ``variants``. When present, ``load_variants``
+    synthesises a ``Variant(name="default", label="Factory default", ...)``
+    from ``body["default"]["params"]`` (and its optional ``iterations``
+    override) and returns it as the first element of the tuple; the second
+    element is the list of curated ``variants`` entries. ``_resolve_variants``
+    is responsible for prepending the default to the rendered list.
 
     A show that is missing from the file falls back to a single ``default``
     variant with empty parameters so the gallery still shows every registered
@@ -133,16 +142,30 @@ def load_variants(path: Path) -> dict[str, list[Variant]]:
         raw = json.load(f)
     raw = _strip_comment_key(raw)
 
-    out: dict[str, list[Variant]] = {}
+    out: dict[str, tuple[Variant | None, list[Variant]]] = {}
     for show, body in raw.items():
         if not isinstance(body, dict) or "variants" not in body:
             # Tolerate bare-list shorthand: {"Wave": [{...}, {...}]}.
             if isinstance(body, list):
-                out[show] = [Variant(**{k: v for k, v in v.items() if k != "description"})
-                             for v in body]
+                variants = [
+                    Variant(**{k: v for k, v in v.items() if k != "description"})
+                    for v in body
+                ]
+                out[show] = (None, variants)
             continue
         body_iterations = body.get("iterations")
-        variants = []
+
+        default_variant: Variant | None = None
+        raw_default = body.get("default")
+        if isinstance(raw_default, dict):
+            default_variant = Variant(
+                name="default",
+                label="Factory default",
+                params=dict(raw_default.get("params", {})),
+                iterations=raw_default.get("iterations", body_iterations),
+            )
+
+        variants: list[Variant] = []
         for v in body["variants"]:
             resolved = v["iterations"] if "iterations" in v else body_iterations
             variants.append(Variant(
@@ -151,7 +174,7 @@ def load_variants(path: Path) -> dict[str, list[Variant]]:
                 params=dict(v.get("params", {})),
                 iterations=resolved,
             ))
-        out[show] = variants
+        out[show] = (default_variant, variants)
     return out
 
 
@@ -329,14 +352,23 @@ class VariantEntry:
 
 def _resolve_variants(
     show: str,
-    variants_by_show: dict[str, list[Variant]],
+    variants_by_show: dict[str, tuple[Variant | None, list[Variant]]],
     descriptions: dict[str, str],
 ) -> tuple[list[Variant], str]:
     """Return ``(variants, description)`` for a show, falling back to a single
     default variant when ``show`` is not mentioned in the variants file.
+
+    The synthetic ``default`` variant (when present) is prepended to the list
+    of curated ``variants`` so the default appears first under each show's
+    section in the gallery. Callers see the default as the first element of
+    the returned list and don't need to know which entry is the default.
     """
     if show in variants_by_show:
-        return variants_by_show[show], descriptions.get(show, "")
+        default_variant, variants = variants_by_show[show]
+        out = list(variants)
+        if default_variant is not None:
+            out.insert(0, default_variant)
+        return out, descriptions.get(show, "")
     return [fallback_variant(show)], descriptions.get(show, "")
 
 

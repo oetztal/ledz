@@ -3,9 +3,7 @@
 ## Purpose
 
 The show simulator is a host-side CLI binary that drives any registered show against a `MockStrip` for `N` iterations and emits the resulting strip state as a raw RGB stream on stdout. It exists so that the same C++ source that runs on the device can be used to preview show parameter sets and to populate the GitHub Pages gallery of show previews, without maintaining a parallel Python port.
-
 ## Requirements
-
 ### Requirement: Host CLI drives every registered show
 
 The show simulator binary SHALL be built by `[env:native_show_sim]` from `scripts/show_simulator/main.cpp`, `src/show/**`, `src/show/factory/**`, `src/strip/**`, `src/support/**`, `src/color.cpp`, and `src/Timer.cpp`. Given a show name on argv, it SHALL construct that show through `Show::Factory::ShowFactory::createShow(name, params_json)`, drive it against a `MockStrip` of the requested length for the requested number of iterations, and write the resulting pixels to stdout. On a malformed or unknown show name the binary SHALL exit non-zero with a message naming the offending argument.
@@ -111,7 +109,20 @@ The binary SHALL accept a `--list-params <show>` flag that prints the JSON keys 
 
 ### Requirement: Variants manifest drives the gallery
 
-`scripts/build_pages.py --all` SHALL consult a variants manifest at `scripts/show_variants.json` to decide which parameter sets to render for each registered show. The manifest SHALL be a JSON object keyed by show name, where each value carries a `description`, an optional `iterations` override (positive integer), and a `variants` array. Each variant entry SHALL have a unique `name`, a human-readable `label`, an optional `iterations` override (positive integer) that takes precedence over the show-level value, and a `params` object that is passed verbatim to the simulator via `--params`. When neither the variant entry nor the show body specifies `iterations`, the renderer SHALL fall back to the `--iterations` CLI flag's value (default 1000). A show that is omitted from the manifest SHALL still render a single default variant with empty parameters so the gallery stays complete.
+`scripts/build_pages.py --all` SHALL consult a variants manifest at `scripts/show_variants.json` to decide which parameter sets to render for each registered show. The manifest SHALL be a JSON object keyed by show name, where each value carries a `description`, an optional `iterations` override (positive integer), a `default` object, and a `variants` array.
+
+The `default` object SHALL carry a `params` object (the factory default parameters, fully materialised — see [canonical-show-config]) and an optional `iterations` override (positive integer) that takes precedence over the show-level value.
+
+Each entry in `variants` SHALL have a unique `name`, a human-readable `label`, an optional `iterations` override (positive integer) that takes precedence over the show-level value, and a `params` object that is passed verbatim to the simulator via `--params`. When neither the variant entry, the `default` object, nor the show body specifies `iterations`, the renderer SHALL fall back to the `--iterations` CLI flag's value (default 1000). A show that is omitted from the manifest SHALL still render a single default variant with empty parameters so the gallery stays complete.
+
+The renderer SHALL prepend a synthetic variant derived from the show's `default` object — `name="default"`, `label="Factory default"`, `params=default.params`, `iterations=default.iterations or show.iterations` — to the list of `variants` entries before producing PNGs, so the default appears first under each show's section in `docs/show_previews/index.html`.
+
+#### Scenario: Default is rendered first under each show
+
+- **WHEN** the manifest declares `Wave` with a `default` object and three variants in the `variants` array
+- **THEN** the gallery directory contains `Wave_default.png` followed by `Wave_tight.png`, `Wave_calm.png`, and any other `Wave_*` variants
+- **THEN** `Wave_default.png` is the first PNG listed under the `Wave` section in `docs/show_previews/index.html`
+- **THEN** the variant label on that first entry reads `Factory default`
 
 #### Scenario: Variant filename and image
 
@@ -146,7 +157,7 @@ The binary SHALL accept a `--list-params <show>` flag that prints the JSON keys 
 
 #### Scenario: Absent iterations falls through to the CLI default
 
-- **WHEN** neither the variant entry nor the show body specifies `iterations`
+- **WHEN** neither the variant entry, the `default` object, nor the show body specifies `iterations`
 - **THEN** the renderer uses the value passed to `--iterations` on the CLI (default 1000)
 - **THEN** behavior is identical to a manifest without the new field
 
@@ -203,3 +214,4 @@ When invoked with `--landing`, `scripts/build_pages.py` SHALL also render `docs/
 
 - **WHEN** a pull request is opened against `main`
 - **THEN** `.github/workflows/pages.yml` does not run (no `pull_request` trigger)
+

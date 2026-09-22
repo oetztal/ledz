@@ -1,22 +1,21 @@
 {
-  "_comment": "Show preview variants rendered by scripts/build_pages.py --all. Each entry is a list of parameter sets that showcase the show's behaviour, plus a one-line description that mirrors the source-code registration in src/show/factory/ShowFactory.cpp. A show that is omitted here falls back to a single 'default' variant using empty params. Adding a new entry here gives the gallery a new preview on the next regeneration; no source-code changes are required. Each show body and each variant entry may also carry an optional positive integer 'iterations' (default: the --iterations CLI value) that overrides the row count for that show or that single variant — useful for shows whose pattern repeats inside a much shorter window than the default 1000 rows.",
+  "_comment": "Canonical show config consumed by scripts/build_pages.py --all. Every show entry has two roles, both fully materialised: (1) a top-level 'default' object holding the factory default parameters the runtime uses when the show is requested without explicit params (equivalently, the values the C++ ShowFactory '|' fallback in src/show/factory/ShowFactory.cpp produces for '{}'); (2) a 'variants' array of curated presets. The default is structurally distinct from variants — it is not a named entry inside the array. Every 'params' object (in 'default' and in every variant) carries every key the C++ factory reads for that show; the empty-object shorthand 'params: {}' is reserved for shows that genuinely take no parameters (ColorRun, Jump). The optional show-level 'iterations' field and the optional per-entry 'iterations' override apply to render-row count for the gallery only — they are not consumed by the firmware. Adding a new show here previews it in the gallery without any source-code change.",
   "Solid": {
     "description": "Static light: one color, or the strip split into sections with optional gradient blending (flags, patterns)",
     "iterations": 300,
-    "variants": [
-      {
-        "name": "white",
-        "label": "Warm white",
-        "params": {
-          "colors": [
-            [
-              255,
-              250,
-              230
-            ]
+    "default": {
+      "params": {
+        "colors": [
+          [
+            255,
+            250,
+            230
           ]
-        }
-      },
+        ],
+        "gradient": false
+      }
+    },
+    "variants": [
       {
         "name": "ukraine",
         "label": "Ukraine flag",
@@ -32,7 +31,8 @@
               215,
               0
             ]
-          ]
+          ],
+          "gradient": false
         }
       },
       {
@@ -55,7 +55,8 @@
               33,
               42
             ]
-          ]
+          ],
+          "gradient": false
         }
       },
       {
@@ -102,12 +103,17 @@
   "Fire": {
     "description": "Flickering flames rising from one end, fed by random sparks and cooling into embers",
     "iterations": 300,
+    "default": {
+      "params": {
+        "cooling": 0.1,
+        "spread": 10.0,
+        "ignition": 0.5,
+        "spark_amount": 0.5,
+        "start_offset": 5,
+        "spark_range": 5
+      }
+    },
     "variants": [
-      {
-        "name": "default",
-        "label": "Default flames",
-        "params": {}
-      },
       {
         "name": "high",
         "label": "High flames",
@@ -115,23 +121,31 @@
           "cooling": 0.05,
           "spread": 10.0,
           "ignition": 0.5,
-          "spark_amount": 0.5
+          "spark_amount": 0.5,
+          "start_offset": 5,
+          "spark_range": 5
         }
       }
     ]
   },
   "Starlight": {
     "description": "Single pixels light up at random and slowly fade away, like stars in a night sky",
+    "default": {
+      "params": {
+        "probability": 0.1,
+        "length": 5000,
+        "fade": 1000,
+        "r": 255,
+        "g": 180,
+        "b": 50
+      }
+    },
     "variants": [
-      {
-        "name": "warm",
-        "label": "Warm stars (default)",
-        "params": {}
-      },
       {
         "name": "cool",
         "label": "Cool blue sparks",
         "params": {
+          "probability": 0.1,
           "r": 80,
           "g": 160,
           "b": 255,
@@ -144,12 +158,16 @@
   "Stroboscope": {
     "description": "Hard on/off flashes of a single color at an adjustable rhythm",
     "iterations": 300,
+    "default": {
+      "params": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "on_cycles": 1,
+        "off_cycles": 10
+      }
+    },
     "variants": [
-      {
-        "name": "white-fast",
-        "label": "White strobe (default)",
-        "params": {}
-      },
       {
         "name": "red-slow",
         "label": "Red slow strobe",
@@ -165,33 +183,28 @@
   },
   "ColorRun": {
     "description": "Colored dots appear at random and race along the strip at their own speed",
-    "variants": [
-      {
-        "name": "default",
-        "label": "Default",
-        "params": {}
-      }
-    ]
+    "default": {
+      "params": {}
+    },
+    "variants": []
   },
   "Jump": {
     "description": "Several balls bounce along the strip at different heights and speeds, swapping colors at each bounce",
-    "variants": [
-      {
-        "name": "default",
-        "label": "Default",
-        "params": {}
-      }
-    ]
+    "default": {
+      "params": {}
+    },
+    "variants": []
   },
   "Rainbow": {
     "description": "The full color spectrum drifting smoothly along the strip",
     "iterations": 300,
+    "default": {
+      "params": {
+        "time_step": 1.0,
+        "pixel_step": 1.0
+      }
+    },
     "variants": [
-      {
-        "name": "scroll",
-        "label": "Scrolling spectrum (default)",
-        "params": {}
-      },
       {
         "name": "timefreeze",
         "label": "Frozen in time",
@@ -220,16 +233,14 @@
   },
   "Wave": {
     "description": "Cosine-bouncing rainbow source with exponential brightness decay",
+    "default": {
+      "params": {
+        "mode": "bounce",
+        "decay_rate": 2.0,
+        "brightness_frequency": 0.1
+      }
+    },
     "variants": [
-      {
-        "name": "default",
-        "label": "Default bounce",
-        "params": {
-          "mode": "bounce",
-          "decay_rate": 2.0,
-          "brightness_frequency": 0.1
-        }
-      },
       {
         "name": "tight",
         "label": "Tight fast",
@@ -253,12 +264,12 @@
   "TheaterChase": {
     "description": "Evenly spaced rainbow dots march along the strip, like lights around a theater marquee",
     "iterations": 300,
+    "default": {
+      "params": {
+        "num_steps_per_cycle": 21
+      }
+    },
     "variants": [
-      {
-        "name": "default",
-        "label": "Default chase",
-        "params": {}
-      },
       {
         "name": "tight",
         "label": "Tight fast chase",
@@ -271,31 +282,43 @@
   "MorseCode": {
     "description": "Your own message spelled out in Morse code, scrolling across the strip as dots and dashes",
     "iterations": 300,
+    "default": {
+      "params": {
+        "message": "HELLO WORLD",
+        "speed": 0.5,
+        "dot_length": 2,
+        "dash_length": 4,
+        "symbol_space": 2,
+        "letter_space": 3,
+        "word_space": 5
+      }
+    },
     "variants": [
-      {
-        "name": "hello",
-        "label": "HELLO WORLD",
-        "params": {
-          "message": "HELLO WORLD"
-        }
-      },
       {
         "name": "sos",
         "label": "SOS",
         "params": {
-          "message": "SOS"
+          "message": "SOS",
+          "speed": 0.5,
+          "dot_length": 2,
+          "dash_length": 4,
+          "symbol_space": 2,
+          "letter_space": 3,
+          "word_space": 5
         }
       }
     ]
   },
   "Chaos": {
     "description": "The logistic map drawn live: steady points split again and again until they dissolve into chaos",
+    "default": {
+      "params": {
+        "Rmin": 2.95,
+        "Rmax": 4.0,
+        "Rdelta": 0.0002
+      }
+    },
     "variants": [
-      {
-        "name": "bifurcation",
-        "label": "Period-doubling region (default)",
-        "params": {}
-      },
       {
         "name": "chaotic",
         "label": "Mostly chaotic",
@@ -309,17 +332,21 @@
   },
   "Mandelbrot": {
     "description": "A slow scan across the Mandelbrot set, one fractal slice at a time, colored by escape time",
+    "iterations": 1500,
+    "default": {
+      "params": {
+        "Cre0": -1.05,
+        "Cim0": -0.3616,
+        "Cim1": -0.3156,
+        "scale": 5,
+        "max_iterations": 50,
+        "color_scale": 10
+      }
+    },
     "variants": [
-      {
-        "name": "default",
-        "label": "Spiral slice (factory default)",
-        "iterations": 1500,
-        "params": {}
-      },
       {
         "name": "deep-zoom",
         "label": "Deep zoom on cardioid cusp",
-        "iterations": 1500,
         "params": {
           "Cre0": 0.25604447200014124,
           "Cim0": -0.0007223570865966194,
@@ -332,7 +359,6 @@
       {
         "name": "wide-overview",
         "label": "Wide overview of the set",
-        "iterations": 1500,
         "params": {
           "Cre0": -3.028449302036049,
           "Cim0": -2.5330279833053484,
@@ -345,7 +371,6 @@
       {
         "name": "mid-zoom",
         "label": "Mid-zoom near period-2 bulb",
-        "iterations": 1500,
         "params": {
           "Cre0": -0.549968185623812,
           "Cim0": 0.6273713969274161,
@@ -358,7 +383,6 @@
       {
         "name": "mid-zoom-2",
         "label": "Mid-zoom above period-2 bulb",
-        "iterations": 1500,
         "params": {
           "Cre0": -0.4844641513949024,
           "Cim0": 0.6243075234718344,
@@ -371,7 +395,6 @@
       {
         "name": "intermediate-zoom",
         "label": "Intermediate zoom on period-2 bulb",
-        "iterations": 1500,
         "params": {
           "Cre0": -0.4176640723972577,
           "Cim0": 0.5780971139366687,
@@ -384,7 +407,6 @@
       {
         "name": "spiral",
         "label": "Spiral on period-2 bulb",
-        "iterations": 1500,
         "params": {
           "Cre0": -0.4154272772697746,
           "Cim0": 0.5806524876727829,
