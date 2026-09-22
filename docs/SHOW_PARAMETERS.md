@@ -4,12 +4,19 @@
 
 ledz now supports configurable parameters for shows. Parameters are passed as JSON objects and automatically parsed by the ShowFactory.
 
-**✅ Web UI Implemented**: The control interface now includes parameter controls that automatically appear based on the selected show:
-- **Solid Show**: Color picker for RGB selection
+**✅ Web UI Implemented**: The control interface includes parameter controls that automatically appear based on the selected show:
+- **Solid Show**: Dynamic color inputs with optional gradients and flag presets (Warm White, Gradient, Ukraine 🇺🇦, Italy 🇮🇹, France 🇫🇷), plus optional custom `ranges`
 - **Mandelbrot Show**: Input fields for Cre0, Cim0, Cim1 (complex plane coordinates), scale, max_iterations, and color_scale
 - **Chaos Show**: Input fields for Rmin, Rmax, and Rdelta (logistic map parameters)
-- **ColorRanges Show with Blends**: Linear gradients between colors using `blends` parameter
-- **ColorRanges Show**: Dynamic color inputs with flag presets (Ukraine 🇺🇦, Italy 🇮🇹), optional custom ranges
+- **Fire Show**: Inputs for cooling, spread, ignition, spark_amount, start_offset, and spark_range
+- **Starlight Show**: Probability, star length/fade, and star color
+- **Stroboscope Show**: Flash color and on/off cycle counts
+- **TheaterChase Show**: `num_steps_per_cycle`
+- **MorseCode Show**: Message text and timing (speed, dot/dash lengths, spacing)
+- **Rainbow Show**: `time_step` and `pixel_step` sliders
+
+Each parameterized show also exposes a **preset selector** populated from
+`scripts/show_variants.json` (see `docs/SHOW_PREVIEWS.md`).
 
 ## Architecture
 
@@ -23,8 +30,17 @@ Web UI → API → ShowController → Queue → ShowFactory → Show Instance
 2. UI sends JSON to `/api/show` endpoint
 3. ShowController queues the command (thread-safe)
 4. LED task processes queue
-5. ShowFactory parses JSON and creates show with parameters
+5. ShowFactory merges the user's JSON over the show's canonical defaults and creates the show
 6. Parameters are saved to NVS for persistence
+
+### Canonical defaults
+
+Each show's default parameters live in `scripts/show_variants.json`. A build
+script (`scripts/gen_show_variants.py`) turns that file into
+`src/generated/show_variants.h`, which `ShowFactory` deserialises at runtime
+as the base document. User-supplied keys are overlaid on top, so omitted keys
+fall back to the canonical default. The `|` fallbacks inside each factory
+lambda remain as defense-in-depth but are normally unreachable.
 
 ## API Usage
 
@@ -72,32 +88,39 @@ curl -X POST http://192.168.1.100/api/show \
   -d '{"name":"Chaos","params":{"Rmin":3.5,"Rmax":4.0,"Rdelta":0.001}}'
 ```
 
-**Example: Set ColorRanges with Linear Gradient (replaces TwoColorBlend)**
+**Example: Set Solid with Linear Gradient (replaces TwoColorBlend)**
 ```bash
 curl -X POST http://192.168.1.100/api/show \
   -H "Content-Type: application/json" \
   -d '{"name":"Solid","params":{"colors":[[255,0,0],[0,0,255]],"gradient":true}}'
 ```
 
-**Example: Set ColorRanges Parameters (Ukraine Flag)**
+**Example: Set Solid Parameters (Ukraine Flag)**
 ```bash
 curl -X POST http://192.168.1.100/api/show \
   -H "Content-Type: application/json" \
-  -d '{"name":"ColorRanges","params":{"colors":[[0,87,183],[255,215,0]]}}'
+  -d '{"name":"Solid","params":{"colors":[[0,87,183],[255,215,0]]}}'
 ```
 
-**Example: Set ColorRanges Parameters (Italian Flag)**
+**Example: Set Solid Parameters (Italian Flag)**
 ```bash
 curl -X POST http://192.168.1.100/api/show \
   -H "Content-Type: application/json" \
-  -d '{"name":"ColorRanges","params":{"colors":[[0,140,69],[255,255,255],[205,33,42]]}}'
+  -d '{"name":"Solid","params":{"colors":[[0,140,69],[255,255,255],[205,33,42]]}}'
 ```
 
-**Example: Set ColorRanges with Custom Ranges**
+**Example: Set Solid with Custom Ranges**
 ```bash
 curl -X POST http://192.168.1.100/api/show \
   -H "Content-Type: application/json" \
-  -d '{"name":"ColorRanges","params":{"colors":[[255,0,0],[255,255,255],[0,0,255]],"ranges":[25,75]}}'
+  -d '{"name":"Solid","params":{"colors":[[255,0,0],[255,255,255],[0,0,255]],"ranges":[25,75]}}'
+```
+
+**Example: Set MorseCode Message**
+```bash
+curl -X POST http://192.168.1.100/api/show \
+  -H "Content-Type: application/json" \
+  -d '{"name":"MorseCode","params":{"message":"HELLO WORLD","speed":0.5}}'
 ```
 
 ## Supported Shows & Parameters
@@ -144,9 +167,9 @@ curl -X POST http://192.168.1.100/api/show \
 {"Rmin": 2.8, "Rmax": 3.6, "Rdelta": 0.0001}   // Slower, exploring period-doubling
 ```
 
-### ColorRanges (Solid)
+### Solid
 **Parameters**:
-- `colors` (array of RGB arrays, required): List of colors as `[r, g, b]` arrays. Minimum 1 color.
+- `colors` (array of RGB arrays, optional): List of colors as `[r, g, b]` arrays. Defaults to a single warm white (`[255, 250, 230]`) when omitted.
 - `ranges` (array of floats, optional): Boundary percentages (0-100) where colors transition. **Must have exactly N-1 values for N colors.** If omitted, colors distribute equally. Note: ignored in gradient mode.
 - `gradient` (boolean, optional): If `true`, colors act as waypoints with smooth interpolation. If `false` (default), colors fill sections with sharp boundaries.
 
@@ -285,6 +308,89 @@ Two modes are accepted by the JSON contract (`bounce` and `traveling`) but curre
 {"mode": "traveling", "decay_rate": 2.0, "brightness_frequency": 0.1}
 ```
 
+### Fire
+**Behavior**: Simulates a flame. Each frame the strip cools, sparks are injected near one end, and heat spreads upward. Pixels are colored along a black→red→orange→yellow→white ramp by temperature.
+
+**Parameters**:
+- `cooling` (float, default: `0.1`): Per-frame temperature decay. Higher values make the flames die out faster and the strip darker.
+- `spread` (float, default: `10.0`): How strongly heat diffuses to neighbouring pixels.
+- `ignition` (float, default: `0.5`): Temperature added at the base each frame; higher values keep a hotter bed of embers.
+- `spark_amount` (float, default: `0.5`): Amount of randomness injected into the base temperature (flicker intensity).
+- `start_offset` (int, default: `5`): How far from the strip start the fire bed is anchored.
+- `spark_range` (int, default: `5`): Width of the spark region around the start offset.
+
+**Example JSON**:
+```json
+{"cooling": 0.1, "spread": 10.0, "ignition": 0.5, "spark_amount": 0.5, "start_offset": 5, "spark_range": 5}
+```
+
+### Starlight
+**Behavior**: Single pixels light up at random, hold at full brightness, then fade out — like stars in a night sky.
+
+**Parameters**:
+- `probability` (float, default: `0.1`): Chance per frame of spawning a new star. `0.0–1.0`.
+- `length` (unsigned long, default: `5000`): Hold duration at full brightness, in milliseconds.
+- `fade` (unsigned long, default: `1000`): Fade-in and fade-out duration each, in milliseconds.
+- `r`, `g`, `b` (uint8_t, default: `255`, `180`, `50`): Star colour (default is a warm amber).
+
+**Example JSON**:
+```json
+// Default warm stars
+{"probability": 0.1, "length": 5000, "fade": 1000, "r": 255, "g": 180, "b": 50}
+
+// Dense field of cool white stars with a short hold
+{"probability": 0.3, "length": 2000, "fade": 500, "r": 200, "g": 220, "b": 255}
+```
+
+### Stroboscope
+**Behavior**: Hard on/off flashes of a single colour followed by darkness, repeating on a fixed cycle count.
+
+**Parameters**:
+- `r`, `g`, `b` (uint8_t, default: `255`, `255`, `255`): Flash colour.
+- `on_cycles` (unsigned int, default: `1`): Number of 10 ms cycles the strip stays on before turning off.
+- `off_cycles` (unsigned int, default: `10`): Number of 10 ms cycles the strip stays dark.
+
+**Example JSON**:
+```json
+// White flash, brief on, long off
+{"r": 255, "g": 255, "b": 255, "on_cycles": 1, "off_cycles": 10}
+
+// Red flash, longer on-time (slower strobe)
+{"r": 255, "g": 0, "b": 0, "on_cycles": 5, "off_cycles": 20}
+```
+
+### TheaterChase
+**Behavior**: Evenly spaced rainbow dots march along the strip like a theater marquee, colour-cycling as they go.
+
+**Parameters**:
+- `num_steps_per_cycle` (unsigned int, default: `21`): Steps needed for one complete colour rotation. Should be a multiple of `7` so the three dots cover the full hue wheel cleanly. Smaller values rotate colours faster.
+
+**Example JSON**:
+```json
+{"num_steps_per_cycle": 21}
+```
+
+### MorseCode
+**Behavior**: Spells out an arbitrary message in International Morse code and scrolls it across the strip as dots and dashes.
+
+**Parameters**:
+- `message` (string, default: `"HELLO WORLD"`): Text to display. Converted to uppercase; unknown characters are skipped.
+- `speed` (float, default: `0.5`): Scroll speed in LEDs per frame.
+- `dot_length` (unsigned int, default: `2`): Length of a dot in LEDs.
+- `dash_length` (unsigned int, default: `4`): Length of a dash in LEDs.
+- `symbol_space` (unsigned int, default: `2`): Gap between symbols within a letter.
+- `letter_space` (unsigned int, default: `3`): Gap between letters.
+- `word_space` (unsigned int, default: `5`): Gap between words.
+
+**Example JSON**:
+```json
+// Default message
+{"message": "HELLO WORLD", "speed": 0.5, "dot_length": 2, "dash_length": 4, "symbol_space": 2, "letter_space": 3, "word_space": 5}
+
+// Continuous SOS
+{"message": "SOS", "speed": 0.5, "dot_length": 2, "dash_length": 4, "symbol_space": 2, "letter_space": 3, "word_space": 5}
+```
+
 ### Other Shows
 ColorRun and Jump currently don't support parameters and will use their default behavior.
 
@@ -307,31 +413,24 @@ public:
 ### Step 2: Add JSON Parsing in ShowFactory
 
 ```cpp
-// ShowFactory.cpp in createShow(name, paramsJson):
-else if (strcmp(name, "MyShow") == 0) {
-    // Parse parameters with defaults
-    int speed = doc["speed"] | 50;  // Default to 50
+// ShowFactory.cpp constructor: register a lambda that receives the merged
+// JsonDocument and returns a unique_ptr.
+registerShow("MyShow", "One-line description shown in the UI",
+             [](const JsonDocument &doc) {
+    // `|` fallbacks are defense-in-depth; the canonical default comes from
+    // scripts/show_variants.json -> src/generated/show_variants.h.
+    int speed = doc["speed"] | 50;
     uint8_t r = doc["r"] | 255;
     uint8_t g = doc["g"] | 255;
     uint8_t b = doc["b"] | 255;
 
-    Serial.printf("ShowFactory: Creating MyShow speed=%d RGB(%d,%d,%d)\n",
-                  speed, r, g, b);
-    return new Show::MyShow(speed, color(r, g, b));
-}
-
-// Example: Mandelbrot with all parameters
-else if (strcmp(name, "Mandelbrot") == 0) {
-    float Cre0 = doc["Cre0"] | -1.05f;
-    float Cim0 = doc["Cim0"] | -0.3616f;
-    float Cim1 = doc["Cim1"] | -0.3156f;
-    unsigned int scale = doc["scale"] | 5;
-    unsigned int max_iterations = doc["max_iterations"] | 50;
-    unsigned int color_scale = doc["color_scale"] | 10;
-
-    return new Show::Mandelbrot(Cre0, Cim0, Cim1, scale, max_iterations, color_scale);
-}
+    ESP_LOGI(TAG, "Creating MyShow speed=%d, RGB(%d,%d,%d)", speed, r, g, b);
+    return std::make_unique<MyShow>(speed, color(r, g, b));
+});
 ```
+
+Also add an entry to `scripts/show_variants.json` so the show gets a preview
+and a default-parameter source (see `docs/SHOW_PREVIEWS.md`).
 
 ### Step 3: Test via API
 
@@ -457,11 +556,13 @@ Parameters are automatically saved to NVS when a show is changed. On restart:
 
 ## Memory Considerations
 
-- **ShowCommand**: 256 bytes for `params_json` (stored in queue)
-- **ShowConfig**: 256 bytes for `params_json` (stored in NVS)
+- **ShowCommand**: `char *show_name` and `char *params_json` are heap-allocated with `strdup()` when the command is queued and freed by the LED task after it is processed. The struct itself is fixed-size; the JSON length is unbounded.
+- **ShowConfig**: `params_json[256]` is the one fixed buffer — the NVS-persisted parameter string is truncated to 255 characters.
 - **Heap usage**: ArduinoJson 7 `JsonDocument` grows on demand, so parsing allocates roughly what the payload needs rather than a fixed buffer. There is no compile-time capacity to tune and no silent truncation when a payload outgrows one.
 
-Total overhead: ~1KB RAM when queue is full (5 commands × 256 bytes)
+The command queue holds at most `SHOW_COMMAND_QUEUE_SIZE` (5) commands; because
+the strings are heap-allocated, queue memory usage scales with the JSON payload
+sizes rather than a fixed per-slot budget.
 
 ## Testing
 
@@ -528,11 +629,12 @@ async function applyPreset(name) {
 
 ## Debug Output
 
-The ShowFactory and ShowController log parameter information to Serial:
+The ShowFactory and ShowController log parameter information via the
+`ESP_LOGx` macros (tags `show` and `ctrl`), e.g.:
 
 ```
-ShowFactory: Creating Solid with color RGB(255,0,0)
-ShowController: Switched to show: Solid with params: {"r":255,"g":0,"b":0}
+00001234 I    show Creating Fire cooling=0.10, spread=10.00, ignition=0.50, spark_amount=0.50, start_offset=5, spark_range=5
+00001240 I    ctrl Switched to show: Fire with params: {"cooling":0.1,"spread":10}
 ```
 
 Monitor serial output to verify parameters are being parsed correctly.
@@ -551,7 +653,7 @@ it appear in `--list` and on the GitHub Pages gallery with no further work.
 
 1. ✅ ~~Add color picker UI to web interface~~ (Completed)
 2. ✅ ~~Add parameter forms for Mandelbrot coordinates~~ (Completed)
-3. Add preset buttons for common colors
-4. Add parameter support to other shows (ColorRun speed, Rainbow rate, etc.)
-5. Add "favorite" presets that users can save
+3. ✅ ~~Add preset buttons for common colors~~ (Completed — flag presets and per-show preset selectors)
+4. ✅ ~~Add parameter support to other shows (ColorRun speed, Rainbow rate, etc.)~~ (Rainbow, Fire, Starlight, Stroboscope, TheaterChase and MorseCode done; ColorRun and Jump still parameterless)
+5. ✅ ~~Add "favorite" presets that users can save~~ (Completed — user presets via `/api/presets`)
 6. Add parameter validation (range checking)

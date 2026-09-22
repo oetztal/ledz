@@ -11,7 +11,7 @@ with web interface for WS2812B/NeoPixel LED strips.
 
 ## Features
 
-- **15 LED shows** - Rainbow, Fire, Wave, Starlight, Mandelbrot, and more
+- **12 LED shows** - Rainbow, Fire, Wave, Starlight, Mandelbrot, and more
 - **Web interface** - Control from any device on your network
 - **Presets** - Save and recall up to 8 complete configurations
 - **Touch control** - Capacitive touch pins to load presets without WiFi
@@ -26,7 +26,7 @@ with web interface for WS2812B/NeoPixel LED strips.
 | Specification | Value |
 |---------------|-------|
 | LED type | WS2812B / NeoPixel |
-| Max LEDs | 300 (configurable) |
+| Max LEDs | 1000 (default 300) |
 | LED pin | GPIO 39 (onboard) or GPIO 35 (external) |
 
 ## Wiring
@@ -87,11 +87,11 @@ pio run -e adafruit_qtpy_esp32s3_nopsram -t upload
 ### Initial Setup
 
 1. Power on the device
-2. Connect to the WiFi network `ledz-XXXXXX` (where XXXXXX is the device ID)
+2. Connect to the WiFi network `ledz XXXXXX` (where XXXXXX is the device ID)
 3. A captive portal opens automatically, or navigate to `192.168.4.1`
 4. Enter your WiFi credentials
 5. The device restarts and connects to your network
-6. Access the web interface at `ledzxxxxxx.local` or check your router for the IP
+6. Access the web interface at `ledz-xxxxxx.local` or check your router for the IP
 
 ## Web Interface
 
@@ -106,13 +106,11 @@ pio run -e adafruit_qtpy_esp32s3_nopsram -t upload
 
 | Show | Description |
 |------|-------------|
-| Solid | Static color or multi-color sections (flags) |
+| Solid | Static color, or multi-color sections (flags) with optional gradient blending |
 | Rainbow | Cycling rainbow spectrum |
 | Fire | Realistic fire simulation |
 | Wave | Propagating sine-wave patterns |
 | Starlight | Twinkling star effect |
-| ColorRanges | Multi-color gradient sections |
-| TwoColorBlend | Smooth gradient between two colors |
 | ColorRun | Running color animation |
 | Jump | Bouncing light effects |
 | TheaterChase | Marquee-style chase |
@@ -153,18 +151,27 @@ src/
   main.cpp              # Entry point
   Config.h/cpp          # NVS persistence
   Network.h/cpp         # WiFi, mDNS, NTP
+  CaptivePortal.cpp     # AP-mode captive portal
   WebServerManager.cpp  # Web interface & API
   ShowController.cpp    # Show management
-  ShowFactory.cpp       # Show creation
   TimerScheduler.cpp    # Timer system
+  Timer.cpp             # Single timer/schedule entry
   TouchController.cpp   # Capacitive touch input
   OTAUpdater.cpp        # Firmware updates
+  Log.cpp               # ESP_LOGx implementation
   show/                 # LED show implementations
+    factory/            # Show creation (ShowFactory)
   strip/                # LED hardware abstraction
+  task/                 # LED render task
+  generated/            # Build-generated web asset headers
 data/
   control.html          # Main control page
   settings.html         # Settings page
   timers.html           # Timer scheduler
+  config.html           # WiFi configuration page
+  about.html            # Diagnostics page
+  common.css            # Shared styles
+  favicon.svg
 docs/
   SHOW_PARAMETERS.md    # Show configuration guide
   OTA_FIRMWARE_UPDATES.md

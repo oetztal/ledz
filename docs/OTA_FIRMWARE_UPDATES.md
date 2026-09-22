@@ -177,10 +177,13 @@ The OTA worker needs at least `OTA_MIN_FREE_HEAP_BYTES` (64 KB) free at
 startup. If less is available, `/api/ota/update` returns 409 and the
 existing LED show keeps running.
 
-The check task needs ~7 KB of stack; the update task needs ~10 KB. Both
-are well within the S3's free heap budget. The high-water mark of each
-worker is logged at task exit (`ota_check HWM=…`, `ota_update HWM=…`) so
-the values can be tuned in a follow-up if needed.
+Both worker tasks use `OTA_CHECK_TASK_STACK` / `OTA_UPDATE_TASK_STACK`
+(12,288 bytes each) — the TLS handshake plus the CA-bundle chain walk needs
+~6 KB on its own, so the budgets stay well clear of that floor. The
+high-water mark of each worker is logged at task exit
+(`ota_check stack headroom left: N bytes of M`,
+`ota_update stack headroom left: N bytes of M`) so the values can be tuned
+in a follow-up if needed.
 
 ## Partition table
 
@@ -195,12 +198,14 @@ spiffs (256 KB) - Web assets (future use)
 coredump (64 KB)- Crash diagnostics
 ```
 
-The CA bundle adds ~30 KB flash; current 988 KB usage leaves ~830 KB of
-headroom in the firmware partition.
+The CA bundle adds ~30 KB flash. As of the latest build (`firmware.bin`
+≈1.22 MiB) the image leaves roughly 600 KB of headroom in the 1,856 KB
+firmware partition. Check `pio run -e adafruit_qtpy_esp32s3_nopsram` output
+for the current figure before publishing a release.
 
 ## See also
 
 - `docs/RELEASING.md` — release workflow
 - `src/OTAUpdater.h` — public API reference
 - `src/support/SemVer.h` — semver comparator (tested natively)
-- `openspec/changes/2026-08-19-ota-update-rework/` — the design proposal
+- `openspec/changes/archive/2026-08-19-ota-update-rework/` — the design proposal

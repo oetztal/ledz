@@ -52,7 +52,7 @@ new entry so `--list-params` reflects it.
 
 Random shows (Fire, Starlight, ColorRun) take a `--seed N` flag that the
 simulator passes to `Support::setRandomSeedOverride()` before constructing
-the show. Solid/ColorRanges uses a wall-clock-driven `SmoothBlend`; the
+the show. Solid uses a wall-clock-driven `SmoothBlend`; the
 simulator replaces the host `millis()` with a deterministic counter that
 advances 10 ms per iteration. As a result, every preview is byte-identical
 across runs when the same `--seed` is supplied.

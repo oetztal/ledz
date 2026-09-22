@@ -14,12 +14,12 @@ When the device connects to WiFi (either in AP or STA mode), it automatically:
 ## Hostname Format
 
 The hostname follows this pattern:
-- **Device ID**: `ledz-AABBCC` (where AABBCC are the last 3 bytes of MAC address)
-- **mDNS Hostname**: `ledzaabbcc.local`
+- **Device ID**: `AABBCC` (the last 3 bytes of the MAC address, from `DeviceId::getDeviceId()`)
+- **mDNS Hostname**: `ledz-aabbcc.local`
 
 Example:
-- If your device ID is `ledz-A1B2C3`
-- Your mDNS hostname will be `ledza1b2c3.local`
+- If your device ID is `A1B2C3`
+- Your mDNS hostname will be `ledz-a1b2c3.local`
 
 ## Accessing the Controller
 
@@ -27,7 +27,7 @@ Example:
 
 You can access ledz at:
 ```
-http://ledzaabbcc.local/
+http://ledz-aabbcc.local/
 ```
 
 Replace `aabbcc` with your device's unique identifier.
@@ -43,22 +43,23 @@ http://192.168.1.XXX/
 
 ### 1. Serial Monitor Output
 
-When the device connects to WiFi, the Serial monitor displays:
+When the device connects to WiFi, the Serial monitor displays (format is
+`<millis> <level> <tag> <message>`):
 ```
-Connected!
-IP address: 192.168.1.123
-mDNS responder started: ledza1b2c3.local
-You can now access ledz at:
-  http://ledza1b2c3.local/
-  or http://192.168.1.123
+00001280 I    net WiFi connected
+00001281 I    net IP address: 192.168.1.123
+00001310 I    net mDNS responder started: ledz-a1b2c3.local
+00001311 I    net You can now access ledz at:
+00001311 I    net   http://ledz-a1b2c3.local/
+00001311 I    net   or http://192.168.1.123
 ```
 
 ### 2. Web Interface Header
 
 The web interface displays your device ID and mDNS hostname:
 ```
-ledz-A1B2C3
-Access at: ledza1b2c3.local
+A1B2C3
+Access at: ledz-a1b2c3.local
 ```
 
 ## Service Advertisement
@@ -66,7 +67,7 @@ Access at: ledza1b2c3.local
 ledz advertises the following mDNS service:
 - **Service Type**: `_http._tcp`
 - **Port**: 80
-- **Name**: Device hostname (e.g., `ledza1b2c3`)
+- **Name**: Device hostname (e.g., `ledz-a1b2c3`)
 
 This allows mDNS-aware applications and network scanners to automatically discover ledz devices on the network.
 
@@ -95,7 +96,7 @@ This allows mDNS-aware applications and network scanners to automatically discov
 
 Check the Serial monitor for error messages:
 ```
-Error starting mDNS responder!
+00001311 E    net Error starting mDNS responder!
 ```
 
 This usually indicates a WiFi connection issue or memory constraint.
@@ -122,13 +123,13 @@ This usually indicates a WiFi connection issue or memory constraint.
 ### Quick Access
 ```bash
 # From any device on the network
-open http://ledza1b2c3.local/
+open http://ledz-a1b2c3.local/
 
 # Using curl
-curl http://ledza1b2c3.local/api/status
+curl http://ledz-a1b2c3.local/api/status
 
 # Set show via API
-curl -X POST http://ledza1b2c3.local/api/show \
+curl -X POST http://ledz-a1b2c3.local/api/show \
   -H "Content-Type: application/json" \
   -d '{"name":"Rainbow"}'
 ```
@@ -139,7 +140,7 @@ curl -X POST http://ledza1b2c3.local/api/show \
 ```yaml
 rest_command:
   ledz_rainbow:
-    url: http://ledza1b2c3.local/api/show
+    url: http://ledz-a1b2c3.local/api/show
     method: POST
     payload: '{"name":"Rainbow"}'
     content_type: 'application/json'
@@ -180,12 +181,8 @@ avahi-browse -r _http._tcp
 If you want to change the hostname format, modify `src/Network.cpp`:
 
 ```cpp
-// Current implementation
-String hostname = deviceId;
-hostname.toLowerCase();
-hostname.replace("ledz-", "ledz");
-
-// Custom implementation (example)
+// Custom implementation (example): Network::generateHostname()
+// returns a prefix derived from DeviceId::getDeviceId().
 hostname = "myled";  // All devices would be "myled.local"
 ```
 

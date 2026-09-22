@@ -36,21 +36,21 @@ equal version** before clicking install.
 
 ```sh
 # Step 1: kick off a check
-curl http://ledz.local/api/ota/check -i
+curl http://ledz-aabbcc.local/api/ota/check -i
 # HTTP/1.1 202 Accepted  {"started":true}
 
 # Step 2: poll until check.state == done
 while true; do
-    curl -s http://ledz.local/api/ota/status | jq '.check.state'
+    curl -s http://ledz-aabbcc.local/api/ota/status | jq '.check.state'
     sleep 1
 done
 
 # Step 3: kick off the install
-curl -X POST http://ledz.local/api/ota/update -i
+curl -X POST http://ledz-aabbcc.local/api/ota/update -i
 # HTTP/1.1 202 Accepted  {"started":true}
 
 # Or with force for downgrades:
-curl -X POST 'http://ledz.local/api/ota/update?force=true' -i
+curl -X POST 'http://ledz-aabbcc.local/api/ota/update?force=true' -i
 ```
 
 ### 3. Manually via serial
@@ -59,10 +59,9 @@ If you have a serial console attached, the worker logs progress in human
 readable form:
 
 ```
-[OTA] performUpdate: https://github.com/.../firmware.bin (1048576 bytes)
-[OTA] Flashing firmware...
-[OTA] Flashed 1048576 bytes
-[OTA] OTA update successful - scheduling restart in 2000ms
+00001234 I    ota performUpdate: https://github.com/.../firmware.bin (1048576 bytes)
+00002345 I    ota Flashed 1048576 bytes
+00002346 I    ota OTA update successful - scheduling restart in 2000ms
 ```
 
 ## Verifying the install

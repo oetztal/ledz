@@ -8,39 +8,39 @@ The project has been renamed from "LED Controller" to "ledz" throughout the code
 
 ### 1. Device ID Format
 - **Before**: `LEDCtrl-AABBCC`
-- **After**: `ledz-AABBCC`
+- **After**: `AABBCC` — the `ledz` prefix is applied by the consumers (mDNS hostname, AP SSID, mDNS instance name), not by the ID itself
 
 ### 2. mDNS Hostname Format
 - **Before**: `ledctrlaabbcc.local`
-- **After**: `ledzaabbcc.local`
+- **After**: `ledz-aabbcc.local`
 
 ### 3. Web Interface
 - **Title**: Changed from "LED Controller" to "ledz"
 - **Header**: Now displays "ledz" in the main header
-- **Device Info**: Shows "ledz-AABBCC" and "ledzaabbcc.local"
+- **Device Info**: Shows the device ID `AABBCC` and the hostname `ledz-aabbcc.local`
 
 ### 4. Code Changes
 
 #### Modified Files
 1. **`src/DeviceId.h`**
-   - Updated device ID format from `LEDCtrl-%02X%02X%02X` to `ledz-%02X%02X%02X`
-   - Updated comment: `"ledz-AABBCC"`
+   - Updated device ID format from `LEDCtrl-%02X%02X%02X` to `%02X%02X%02X` (the `ledz` prefix is added separately)
+   - Updated comment: `"AABBCC"`
 
 2. **`src/Config.cpp`**
-   - Updated `getDeviceId()` method to return `ledz-AABBCC` format
+   - Updated `getDeviceId()` method to return `AABBCC` format
 
 3. **`src/Network.cpp`**
-   - Updated hostname generation: `hostname.replace("ledz-", "ledz")`
+   - Updated hostname generation: `"ledz-" + deviceId`
    - Updated Serial output messages to use "ledz"
 
 4. **`src/WebServerManager.cpp`**
    - Changed web page title from "LED Controller" to "ledz"
-   - Updated JavaScript hostname parsing: `replace('ledz-', 'ledz')`
+   - Updated JavaScript hostname construction: `"ledz-" + device_id`
 
 5. **`docs/MDNS.md`**
    - Updated all references from "LED Controller" to "ledz"
-   - Updated all example hostnames from `ledctrlaabbcc.local` to `ledzaabbcc.local`
-   - Updated device ID examples from `LEDCtrl-A1B2C3` to `ledz-A1B2C3`
+   - Updated all example hostnames from `ledctrlaabbcc.local` to `ledz-aabbcc.local`
+   - Updated device ID examples from `LEDCtrl-A1B2C3` to `A1B2C3`
 
 6. **`docs/SHOW_PARAMETERS.md`**
    - Updated overview text from "LED Controller" to "ledz"
@@ -57,25 +57,25 @@ AP SSID: LEDCtrl-A1B2C3
 
 ### After
 ```
-Device ID: ledz-A1B2C3
-Hostname: ledza1b2c3.local
+Device ID: A1B2C3
+Hostname: ledz-a1b2c3.local
 Web Title: ledz
-AP SSID: ledz-A1B2C3
+AP SSID: ledz A1B2C3
 ```
 
 ## Serial Monitor Output
 
 When the device connects, you'll now see:
 ```
-Starting Access Point: ledz-A1B2C3
+Starting Access Point: ledz A1B2C3
 AP IP address: 192.168.4.1
-mDNS responder started: ledza1b2c3.local
+mDNS responder started: ledz-a1b2c3.local
 
 Connected!
 IP address: 192.168.1.123
-mDNS responder started: ledza1b2c3.local
+mDNS responder started: ledz-a1b2c3.local
 You can now access ledz at:
-  http://ledza1b2c3.local/
+  http://ledz-a1b2c3.local/
   or http://192.168.1.123
 ```
 
@@ -84,8 +84,8 @@ You can now access ledz at:
 The web interface header now shows:
 ```
 ledz
-ledz-A1B2C3
-Access at: ledza1b2c3.local
+A1B2C3
+Access at: ledz-a1b2c3.local
 ```
 
 ## API Access
@@ -97,7 +97,7 @@ All API endpoints remain the same, just accessed via the new hostname:
 curl http://ledctrla1b2c3.local/api/status
 
 # After
-curl http://ledza1b2c3.local/api/status
+curl http://ledz-a1b2c3.local/api/status
 ```
 
 ## Migration Notes
@@ -110,7 +110,7 @@ If you're upgrading from the old "LED Controller" branding:
 2. **Show Settings**: Preserved - all show configurations remain
 3. **Hostname**: Will change on next reboot
    - Old: `ledctrlaabbcc.local`
-   - New: `ledzaabbcc.local`
+   - New: `ledz-aabbcc.local`
 4. **Bookmarks**: Update any saved bookmarks to use new hostname
 
 ### Home Automation
@@ -128,7 +128,7 @@ rest_command:
 ```yaml
 rest_command:
   ledz_rainbow:
-    url: http://ledzaabbcc.local/api/show
+    url: http://ledz-aabbcc.local/api/show
 ```
 
 ## Build Status
@@ -142,7 +142,7 @@ rest_command:
 1. **Shorter**: Easier to type and remember
 2. **Unique**: More distinctive branding
 3. **Clean**: Simple, memorable name
-4. **Scalable**: Works well for multiple devices (ledza1b2c3, ledza1b2c4, etc.)
+4. **Scalable**: Works well for multiple devices (ledz-a1b2c3, ledza1b2c4, etc.)
 
 ## Backwards Compatibility
 
@@ -160,13 +160,13 @@ rest_command:
 ## Testing Checklist
 
 After flashing the new firmware:
-- [ ] Verify device ID shows as `ledz-XXXXXX` in Serial monitor
-- [ ] Verify mDNS hostname is `ledzxxxxxx.local`
+- [ ] Verify device ID shows as `XXXXXX` in the web interface
+- [ ] Verify mDNS hostname is `ledz-xxxxxx.local`
 - [ ] Verify web interface title shows "ledz"
 - [ ] Verify web interface header shows device ID and hostname
 - [ ] Test accessing via `.local` hostname
 - [ ] Test API endpoints via new hostname
-- [ ] Verify AP mode uses `ledz-XXXXXX` as SSID
+- [ ] Verify AP mode uses `ledz XXXXXX` as SSID
 
 ## Future Considerations
 
