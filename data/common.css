@@ -230,11 +230,13 @@ label.checkbox-row,
 }
 
 /* Floating Off action button on the control page. Lives inside .content
-   (top:24 right:24) so the existing overflow:hidden on .container keeps
-   the rounded corners clean. */
+   so the existing overflow:hidden on .container keeps the rounded corners
+   clean. Top:46 right:24 places the button's vertical centre at the status
+   bar's vertical centre (status bar starts 30px below .content top, ~80px
+   tall, so its centre sits around 70px; 70-24=46). */
 .off-button {
     position: absolute;
-    top: 24px;
+    top: 46px;
     right: 24px;
     z-index: 5;
     width: 48px;
