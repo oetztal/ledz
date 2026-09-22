@@ -2,15 +2,13 @@
 #include "../support/Color.h"
 
 namespace Show {
-    TheaterChase::TheaterChase(unsigned int num_steps_per_cycle)
-        : num_steps_per_cycle(num_steps_per_cycle) {
-    }
+    TheaterChase::TheaterChase(unsigned int num_steps_per_cycle) : num_steps_per_cycle(num_steps_per_cycle) {}
 
-    void TheaterChase::execute(Strip::Strip &strip, Iteration iteration) {
+    void TheaterChase::execute(Strip::Strip& strip, Iteration iteration) {
         uint16_t num_leds = strip.length();
 
         // Calculate color progression through the wheel
-        float cycle_position = (float) (index % num_steps_per_cycle) / (float) num_steps_per_cycle;
+        float cycle_position = (float)(index % num_steps_per_cycle) / (float)num_steps_per_cycle;
         Strip::Color chase_color = Support::Color::wheel(cycle_position * 255.0f);
 
         // Apply theater chase pattern

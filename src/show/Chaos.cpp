@@ -11,12 +11,11 @@ namespace Show {
         // Delegate to parameterized constructor with defaults
     }
 
-    Chaos::Chaos(float Rmin, float Rmax, float Rdelta)
-        : Rmin(Rmin), Rmax(Rmax), Rdelta(Rdelta), r(Rmin) {
+    Chaos::Chaos(float Rmin, float Rmax, float Rdelta) : Rmin(Rmin), Rmax(Rmax), Rdelta(Rdelta), r(Rmin) {
         // Initialize with provided parameters
     }
 
-    void Chaos::execute(Strip::Strip &strip, Iteration iteration) {
+    void Chaos::execute(Strip::Strip& strip, Iteration iteration) {
         strip.fill(0x000000);
 
         auto num_leds = strip.length();

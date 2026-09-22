@@ -7,14 +7,12 @@
 namespace Support {
     namespace {
         // Copy into a fixed buffer, always NUL-terminated and never overrunning.
-        template<size_t N>
-        void copyBounded(std::array<char, N> &dest, const char *src) {
+        template <size_t N> void copyBounded(std::array<char, N>& dest, const char* src) {
             snprintf(dest.data(), dest.size(), "%s", src);
         }
     }
 
-    Config::WiFiConfig mergeWiFiCredentials(const Config::WiFiConfig &existing,
-                                            const WiFiCredentialUpdate &update) {
+    Config::WiFiConfig mergeWiFiCredentials(const Config::WiFiConfig& existing, const WiFiCredentialUpdate& update) {
         Config::WiFiConfig merged = existing;
 
         if (update.ssid != nullptr) {

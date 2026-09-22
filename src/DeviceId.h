@@ -25,8 +25,7 @@ namespace DeviceId {
         memcpy(mac_bytes.data(), &mac, 6);
 
         std::array<char, 16> id;
-        snprintf(id.data(), id.size(), "%02X%02X%02X",
-                 mac_bytes[3], mac_bytes[4], mac_bytes[5]);
+        snprintf(id.data(), id.size(), "%02X%02X%02X", mac_bytes[3], mac_bytes[4], mac_bytes[5]);
         return String(id.data());
     }
 
@@ -41,13 +40,12 @@ namespace DeviceId {
         memcpy(mac_bytes.data(), &mac, 6);
 
         std::array<char, 18> mac_str;
-        snprintf(mac_str.data(), mac_str.size(), "%02X:%02X:%02X:%02X:%02X:%02X",
-                 mac_bytes[0], mac_bytes[1], mac_bytes[2],
-                 mac_bytes[3], mac_bytes[4], mac_bytes[5]);
+        snprintf(mac_str.data(), mac_str.size(), "%02X:%02X:%02X:%02X:%02X:%02X", mac_bytes[0], mac_bytes[1],
+                 mac_bytes[2], mac_bytes[3], mac_bytes[4], mac_bytes[5]);
         return String(mac_str.data());
     }
 } // namespace DeviceId
 
 #endif // ARDUINO
 
-#endif //LEDZ_DEVICEID_H
+#endif // LEDZ_DEVICEID_H

@@ -13,7 +13,7 @@ void setUp() {}
 void tearDown() {}
 
 namespace {
-    constexpr const char *BERLIN = "CET-1CEST,M3.5.0,M10.5.0/3";
+    constexpr const char* BERLIN = "CET-1CEST,M3.5.0,M10.5.0/3";
 
     /**
      * UTC epoch for a calendar instant. timegm() is the inverse of gmtime()
@@ -37,7 +37,7 @@ namespace {
     }
 
     /** Offset in minutes east of UTC that the host's own tzdata reports. */
-    int hostOffsetMinutes(const char *zone, uint32_t epoch) {
+    int hostOffsetMinutes(const char* zone, uint32_t epoch) {
         setenv("TZ", zone, 1);
         tzset();
         const time_t when = static_cast<time_t>(epoch);
@@ -57,15 +57,15 @@ namespace {
      * tests the artifact rather than a copy of it.
      */
     std::vector<TableRow> readTimezoneTable() {
-        static const char *candidates[] = {
+        static const char* candidates[] = {
             "data/timers.html",
             "../data/timers.html",
             "../../data/timers.html",
             "../../../data/timers.html",
         };
 
-        FILE *page = nullptr;
-        for (const char *path : candidates) {
+        FILE* page = nullptr;
+        for (const char* path : candidates) {
             page = fopen(path, "r");
             if (page != nullptr) break;
         }
@@ -74,24 +74,23 @@ namespace {
         std::vector<TableRow> rows;
         char line[512];
         while (fgets(line, sizeof(line), page) != nullptr) {
-            const char *value = strstr(line, "<option value=\"");
+            const char* value = strstr(line, "<option value=\"");
             if (value == nullptr) continue;
             value += strlen("<option value=\"");
-            const char *valueEnd = strchr(value, '"');
+            const char* valueEnd = strchr(value, '"');
             if (valueEnd == nullptr) continue;
 
-            const char *iana = strstr(valueEnd, "data-iana=\"");
+            const char* iana = strstr(valueEnd, "data-iana=\"");
             if (iana == nullptr) continue;
             iana += strlen("data-iana=\"");
-            const char *ianaEnd = strchr(iana, '"');
+            const char* ianaEnd = strchr(iana, '"');
             if (ianaEnd == nullptr) continue;
 
             // data-iana carries the canonical zone first, then aliases.
-            const char *canonicalEnd = static_cast<const char *>(memchr(iana, ' ', ianaEnd - iana));
+            const char* canonicalEnd = static_cast<const char*>(memchr(iana, ' ', ianaEnd - iana));
             if (canonicalEnd == nullptr) canonicalEnd = ianaEnd;
 
-            rows.push_back({std::string(value, valueEnd - value),
-                            std::string(iana, canonicalEnd - iana)});
+            rows.push_back({std::string(value, valueEnd - value), std::string(iana, canonicalEnd - iana)});
         }
         fclose(page);
         return rows;
@@ -101,10 +100,8 @@ namespace {
 // --- secondsSinceMidnight -------------------------------------------------
 
 void test_berlin_winter_and_summer() {
-    TEST_ASSERT_EQUAL_UINT32(hms(7, 0, 0),
-                             LocalTime::secondsSinceMidnight(utcEpoch(2026, 1, 15, 6, 0, 0), BERLIN));
-    TEST_ASSERT_EQUAL_UINT32(hms(7, 0, 0),
-                             LocalTime::secondsSinceMidnight(utcEpoch(2026, 7, 15, 5, 0, 0), BERLIN));
+    TEST_ASSERT_EQUAL_UINT32(hms(7, 0, 0), LocalTime::secondsSinceMidnight(utcEpoch(2026, 1, 15, 6, 0, 0), BERLIN));
+    TEST_ASSERT_EQUAL_UINT32(hms(7, 0, 0), LocalTime::secondsSinceMidnight(utcEpoch(2026, 7, 15, 5, 0, 0), BERLIN));
 }
 
 void test_berlin_spring_forward_instant() {
@@ -161,14 +158,14 @@ void test_table_offsets_match_host_tzdata() {
         utcEpoch(2026, 7, 15, 12, 0, 0),
     };
 
-    for (const TableRow &row : rows) {
+    for (const TableRow& row : rows) {
         for (uint32_t epoch : probes) {
             const int expected = hostOffsetMinutes(row.iana.c_str(), epoch);
             const LocalTime::Info info = LocalTime::describe(epoch, row.tz.c_str());
 
             char message[160];
-            snprintf(message, sizeof(message), "%s (%s): expected %d, got %d",
-                     row.iana.c_str(), row.tz.c_str(), expected, info.offset_minutes);
+            snprintf(message, sizeof(message), "%s (%s): expected %d, got %d", row.iana.c_str(), row.tz.c_str(),
+                     expected, info.offset_minutes);
             TEST_ASSERT_EQUAL_INT_MESSAGE(expected, info.offset_minutes, message);
         }
     }
@@ -277,7 +274,7 @@ void test_invalid_tz_strings_are_rejected() {
     TEST_ASSERT_TRUE(LocalTime::isSyntacticallyValidTz(tooLong));
 }
 
-int main(int, char **) {
+int main(int, char**) {
     UNITY_BEGIN();
 
     RUN_TEST(test_berlin_winter_and_summer);

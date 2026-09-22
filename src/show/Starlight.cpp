@@ -4,30 +4,29 @@
 #ifdef ARDUINO
 #include <Arduino.h>
 #else
-#include <cstdlib>  // For rand(), RAND_MAX
+#include <cstdlib> // For rand(), RAND_MAX
 #endif
 
 namespace {
     float randomChance() {
 #ifdef ARDUINO
-        return (float) random(1000) / 1000.0f;
+        return (float)random(1000) / 1000.0f;
 #else
-        return (float) rand() / (float) RAND_MAX;
+        return (float)rand() / (float)RAND_MAX;
 #endif
     }
 } // namespace
 
 namespace Show {
-    Starlight::Starlight(float probability, unsigned long length_ms, unsigned long fade_ms,
-                         uint8_t r, uint8_t g, uint8_t b)
+    Starlight::Starlight(float probability, unsigned long length_ms, unsigned long fade_ms, uint8_t r, uint8_t g,
+                         uint8_t b)
         : probability(probability), length_ms(length_ms), fade_ms(fade_ms),
-          star_color(Support::Color::from_rgb(r, g, b)) {
-    }
+          star_color(Support::Color::from_rgb(r, g, b)) {}
 
     float Starlight::calculateBrightness(unsigned long elapsed_ms) {
         // Phase 1: Fade-in (0 to fade_ms)
         if (elapsed_ms < fade_ms) {
-            return (float) elapsed_ms / (float) fade_ms;
+            return (float)elapsed_ms / (float)fade_ms;
         }
 
         // Phase 2: Hold at full brightness (fade_ms to fade_ms + length_ms)
@@ -37,17 +36,16 @@ namespace Show {
         }
 
         // Phase 3: Fade-out (hold_end to hold_end + fade_ms)
-        if (unsigned long fade_out_start = hold_end;
-            elapsed_ms < fade_out_start + fade_ms) {
+        if (unsigned long fade_out_start = hold_end; elapsed_ms < fade_out_start + fade_ms) {
             unsigned long fade_out_elapsed = elapsed_ms - fade_out_start;
-            return 1.0f - ((float) fade_out_elapsed / (float) fade_ms);
+            return 1.0f - ((float)fade_out_elapsed / (float)fade_ms);
         }
 
         // Star has completed its lifecycle
         return 0.0f;
     }
 
-    void Starlight::execute(Strip::Strip &strip, Iteration iteration) {
+    void Starlight::execute(Strip::Strip& strip, Iteration iteration) {
 #ifdef ARDUINO
         unsigned long current_time = millis();
 #else

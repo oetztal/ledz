@@ -1,7 +1,7 @@
 # control-page-preset-selector Specification
 
 ## Purpose
-TBD - created by archiving change add-control-page-preset-selector. Update Purpose after archive.
+Shows that declare curated presets in the canonical manifest get a preset selector on the control page, letting the user apply a named parameter set immediately while still allowing manual edits afterward.
 ## Requirements
 ### Requirement: A preset selector is rendered for every show with curated variants
 
@@ -58,4 +58,3 @@ The show's individual parameter fields and their Apply buttons SHALL remain avai
 #### Scenario: Selector clears on status refresh
 - **WHEN** the periodic status refresh runs
 - **THEN** every preset selector on the page is reset to its placeholder option
-

@@ -16,8 +16,7 @@ namespace Show {
         std::vector<float> prev_temperature;
 
     public:
-        explicit FireState(std::function<float()> randomFloat,
-                  Strip::PixelIndex length);
+        explicit FireState(std::function<float()> randomFloat, Strip::PixelIndex length);
 
         ~FireState() = default;
         FireState(const FireState&) = delete;
@@ -30,7 +29,7 @@ namespace Show {
         void cooldown(float value);
 
         void spread(float spread_rate, float ignition, Strip::PixelIndex spark_range, float spark_amount,
-                    const std::vector<float> &weights = {1.0f});
+                    const std::vector<float>& weights = {1.0f});
 
         [[nodiscard]] float get_temperature(Strip::PixelIndex pixel_index) const;
         void set_temperature(Strip::PixelIndex pixel_index, float value);
@@ -50,14 +49,13 @@ namespace Show {
         Strip::PixelIndex spark_range;
 
     public:
-        Fire(float cooling, float spread, float ignition, float spark_amount,
-             std::vector<float> weights, Strip::PixelIndex start_offset,
-             Strip::PixelIndex spark_range);
+        Fire(float cooling, float spread, float ignition, float spark_amount, std::vector<float> weights,
+             Strip::PixelIndex start_offset, Strip::PixelIndex spark_range);
 
-        void ensureState(const Strip::Strip &strip);
+        void ensureState(const Strip::Strip& strip);
 
-        void execute(Strip::Strip &strip, Iteration iteration) override;
+        void execute(Strip::Strip& strip, Iteration iteration) override;
     };
 } // Show
 
-#endif //LEDZ_FIRE_H
+#endif // LEDZ_FIRE_H

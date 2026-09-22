@@ -1,5 +1,9 @@
 # ota-update Specification
 
+## Purpose
+The GitHub-release OTA flow lets the device check for, download, and flash a newer firmware image from its own compiled-in release repository. It verifies TLS and the update origin, streams the image to the inactive partition, gates on semver, reports observable state, and confirms the booted image only after init succeeds.
+
+## Requirements
 ### Requirement: TLS verification of firmware downloads
 
 The device SHALL verify the TLS certificate of any firmware download server against a trusted CA bundle before transmitting firmware bytes to the OTA partition.

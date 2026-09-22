@@ -1,11 +1,17 @@
 .pio
 
+.cache
+
 __pycache__
 
 .idea
 .claude
 .opencode
+.junie
 .mcp.json
+
+# Per-developer direnv / shell environment (generated locally by direnv)
+scripts/.envrc
 
 # Auto-generated compressed web content
 src/generated/
@@ -19,4 +25,11 @@ coverage_filtered.info
 coverage_report/
 coverage-generic.xml
 
+# Python cache
+*.pyc
 
+# Node.js
+node_modules/
+
+# Misc
+.DS_Store

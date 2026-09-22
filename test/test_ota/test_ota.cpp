@@ -83,11 +83,11 @@ struct State {
     }
 };
 
-using ota::SemVer;
-using ota::parseSemVer;
 using ota::compareSemVer;
-using ota::isNewerVersion;
 using ota::compareVersions;
+using ota::isNewerVersion;
+using ota::parseSemVer;
+using ota::SemVer;
 
 void setUp() {}
 void tearDown() {}
@@ -118,8 +118,12 @@ static void test_parse_with_build_metadata() {
     TEST_ASSERT_TRUE(v.has_value());
     TEST_ASSERT_EQUAL_INT(0, v->patch);
 }
-static void test_parse_empty() { TEST_ASSERT_FALSE(parseSemVer("").has_value()); }
-static void test_parse_just_prefix() { TEST_ASSERT_FALSE(parseSemVer("v").has_value()); }
+static void test_parse_empty() {
+    TEST_ASSERT_FALSE(parseSemVer("").has_value());
+}
+static void test_parse_just_prefix() {
+    TEST_ASSERT_FALSE(parseSemVer("v").has_value());
+}
 static void test_parse_missing_components() {
     TEST_ASSERT_FALSE(parseSemVer("1.2").has_value());
     TEST_ASSERT_FALSE(parseSemVer("1").has_value());
@@ -388,7 +392,8 @@ int runUnityTests(void) {
     return UNITY_END();
 }
 
-int main(int argc, char **argv) {
-    (void)argc; (void)argv;
+int main(int argc, char** argv) {
+    (void)argc;
+    (void)argv;
     return runUnityTests();
 }

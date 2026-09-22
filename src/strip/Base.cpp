@@ -32,8 +32,8 @@ namespace Strip {
     void Base::fill(Color c) {
 #ifdef ARDUINO
         uint32_t scaled = applyBrightness(applyGammaCorrection(c));
-        for (uint16_t i=0; i<strip->numPixels(); i++) {
-            colors[i]=c;
+        for (uint16_t i = 0; i < strip->numPixels(); i++) {
+            colors[i] = c;
         }
 
         strip->fill(scaled);
@@ -42,7 +42,7 @@ namespace Strip {
 
     void Base::setPixelColor(PixelIndex pixel_index, Color color) {
 #ifdef ARDUINO
-        colors[pixel_index]=color;
+        colors[pixel_index] = color;
         strip->setPixelColor(pixel_index, applyBrightness(applyGammaCorrection(color)));
 #endif
     }
@@ -76,7 +76,7 @@ namespace Strip {
             // Re-emit every cached pixel with the new brightness factor.
             // Adafruit's setBrightness is never called: it stays pinned at 255
             // so the hardware buffer is written verbatim.
-            for (uint16_t i=0; i<strip->numPixels(); i++) {
+            for (uint16_t i = 0; i < strip->numPixels(); i++) {
                 strip->setPixelColor(i, applyBrightness(applyGammaCorrection(colors[i])));
             }
         }
@@ -114,9 +114,7 @@ namespace Strip {
         // This guarantees scale8(255, s) == s and is free of the
         // integer-truncation banding that (i * scale) >> 8 produces
         // (e.g. (255 * 255) >> 8 == 254 with the naive form).
-        return static_cast<uint8_t>(
-            (static_cast<uint16_t>(component) * (static_cast<uint16_t>(scale) + 1)) >> 8
-        );
+        return static_cast<uint8_t>((static_cast<uint16_t>(component) * (static_cast<uint16_t>(scale) + 1)) >> 8);
     }
 
     uint32_t Base::applyBrightness(uint32_t color) {
@@ -126,9 +124,7 @@ namespace Strip {
         uint8_t r = scaleComponent(static_cast<uint8_t>((color >> 16) & 0xFF), brightness);
         uint8_t g = scaleComponent(static_cast<uint8_t>((color >> 8) & 0xFF), brightness);
         uint8_t b = scaleComponent(static_cast<uint8_t>(color & 0xFF), brightness);
-        return (static_cast<uint32_t>(r) << 16) |
-               (static_cast<uint32_t>(g) << 8)  |
-                static_cast<uint32_t>(b);
+        return (static_cast<uint32_t>(r) << 16) | (static_cast<uint32_t>(g) << 8) | static_cast<uint32_t>(b);
     }
 #endif
 }

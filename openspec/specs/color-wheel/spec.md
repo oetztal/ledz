@@ -1,7 +1,7 @@
 # color-wheel Specification
 
 ## Purpose
-TBD - created by archiving change wheel-float-input. Update Purpose after archive.
+`Support::Color::wheel(float)` converts a hue index into an RGB value for the LED shows. It lives in the `Support::Color` namespace, accepts continuous float input, and preserves byte-identical output at every integer hue so shows can interpolate hues without a visible seam.
 ## Requirements
 ### Requirement: wheel() lives in the Support::Color namespace
 

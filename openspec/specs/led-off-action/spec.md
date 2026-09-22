@@ -66,4 +66,3 @@ The user SHALL be able to leave the Off state by selecting any show from the dro
 - **WHEN** the device is in the Off state and the user changes a colour input or the gradient flag and clicks "Apply Pattern"
 - **THEN** the `Solid` show runs with the new colour configuration
 - **THEN** the LED strip renders the new colours
-

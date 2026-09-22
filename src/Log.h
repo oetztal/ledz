@@ -42,11 +42,12 @@ namespace Log {
 #define CORE_DEBUG_LEVEL 0
 #endif
 
-#define _LEDZ_LOG(letter, tag, format, ...) do {                 \
-    char _log_buf[256];                                         \
-    snprintf(_log_buf, sizeof(_log_buf), format, ##__VA_ARGS__); \
-    Log::emit(#letter[0], tag, _log_buf);                       \
-} while(0)
+#define _LEDZ_LOG(letter, tag, format, ...) \
+    do { \
+        char _log_buf[256]; \
+        snprintf(_log_buf, sizeof(_log_buf), format, ##__VA_ARGS__); \
+        Log::emit(#letter[0], tag, _log_buf); \
+    } while (0)
 
 #define ESP_LOGE(tag, format, ...) _LEDZ_LOG(E, tag, format, ##__VA_ARGS__)
 #define ESP_LOGW(tag, format, ...) _LEDZ_LOG(W, tag, format, ##__VA_ARGS__)
@@ -55,13 +56,17 @@ namespace Log {
 #if CORE_DEBUG_LEVEL >= 4
 #define ESP_LOGD(tag, format, ...) _LEDZ_LOG(D, tag, format, ##__VA_ARGS__)
 #else
-#define ESP_LOGD(tag, format, ...) do {} while(0)
+#define ESP_LOGD(tag, format, ...) \
+    do { \
+    } while (0)
 #endif
 
 #if CORE_DEBUG_LEVEL >= 5
 #define ESP_LOGV(tag, format, ...) _LEDZ_LOG(V, tag, format, ##__VA_ARGS__)
 #else
-#define ESP_LOGV(tag, format, ...) do {} while(0)
+#define ESP_LOGV(tag, format, ...) \
+    do { \
+    } while (0)
 #endif
 
 // Keep esp_log_level_set callable but as a no-op — our macros do not use

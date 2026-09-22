@@ -21,4 +21,4 @@ namespace Support {
     };
 } // Support
 
-#endif //LEDZ_TIMER_H
+#endif // LEDZ_TIMER_H

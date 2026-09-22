@@ -4,7 +4,7 @@
 #include "show/Rainbow.h"
 #include "show/Wave.h"
 
-Show::FireState *state;
+Show::FireState* state;
 
 void setUp() {
     state = new Show::FireState([] { return 1.0f; }, 10);
@@ -212,8 +212,7 @@ void test_wave_bounce_and_traveling_modes_are_identical() {
     }
 
     for (Strip::PixelIndex i = 0; i < strip_b.length(); i++) {
-        TEST_ASSERT_EQUAL_HEX32_MESSAGE(strip_t.getPixelColor(i),
-                                        strip_b.getPixelColor(i),
+        TEST_ASSERT_EQUAL_HEX32_MESSAGE(strip_t.getPixelColor(i), strip_b.getPixelColor(i),
                                         "bounce and traveling modes must produce identical pixels");
     }
 }

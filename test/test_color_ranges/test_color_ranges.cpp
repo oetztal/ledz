@@ -10,9 +10,7 @@ private:
     ::Strip::PixelIndex pixel_count;
 
 public:
-    MockStrip(::Strip::PixelIndex count) : pixel_count(count) {
-        pixels.resize(count, 0x000000);
-    }
+    MockStrip(::Strip::PixelIndex count) : pixel_count(count) { pixels.resize(count, 0x000000); }
 
     void fill(::Strip::Color c) override {
         for (::Strip::PixelIndex i = 0; i < pixel_count; i++) {
@@ -33,9 +31,7 @@ public:
         return 0;
     }
 
-    ::Strip::PixelIndex length() const override {
-        return pixel_count;
-    }
+    ::Strip::PixelIndex length() const override { return pixel_count; }
 
     void show() override {
         // Mock implementation
@@ -45,9 +41,7 @@ public:
         // Mock implementation
     }
 
-    [[nodiscard]] ::Strip::Brightness getBrightness() const override {
-        return 255;
-    }
+    [[nodiscard]] ::Strip::Brightness getBrightness() const override { return 255; }
 };
 
 MockStrip* mock_strip;
@@ -82,8 +76,8 @@ void test_color_ranges_single_color() {
 // Test two colors with equal distribution
 void test_color_ranges_two_colors_equal() {
     std::vector<::Strip::Color> colors;
-    colors.push_back(Support::Color::from_rgb(255, 0, 0));   // Red
-    colors.push_back(Support::Color::from_rgb(0, 0, 255));   // Blue
+    colors.push_back(Support::Color::from_rgb(255, 0, 0)); // Red
+    colors.push_back(Support::Color::from_rgb(0, 0, 255)); // Blue
 
     Show::ColorRanges show(colors);
 
@@ -99,9 +93,9 @@ void test_color_ranges_two_colors_equal() {
 // Test three colors with equal distribution
 void test_color_ranges_three_colors_equal() {
     std::vector<::Strip::Color> colors;
-    colors.push_back(Support::Color::from_rgb(255, 0, 0));     // Red
-    colors.push_back(Support::Color::from_rgb(0, 255, 0));     // Green
-colors.push_back(Support::Color::from_rgb(0, 0, 255));   // Blue
+    colors.push_back(Support::Color::from_rgb(255, 0, 0)); // Red
+    colors.push_back(Support::Color::from_rgb(0, 255, 0)); // Green
+    colors.push_back(Support::Color::from_rgb(0, 0, 255)); // Blue
 
     Show::ColorRanges show(colors);
 
@@ -118,8 +112,8 @@ colors.push_back(Support::Color::from_rgb(0, 0, 255));   // Blue
 // Test two colors with custom ranges
 void test_color_ranges_custom_ranges() {
     std::vector<::Strip::Color> colors;
-    colors.push_back(Support::Color::from_rgb(255, 0, 0));   // Red
-    colors.push_back(Support::Color::from_rgb(0, 0, 255));   // Blue
+    colors.push_back(Support::Color::from_rgb(255, 0, 0)); // Red
+    colors.push_back(Support::Color::from_rgb(0, 0, 255)); // Blue
 
     std::vector<float> ranges;
     ranges.push_back(30.0f); // 30% boundary - first 30% red, rest blue
@@ -138,8 +132,8 @@ void test_color_ranges_custom_ranges() {
 // Test three colors with custom ranges (flag pattern)
 void test_color_ranges_flag_pattern() {
     std::vector<::Strip::Color> colors;
-    colors.push_back(Support::Color::from_rgb(0, 87, 183));    // Blue (Ukraine)
-    colors.push_back(Support::Color::from_rgb(255, 215, 0));   // Yellow
+    colors.push_back(Support::Color::from_rgb(0, 87, 183));  // Blue (Ukraine)
+    colors.push_back(Support::Color::from_rgb(255, 215, 0)); // Yellow
 
     std::vector<float> ranges;
     ranges.push_back(50.0f); // 50% boundary
@@ -174,12 +168,12 @@ void test_color_ranges_multiple_iterations() {
 // Test with invalid ranges (more ranges than needed)
 void test_color_ranges_invalid_ranges() {
     std::vector<::Strip::Color> colors;
-    colors.push_back(Support::Color::from_rgb(255, 0, 0));   // Red
-    colors.push_back(Support::Color::from_rgb(0, 0, 255));   // Blue
+    colors.push_back(Support::Color::from_rgb(255, 0, 0)); // Red
+    colors.push_back(Support::Color::from_rgb(0, 0, 255)); // Blue
 
     std::vector<float> ranges;
     ranges.push_back(30.0f);
-    ranges.push_back(60.0f);  // Too many ranges (should need only 1 for 2 colors)
+    ranges.push_back(60.0f); // Too many ranges (should need only 1 for 2 colors)
     ranges.push_back(90.0f);
 
     Show::ColorRanges show(colors, ranges);

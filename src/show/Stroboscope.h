@@ -10,9 +10,9 @@ namespace Show {
      */
     class Stroboscope : public Show {
     private:
-        uint8_t r, g, b; // Color to flash
-        unsigned int on_cycles; // Number of cycles to stay on
-        unsigned int off_cycles; // Number of cycles to stay off
+        uint8_t r, g, b;                // Color to flash
+        unsigned int on_cycles;         // Number of cycles to stay on
+        unsigned int off_cycles;        // Number of cycles to stay off
         unsigned int current_cycle = 0; // Current cycle counter
 
     public:
@@ -24,18 +24,17 @@ namespace Show {
          * @param on_cycles Number of cycles to flash on (default: 1)
          * @param off_cycles Number of cycles to stay off (default: 10)
          */
-        Stroboscope(uint8_t r, uint8_t g, uint8_t b,
-                    unsigned int on_cycles, unsigned int off_cycles);
+        Stroboscope(uint8_t r, uint8_t g, uint8_t b, unsigned int on_cycles, unsigned int off_cycles);
 
         /**
          * Execute the show - update stroboscope effect
          * @param strip LED strip to control
          * @param iteration Current iteration number
          */
-        void execute(Strip::Strip &strip, Iteration iteration) override;
+        void execute(Strip::Strip& strip, Iteration iteration) override;
 
-        const char *name() { return "Stroboscope"; }
+        const char* name() { return "Stroboscope"; }
     };
 } // namespace Show
 
-#endif //LEDZ_STROBOSCOPE_H
+#endif // LEDZ_STROBOSCOPE_H

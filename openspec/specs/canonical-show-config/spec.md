@@ -1,7 +1,7 @@
 # canonical-show-config Specification
 
 ## Purpose
-TBD - created by archiving change canonical-show-config-file. Update Purpose after archive.
+`scripts/show_variants.json` is the single source of truth for every show's factory default parameters and its curated presets. Firmware runtime defaults, build-time codegen, and the web UI's preset controls all derive from this manifest, so a show's behavior cannot drift between the C++ constructors, the simulator, and the browser.
 ## Requirements
 ### Requirement: Variants manifest is the canonical source for show defaults and presets
 
@@ -276,4 +276,3 @@ The per-show preset dictionaries SHALL carry `{ label, params }` per entry, so t
 - **THEN** the rendered HTML (after minification+gzip) carries the inlined JS payload
 - **WHEN** the firmware serves the page
 - **THEN** the browser receives a single HTML payload that contains both the page structure and the `SHOW_VARIANTS_BY_SHOW` / `FLAG_PRESETS` objects
-

@@ -6,11 +6,9 @@
 #include "unity.h"
 #include "support/Color.h"
 
-void setUp() {
-}
+void setUp() {}
 
-void tearDown() {
-}
+void tearDown() {}
 
 void test_color_extraction() {
     Strip::Color test_color = 0x123456;
@@ -70,8 +68,8 @@ void test_black_body_color() {
 static Strip::Color reference_wheel_uint8(unsigned char h) {
     if (h > 254) h = 254;
     uint16_t pos = static_cast<uint16_t>(h) * 6;
-    if (h <= 42)  return (255u << 16) | (static_cast<unsigned>(pos) << 8);
-    if (h <= 84)  return (static_cast<unsigned>(510 - pos) << 16) | (255u << 8);
+    if (h <= 42) return (255u << 16) | (static_cast<unsigned>(pos) << 8);
+    if (h <= 84) return (static_cast<unsigned>(510 - pos) << 16) | (255u << 8);
     if (h <= 127) return (255u << 8) | static_cast<unsigned>(pos - 510);
     if (h <= 169) return (static_cast<unsigned>(1020 - pos) << 8) | 255u;
     if (h <= 212) return (static_cast<unsigned>(pos - 1020) << 16) | 255u;

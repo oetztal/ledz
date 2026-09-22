@@ -28,8 +28,8 @@ namespace LocalTime {
      * The zone as it stands at one instant.
      */
     struct Info {
-        int16_t offset_minutes; // minutes east of UTC, so +120 for CEST
-        bool is_dst;            // true while the daylight-saving rule is in effect
+        int16_t offset_minutes;     // minutes east of UTC, so +120 for CEST
+        bool is_dst;                // true while the daylight-saving rule is in effect
         std::array<char, 8> abbrev; // "CEST", "IST", "+0545"
     };
 
@@ -39,7 +39,7 @@ namespace LocalTime {
      * @param tz POSIX TZ string
      * @return 0..86399, or 0 if epoch is 0
      */
-    uint32_t secondsSinceMidnight(uint32_t epoch, const char *tz);
+    uint32_t secondsSinceMidnight(uint32_t epoch, const char* tz);
 
     /**
      * Local day of the year, used to fire a schedule at most once per
@@ -48,7 +48,7 @@ namespace LocalTime {
      * @param tz POSIX TZ string
      * @return 0..365
      */
-    uint16_t localDayOfYear(uint32_t epoch, const char *tz);
+    uint16_t localDayOfYear(uint32_t epoch, const char* tz);
 
     /**
      * Local weekday as the C library's tm_wday (Sunday = 0 .. Saturday = 6),
@@ -59,7 +59,7 @@ namespace LocalTime {
      * @param tz POSIX TZ string
      * @return 0..6
      */
-    uint8_t localWeekday(uint32_t epoch, const char *tz);
+    uint8_t localWeekday(uint32_t epoch, const char* tz);
 
     /**
      * Describe the zone as it stands at the given instant.
@@ -67,7 +67,7 @@ namespace LocalTime {
      * @param tz POSIX TZ string
      * @return Offset, DST state and abbreviation
      */
-    Info describe(uint32_t epoch, const char *tz);
+    Info describe(uint32_t epoch, const char* tz);
 
     /**
      * Convert a legacy whole-hour UTC offset to an equivalent fixed-offset
@@ -77,7 +77,7 @@ namespace LocalTime {
      * @param out Destination buffer
      * @param len Size of the destination buffer
      */
-    void legacyOffsetToPosix(int8_t hours, char *out, size_t len);
+    void legacyOffsetToPosix(int8_t hours, char* out, size_t len);
 
     /**
      * Syntactic plausibility check for a POSIX TZ string.
@@ -90,7 +90,7 @@ namespace LocalTime {
      * @param tz Candidate string
      * @return true if it is worth storing
      */
-    bool isSyntacticallyValidTz(const char *tz);
+    bool isSyntacticallyValidTz(const char* tz);
 }
 
-#endif //LEDZ_LOCAL_TIME_H
+#endif // LEDZ_LOCAL_TIME_H

@@ -17,8 +17,7 @@ namespace Config {
     // Compile-time initial value for a fixed-size char buffer. Lets the
     // string-defaulted members below be initialised in-class rather than in a
     // constructor body.
-    template<size_t N>
-    constexpr std::array<char, N> fixedString(const char *s) {
+    template <size_t N> constexpr std::array<char, N> fixedString(const char* s) {
         std::array<char, N> out{};
         for (size_t i = 0; i + 1 < N && s[i] != '\0'; ++i) {
             out[i] = s[i];
@@ -48,9 +47,9 @@ namespace Config {
      * Gamma correction modes
      */
     enum GammaMode {
-        GAMMA_DEFAULT = 0,    // Use our improved gamma (γ=2.2) - recommended
-        GAMMA_NEOPIXEL = 1,  // Use Adafruit NeoPixel gamma (γ=2.6)
-        GAMMA_NONE = 2       // No gamma correction
+        GAMMA_DEFAULT = 0,  // Use our improved gamma (γ=2.2) - recommended
+        GAMMA_NEOPIXEL = 1, // Use Adafruit NeoPixel gamma (γ=2.6)
+        GAMMA_NONE = 2      // No gamma correction
     };
 
     /**
@@ -64,18 +63,18 @@ namespace Config {
 #else
         uint8_t led_pin = 39;
 #endif
-        uint16_t cycle_time = 10; // Cycle time in ms (e.g., 10, 20, 25, 50)
+        uint16_t cycle_time = 10;             // Cycle time in ms (e.g., 10, 20, 25, 50)
         GammaMode gamma_mode = GAMMA_DEFAULT; // Gamma correction mode
-        std::array<char, 16> device_id{}; // e.g., "AABBCC"
-        std::array<char, 32> device_name{}; // Custom device name
+        std::array<char, 16> device_id{};     // e.g., "AABBCC"
+        std::array<char, 32> device_name{};   // Custom device name
     };
 
     /**
      * LED strip layout configuration structure
      */
     struct LayoutConfig {
-        bool reverse = false; // Reverse LED order
-        bool mirror = false; // Mirror LED pattern
+        bool reverse = false;  // Reverse LED order
+        bool mirror = false;   // Mirror LED pattern
         int16_t dead_leds = 0; // Number of dead LEDs at the end
     };
 
@@ -104,16 +103,16 @@ namespace Config {
      * Timer action types
      */
     enum class TimerAction : uint8_t {
-        LOAD_PRESET = 0,  // Load a preset by index
-        TURN_OFF = 1      // Turn off LEDs (Solid show with black color)
+        LOAD_PRESET = 0, // Load a preset by index
+        TURN_OFF = 1     // Turn off LEDs (Solid show with black color)
     };
 
     /**
      * Timer types
      */
     enum class TimerType : uint8_t {
-        COUNTDOWN = 0,    // One-shot countdown timer (duration-based)
-        SCHEDULE = 1      // Recurring action at a time of day on selected weekdays
+        COUNTDOWN = 0, // One-shot countdown timer (duration-based)
+        SCHEDULE = 1   // Recurring action at a time of day on selected weekdays
     };
 
     /**
@@ -133,7 +132,7 @@ namespace Config {
      * Timer entry structure
      */
     struct TimerEntry {
-        bool enabled = false;          // slot occupied (not "armed" — see paused)
+        bool enabled = false; // slot occupied (not "armed" — see paused)
         TimerType type = TimerType::COUNTDOWN;
         TimerAction action = TimerAction::TURN_OFF;
         uint8_t preset_index = 0;
@@ -177,8 +176,8 @@ namespace Config {
      */
     struct TouchConfig {
         static constexpr uint8_t MAX_TOUCH_PINS = 3;
-        bool enabled = true;                              // Touch control enabled
-        uint16_t threshold = 45000;                        // Touch detection threshold (lower = more sensitive)
+        bool enabled = true;        // Touch control enabled
+        uint16_t threshold = 45000; // Touch detection threshold (lower = more sensitive)
     };
 
 // ConfigManager is backed by ESP32 Preferences (NVS) and has no native
@@ -194,7 +193,7 @@ namespace Config {
     class ConfigManager {
     private:
         Preferences prefs;
-        static constexpr const char *NAMESPACE = "ledz";
+        static constexpr const char* NAMESPACE = "ledz";
 
         bool restartRequested = false;
         uint32_t restartAt = 0;
@@ -247,7 +246,7 @@ namespace Config {
          * Save WiFi configuration to NVS
          * @param config WiFi configuration to save
          */
-        void saveWiFiConfig(const WiFiConfig &config);
+        void saveWiFiConfig(const WiFiConfig& config);
 
         /**
          * Load show configuration from NVS
@@ -259,7 +258,7 @@ namespace Config {
          * Save show configuration to NVS
          * @param config Show configuration to save
          */
-        void saveShowConfig(const ShowConfig &config);
+        void saveShowConfig(const ShowConfig& config);
 
         /**
          * Load device configuration from NVS
@@ -271,7 +270,7 @@ namespace Config {
          * Save device configuration to NVS
          * @param config Device configuration to save
          */
-        void saveDeviceConfig(const DeviceConfig &config);
+        void saveDeviceConfig(const DeviceConfig& config);
 
         /**
          * Factory reset - clear all stored configuration
@@ -311,7 +310,7 @@ namespace Config {
          * Save layout configuration to NVS
          * @param config Layout configuration to save
          */
-        void saveLayoutConfig(const LayoutConfig &config);
+        void saveLayoutConfig(const LayoutConfig& config);
 
         /**
          * Load all presets configuration from NVS
@@ -325,7 +324,7 @@ namespace Config {
          * @param preset Preset to save
          * @return true if saved successfully
          */
-        bool savePreset(uint8_t index, const Preset &preset);
+        bool savePreset(uint8_t index, const Preset& preset);
 
         /**
          * Delete a preset from NVS
@@ -339,7 +338,7 @@ namespace Config {
          * @param name Preset name to search for
          * @return Preset index (0-7) or -1 if not found
          */
-        int findPresetByName(const char *name);
+        int findPresetByName(const char* name);
 
         /**
          * Get next available preset slot
@@ -357,7 +356,7 @@ namespace Config {
          * Save timers configuration to NVS
          * @param config Timers configuration to save
          */
-        void saveTimersConfig(const TimersConfig &config);
+        void saveTimersConfig(const TimersConfig& config);
 
         /**
          * Load touch configuration from NVS
@@ -369,10 +368,10 @@ namespace Config {
          * Save touch configuration to NVS
          * @param config Touch configuration to save
          */
-        void saveTouchConfig(const TouchConfig &config);
+        void saveTouchConfig(const TouchConfig& config);
     };
 
 #endif // ARDUINO
 } // namespace Config
 
-#endif //LEDZ_CONFIG_H
+#endif // LEDZ_CONFIG_H

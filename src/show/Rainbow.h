@@ -12,9 +12,8 @@ namespace Show {
     public:
         Rainbow(float time_step, float pixel_step);
 
-        void execute(Strip::Strip &strip, Iteration iteration) override;
+        void execute(Strip::Strip& strip, Iteration iteration) override;
     };
 }
 
-
-#endif //LEDZ_RAINBOW_H
+#endif // LEDZ_RAINBOW_H

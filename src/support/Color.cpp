@@ -19,8 +19,8 @@ namespace Support::Color {
         // hues (yellow at h=42.5, cyan at h=127.5, magenta at h=212.5). Matches
         // the prior unsigned-char body byte-for-byte at every integer input
         // h ∈ [0, 254] (algebra: 255 * X / 255 == X for integer X < 2^24).
-        float pos = wheel_pos * 6.0f / 255.0f;     // ∈ [0, ~5.976]
-        auto section = static_cast<int>(pos);        // ∈ {0..5}
+        float pos = wheel_pos * 6.0f / 255.0f;          // ∈ [0, ~5.976]
+        auto section = static_cast<int>(pos);           // ∈ {0..5}
         float frac = pos - static_cast<float>(section); // ∈ [0, 1)
 
         switch (section) {
@@ -89,8 +89,7 @@ namespace Support::Color {
         blue = static_cast<uint8_t>(blue * brightness);
 
         // Combine into a single color value
-        return (static_cast<Strip::Color>(red) << 16) |
-               (static_cast<Strip::Color>(green) << 8) |
+        return (static_cast<Strip::Color>(red) << 16) | (static_cast<Strip::Color>(green) << 8) |
                static_cast<Strip::Color>(blue);
     }
 }

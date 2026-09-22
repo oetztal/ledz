@@ -24,11 +24,11 @@ namespace Show {
 
     class Wave : public Show {
     private:
-        float decay_rate; // Rate of brightness decay towards ends (higher = faster decay)
+        float decay_rate;           // Rate of brightness decay towards ends (higher = faster decay)
         float brightness_frequency; // Frequency of brightness oscillation at source
-        WaveMode mode; // Phase behaviour (currently unused; kept for future expansion)
+        WaveMode mode;              // Phase behaviour (currently unused; kept for future expansion)
 
-        float time = 0.0f; // Time counter for wave position
+        float time = 0.0f;       // Time counter for wave position
         float color_time = 0.0f; // Time counter for color cycling
 
     public:
@@ -39,19 +39,17 @@ namespace Show {
          * @param mode Phase mode: Bounce or Traveling. Currently a no-op; both
          *             modes render identically. Kept for future expansion.
          */
-        Wave(float decay_rate,
-             float brightness_frequency,
-             WaveMode mode);
+        Wave(float decay_rate, float brightness_frequency, WaveMode mode);
 
         /**
          * Execute the show - update wave animation
          * @param strip LED strip to control
          * @param iteration Current iteration number
          */
-        void execute(Strip::Strip &strip, Iteration iteration) override;
+        void execute(Strip::Strip& strip, Iteration iteration) override;
 
-        const char *name() { return "Wave"; }
+        const char* name() { return "Wave"; }
     };
 } // namespace Show
 
-#endif //LEDZ_WAVE_H
+#endif // LEDZ_WAVE_H

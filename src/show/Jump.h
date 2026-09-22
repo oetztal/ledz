@@ -21,7 +21,7 @@ namespace Show {
 
             Strip::PixelIndex get_position(Iteration iteration, Strip::PixelIndex stripe_size);
 
-            void swap_color(std::queue<Strip::Color> &colors);
+            void swap_color(std::queue<Strip::Color>& colors);
 
             bool is_next();
 
@@ -31,21 +31,16 @@ namespace Show {
         };
 
     private:
-        std::array<Ball, 5> balls = {
-            Ball(1.0f, 0xff0000),
-            Ball(0.5f, 0x00ff00),
-            Ball(0.75f, 0xffff00),
-            Ball(0.80f, 0xff00ff),
-            Ball(0.66f, 0x0000ff)
-        };
+        std::array<Ball, 5> balls = {Ball(1.0f, 0xff0000), Ball(0.5f, 0x00ff00), Ball(0.75f, 0xffff00),
+                                     Ball(0.80f, 0xff00ff), Ball(0.66f, 0x0000ff)};
 
         std::queue<Strip::Color> spare_colors;
 
     public:
         Jump();
 
-        void execute(Strip::Strip &strip, Iteration iteration) override;
+        void execute(Strip::Strip& strip, Iteration iteration) override;
     };
 } // Show
 
-#endif //LEDZ_JUMP_H
+#endif // LEDZ_JUMP_H

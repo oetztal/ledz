@@ -8,22 +8,21 @@ static const char* const TAG = "led";
 namespace Task {
     void LedShow::startTask() {
 #ifdef ARDUINO
-        xTaskCreatePinnedToCore(
-            taskWrapper, // Task Function
-            "LED show", // Task Name
-            10000, // Stack Size
-            this, // Parameters
-            1, // Priority
-            &taskHandle, // Task Handle
-            1 // Core Number
+        xTaskCreatePinnedToCore(taskWrapper, // Task Function
+                                "LED show",  // Task Name
+                                10000,       // Stack Size
+                                this,        // Parameters
+                                1,           // Priority
+                                &taskHandle, // Task Handle
+                                1            // Core Number
         );
 #endif
     }
 
 #ifdef ARDUINO
-    void LedShow::taskWrapper(void *pvParameters) {
+    void LedShow::taskWrapper(void* pvParameters) {
         ESP_LOGI(TAG, "taskWrapper()");
-        auto *instance = static_cast<LedShow *>(pvParameters);
+        auto* instance = static_cast<LedShow*>(pvParameters);
         instance->task();
     }
 
@@ -83,18 +82,16 @@ namespace Task {
             // Log stats every 60 seconds to reduce Serial blocking
             if (timer.start_time - last_show_stats > 60000) {
                 ESP_LOGD(TAG,
-                    "Durations: execution %lu ms (avg: %lu ms), show %lu ms (avg: %lu ms), avg. cycle %lu ms, delay %lu ms%s",
-                    execution_time, total_execution_time / iteration,
-                    show_time, total_show_time / iteration,
-                    (timer.start_time - start_time) / iteration, delay,
-                    in_power_save ? " [POWER SAVE]" : "");
+                         "Durations: execution %lu ms (avg: %lu ms), show %lu ms (avg: %lu ms), avg. cycle %lu ms, "
+                         "delay %lu ms%s",
+                         execution_time, total_execution_time / iteration, show_time, total_show_time / iteration,
+                         (timer.start_time - start_time) / iteration, delay, in_power_save ? " [POWER SAVE]" : "");
                 last_show_stats = timer.start_time;
             }
             vTaskDelay(delay / portTICK_PERIOD_MS);
         }
     }
 
-    LedShow::LedShow(ShowController &controller) : controller(controller) {
-    }
+    LedShow::LedShow(ShowController& controller) : controller(controller) {}
 #endif
 }

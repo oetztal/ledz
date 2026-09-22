@@ -17,5 +17,4 @@ namespace Support::Color {
     Strip::Color black_body_color(float temperature);
 }
 
-
-#endif //LEDZ_SUPPORT_COLOR_H
+#endif // LEDZ_SUPPORT_COLOR_H

@@ -18,12 +18,9 @@ namespace Support {
          * @param power Power for the blend curve (1.0 = linear)
          * @return Blended component value
          */
-        Strip::ColorComponent blend_component(
-            Strip::ColorComponent start_component,
-            Strip::ColorComponent end_component,
-            float fade_progress,
-            float power = 1.0f
-        ) {
+        Strip::ColorComponent blend_component(Strip::ColorComponent start_component,
+                                              Strip::ColorComponent end_component, float fade_progress,
+                                              float power = 1.0f) {
             float start_value = start_component * std::pow(fade_progress, power);
             float end_value = end_component * std::pow(1.0f - fade_progress, power);
             return static_cast<Strip::ColorComponent>(start_value + end_value);
@@ -37,14 +34,17 @@ namespace Support {
          * @return Blended color
          */
         Strip::Color linear_blend(Strip::Color start_color, Strip::Color end_color, float fade_progress) {
-            Strip::ColorComponent r = blend_component(Support::Color::red(start_color), Support::Color::red(end_color), fade_progress);
-            Strip::ColorComponent g = blend_component(Support::Color::green(start_color), Support::Color::green(end_color), fade_progress);
-            Strip::ColorComponent b = blend_component(Support::Color::blue(start_color), Support::Color::blue(end_color), fade_progress);
+            Strip::ColorComponent r =
+                blend_component(Support::Color::red(start_color), Support::Color::red(end_color), fade_progress);
+            Strip::ColorComponent g =
+                blend_component(Support::Color::green(start_color), Support::Color::green(end_color), fade_progress);
+            Strip::ColorComponent b =
+                blend_component(Support::Color::blue(start_color), Support::Color::blue(end_color), fade_progress);
             return Support::Color::from_rgb(r, g, b);
         }
     }
 
-    SmoothBlend::SmoothBlend(Strip::Strip &strip, const std::vector<Strip::Color> &target_colors,
+    SmoothBlend::SmoothBlend(Strip::Strip& strip, const std::vector<Strip::Color>& target_colors,
                              unsigned long duration_ms)
         : strip(strip), target_colors(target_colors), duration_ms(duration_ms) {
         // Capture initial colors from the strip
@@ -61,7 +61,7 @@ namespace Support {
 #endif
     }
 
-    SmoothBlend::SmoothBlend(Strip::Strip &strip, Strip::Color target_color, unsigned long duration_ms)
+    SmoothBlend::SmoothBlend(Strip::Strip& strip, Strip::Color target_color, unsigned long duration_ms)
         : strip(strip), duration_ms(duration_ms) {
         // Fill target_colors with the same color for all LEDs
         target_colors.resize(strip.length(), target_color);
@@ -93,8 +93,8 @@ namespace Support {
         float fade_progress = 1.0f - std::min(elapsed / static_cast<float>(duration_ms), 1.0f);
 
         // Update each LED
-        for (Strip::PixelIndex i = 0; i < strip.length() && i < static_cast<Strip::PixelIndex>(target_colors.size()); i
-             ++) {
+        for (Strip::PixelIndex i = 0; i < strip.length() && i < static_cast<Strip::PixelIndex>(target_colors.size());
+             i++) {
             Strip::Color blended = linear_blend(initial_colors[i], target_colors[i], fade_progress);
             strip.setPixelColor(i, blended);
         }

@@ -13,24 +13,17 @@
 
 static const char* const TAG = "touch";
 
-
 // Solid variants come from scripts/show_variants.json via the generated header.
 // Keep this in lockstep with Solid.variants[] in scripts/show_variants.json —
 // the touch controller, the gallery, and ShowFactory all read from the same
 // canonical JSON entry.
 static const std::array<const char*, 13> SOLID_VARIANTS = {
-    ShowVariants::kSolidVariants[0].params_json,
-    ShowVariants::kSolidVariants[1].params_json,
-    ShowVariants::kSolidVariants[2].params_json,
-    ShowVariants::kSolidVariants[3].params_json,
-    ShowVariants::kSolidVariants[4].params_json,
-    ShowVariants::kSolidVariants[5].params_json,
-    ShowVariants::kSolidVariants[6].params_json,
-    ShowVariants::kSolidVariants[7].params_json,
-    ShowVariants::kSolidVariants[8].params_json,
-    ShowVariants::kSolidVariants[9].params_json,
-    ShowVariants::kSolidVariants[10].params_json,
-    ShowVariants::kSolidVariants[11].params_json,
+    ShowVariants::kSolidVariants[0].params_json,  ShowVariants::kSolidVariants[1].params_json,
+    ShowVariants::kSolidVariants[2].params_json,  ShowVariants::kSolidVariants[3].params_json,
+    ShowVariants::kSolidVariants[4].params_json,  ShowVariants::kSolidVariants[5].params_json,
+    ShowVariants::kSolidVariants[6].params_json,  ShowVariants::kSolidVariants[7].params_json,
+    ShowVariants::kSolidVariants[8].params_json,  ShowVariants::kSolidVariants[9].params_json,
+    ShowVariants::kSolidVariants[10].params_json, ShowVariants::kSolidVariants[11].params_json,
     ShowVariants::kSolidVariants[12].params_json,
 };
 
@@ -39,10 +32,8 @@ static const std::array<const char*, 13> SOLID_VARIANTS = {
 // one-button-press cycling experience on hardware, not for the gallery
 // preview. Renamed TOUCH_ONLY_* to make the boundary explicit.
 static const std::array<const char*, 3> TOUCH_ONLY_COLORRANGES_VARIANTS = {
-    "{\"colors\":[[0,0,255],[255,255,0]]}",
-    "{\"colors\":[[255,0,0],[255,255,255],[0,255,0]]}",
-    R"({"colors":[[170,21,27],[241,191,0],[170,21,27]],"ranges":[25,75]})"
-};
+    "{\"colors\":[[0,0,255],[255,255,0]]}", "{\"colors\":[[255,0,0],[255,255,255],[0,255,0]]}",
+    R"({"colors":[[170,21,27],[241,191,0],[170,21,27]],"ranges":[25,75]})"};
 static const std::array<const char*, 3> TOUCH_ONLY_TWOCOLORBLEND_VARIANTS = {
     R"({"colors":[[0,0,255],[255,0,0]],"gradient":true})",
     R"({"colors":[[0,255,0],[255,0,0]],"gradient":true})",
@@ -50,45 +41,31 @@ static const std::array<const char*, 3> TOUCH_ONLY_TWOCOLORBLEND_VARIANTS = {
 };
 static const std::array<const char*, 1> TOUCH_ONLY_COLORRUN_VARIANTS = {"{}"};
 static const std::array<const char*, 1> TOUCH_ONLY_JUMP_VARIANTS = {"{}"};
-static const std::array<const char*, 3> TOUCH_ONLY_RAINBOW_VARIANTS = {
-    "{}",
-    R"({"time_step":0.3,"pixel_step":1.0})",
-    R"({"time_step":0.05,"pixel_step":0})"
-};
+static const std::array<const char*, 3> TOUCH_ONLY_RAINBOW_VARIANTS = {"{}", R"({"time_step":0.3,"pixel_step":1.0})",
+                                                                       R"({"time_step":0.05,"pixel_step":0})"};
 static const std::array<const char*, 1> TOUCH_ONLY_WAVE_VARIANTS = {"{}"};
-static const std::array<const char*, 2> TOUCH_ONLY_FIRE_VARIANTS = {
-    R"({})",
-    R"({"cooling":0.05})"
-};
+static const std::array<const char*, 2> TOUCH_ONLY_FIRE_VARIANTS = {R"({})", R"({"cooling":0.05})"};
 static const std::array<const char*, 2> TOUCH_ONLY_STARLIGHT_VARIANTS = {
-    R"({"probability":0.1,"length":0,"fade":250})",
-    R"({"probability":0.02,"length":5000,"fade":1000})"
-};
+    R"({"probability":0.1,"length":0,"fade":250})", R"({"probability":0.02,"length":5000,"fade":1000})"};
 static const std::array<const char*, 3> TOUCH_ONLY_THEATERCHASE_VARIANTS = {
-    "{\"num_steps_per_cycle\":21}",
-    "{\"num_steps_per_cycle\":42}",
-    "{\"num_steps_per_cycle\":84}"
-};
-static const std::array<const char*, 2> TOUCH_ONLY_MORSECODE_VARIANTS = {
-    R"({"message":"foo bar baz"})",
-    R"({"message":"gutes neues"})"
-};
+    "{\"num_steps_per_cycle\":21}", "{\"num_steps_per_cycle\":42}", "{\"num_steps_per_cycle\":84}"};
+static const std::array<const char*, 2> TOUCH_ONLY_MORSECODE_VARIANTS = {R"({"message":"foo bar baz"})",
+                                                                         R"({"message":"gutes neues"})"};
 
-const std::array<TouchController::ShowVariantGroup, TouchController::NUM_SHOW_VARIANTS> TouchController::SHOW_VARIANTS = {{
-    {"Solid", SOLID_VARIANTS.data(), SOLID_VARIANTS.size()},
-    {"Solid", TOUCH_ONLY_COLORRANGES_VARIANTS.data(), TOUCH_ONLY_COLORRANGES_VARIANTS.size()},
-    {"Solid", TOUCH_ONLY_TWOCOLORBLEND_VARIANTS.data(), TOUCH_ONLY_TWOCOLORBLEND_VARIANTS.size()},
-    {"ColorRun", TOUCH_ONLY_COLORRUN_VARIANTS.data(), TOUCH_ONLY_COLORRUN_VARIANTS.size()},
-    {"Jump", TOUCH_ONLY_JUMP_VARIANTS.data(), TOUCH_ONLY_JUMP_VARIANTS.size()},
-    {"Rainbow", TOUCH_ONLY_RAINBOW_VARIANTS.data(), TOUCH_ONLY_RAINBOW_VARIANTS.size()},
-    {"Wave", TOUCH_ONLY_WAVE_VARIANTS.data(), TOUCH_ONLY_WAVE_VARIANTS.size()},
-    {"Fire", TOUCH_ONLY_FIRE_VARIANTS.data(), TOUCH_ONLY_FIRE_VARIANTS.size()},
-    {"Starlight", TOUCH_ONLY_STARLIGHT_VARIANTS.data(), TOUCH_ONLY_STARLIGHT_VARIANTS.size()},
-    {"TheaterChase", TOUCH_ONLY_THEATERCHASE_VARIANTS.data(), TOUCH_ONLY_THEATERCHASE_VARIANTS.size()},
-    {"MorseCode", TOUCH_ONLY_MORSECODE_VARIANTS.data(), TOUCH_ONLY_MORSECODE_VARIANTS.size()}
-}};
+const std::array<TouchController::ShowVariantGroup, TouchController::NUM_SHOW_VARIANTS> TouchController::SHOW_VARIANTS =
+    {{{"Solid", SOLID_VARIANTS.data(), SOLID_VARIANTS.size()},
+      {"Solid", TOUCH_ONLY_COLORRANGES_VARIANTS.data(), TOUCH_ONLY_COLORRANGES_VARIANTS.size()},
+      {"Solid", TOUCH_ONLY_TWOCOLORBLEND_VARIANTS.data(), TOUCH_ONLY_TWOCOLORBLEND_VARIANTS.size()},
+      {"ColorRun", TOUCH_ONLY_COLORRUN_VARIANTS.data(), TOUCH_ONLY_COLORRUN_VARIANTS.size()},
+      {"Jump", TOUCH_ONLY_JUMP_VARIANTS.data(), TOUCH_ONLY_JUMP_VARIANTS.size()},
+      {"Rainbow", TOUCH_ONLY_RAINBOW_VARIANTS.data(), TOUCH_ONLY_RAINBOW_VARIANTS.size()},
+      {"Wave", TOUCH_ONLY_WAVE_VARIANTS.data(), TOUCH_ONLY_WAVE_VARIANTS.size()},
+      {"Fire", TOUCH_ONLY_FIRE_VARIANTS.data(), TOUCH_ONLY_FIRE_VARIANTS.size()},
+      {"Starlight", TOUCH_ONLY_STARLIGHT_VARIANTS.data(), TOUCH_ONLY_STARLIGHT_VARIANTS.size()},
+      {"TheaterChase", TOUCH_ONLY_THEATERCHASE_VARIANTS.data(), TOUCH_ONLY_THEATERCHASE_VARIANTS.size()},
+      {"MorseCode", TOUCH_ONLY_MORSECODE_VARIANTS.data(), TOUCH_ONLY_MORSECODE_VARIANTS.size()}}};
 
-TouchController::TouchController(Config::ConfigManager &config, ShowController &showController)
+TouchController::TouchController(Config::ConfigManager& config, ShowController& showController)
     : config(config), showController(showController) {
     // Initialize debounce tracking
     for (uint8_t i = 0; i < Config::TouchConfig::MAX_TOUCH_PINS; i++) {
@@ -117,11 +94,9 @@ void TouchController::begin() {
     ESP_LOGI(TAG, "Initializing touch pins");
     for (uint8_t i = 0; i < Config::TouchConfig::MAX_TOUCH_PINS; i++) {
         const char* action = (i == 0) ? "Switch Show" : (i == 1) ? "Switch Variant" : "Switch Layout";
-        ESP_LOGI(TAG, "  Touch pin %u (GPIO %u) -> %s",
-                      i, TOUCH_PINS[i], action);
+        ESP_LOGI(TAG, "  Touch pin %u (GPIO %u) -> %s", i, TOUCH_PINS[i], action);
     }
-    ESP_LOGI(TAG, "  Enabled: %s, Threshold: %u",
-                  touchConfig.enabled ? "yes" : "no", touchConfig.threshold);
+    ESP_LOGI(TAG, "  Enabled: %s, Threshold: %u", touchConfig.enabled ? "yes" : "no", touchConfig.threshold);
 #endif
 }
 
@@ -154,8 +129,8 @@ void TouchController::update() {
                     const ShowVariantGroup& group = SHOW_VARIANTS[currentShowIdx];
                     const char* params = group.variants[currentVariantIdx];
 
-                    ESP_LOGI(TAG, "Switching show to %s with variant %d: %s",
-                                  group.showName, currentVariantIdx, params);
+                    ESP_LOGI(TAG, "Switching show to %s with variant %d: %s", group.showName, currentVariantIdx,
+                             params);
                     showController.queueShowChange(group.showName, params);
                 } else if (i == 1) {
                     // Button 2: Switch Variant (Circulate variants of current show)
@@ -164,18 +139,17 @@ void TouchController::update() {
 
                     const char* params = group.variants[currentVariantIdx];
 
-                    ESP_LOGI(TAG, "Loading variant %d for show %s: %s",
-                                  currentVariantIdx, group.showName, params);
+                    ESP_LOGI(TAG, "Loading variant %d for show %s: %s", currentVariantIdx, group.showName, params);
                     showController.queueShowChange(group.showName, params);
                 } else if (i == 2) {
                     // Button 3: Switch Layout (8 steps matching Python script)
                     static uint8_t layoutStep = 0;
                     layoutStep = (layoutStep + 1) % 8;
-                    
+
                     bool reverse = false;
                     bool mirror = false;
                     int16_t dead_leds = 0;
-                    
+
                     // Python create_layouts uses (dead_leds, reverse, mirror) logic:
                     // 0: (0, F, F)
                     // 1: (0, F, T)
@@ -186,18 +160,18 @@ void TouchController::update() {
                     // 6: (D, T, F)
                     // 7: (D, T, T)
                     // Note: Python script order is slightly different but covers same combinations
-                    
+
                     reverse = (layoutStep % 4) >= 2;
                     mirror = (layoutStep % 2) == 1;
-                    
+
                     if (layoutStep >= 4) {
                         Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
                         // TODO: fix this
                         // dead_leds = deviceConfig.dead_leds;
                     }
-                    
-                    ESP_LOGI(TAG, "Switching layout to step %u (rev=%d, mir=%d, dead=%d)",
-                                  layoutStep, reverse, mirror, dead_leds);
+
+                    ESP_LOGI(TAG, "Switching layout to step %u (rev=%d, mir=%d, dead=%d)", layoutStep, reverse, mirror,
+                             dead_leds);
                     showController.queueLayoutChange(reverse, mirror, dead_leds);
                 }
             }

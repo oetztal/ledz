@@ -8,10 +8,10 @@ namespace Show {
         unsigned int iterations = 60;
         unsigned int color_factor = 4;
         const float x_initial = 0.5;
-        float Rmin; // r_start - starting R value
-        float Rmax; // r_max - maximum R value
+        float Rmin;   // r_start - starting R value
+        float Rmax;   // r_max - maximum R value
         float Rdelta; // r_incr - increment per iteration
-        float r; // current R value
+        float r;      // current R value
 
         float func(float x) const;
 
@@ -29,8 +29,8 @@ namespace Show {
          */
         Chaos(float Rmin, float Rmax, float Rdelta);
 
-        void execute(Strip::Strip &strip, Iteration iteration) override;
+        void execute(Strip::Strip& strip, Iteration iteration) override;
     };
 }
 
-#endif //LEDZ_CHAOS_H
+#endif // LEDZ_CHAOS_H

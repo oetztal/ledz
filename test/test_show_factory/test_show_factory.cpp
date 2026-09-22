@@ -38,8 +38,7 @@ static const Strip::PixelIndex WIDE_PIXELS = 24;
 // large so that scheduler jitter cannot push the sleep past the 2 s cutoff.
 static const int BLEND_MS = 2000;
 static const int SETTLE_MS = 1500;
-static_assert(SETTLE_MS < BLEND_MS,
-              "settling past the blend duration freezes the strip at its pre-final step");
+static_assert(SETTLE_MS < BLEND_MS, "settling past the blend duration freezes the strip at its pre-final step");
 
 struct Scenario {
     std::string params;
@@ -62,15 +61,15 @@ static void renderAll() {
     ShowFactory factory;
 
     const std::map<std::string, Scenario> scenarios = {
-        {"defaults",        {"{}", PIXELS}},
-        {"no_params",       {"", PIXELS}},  // createShow(name) overload
-        {"malformed",       {"{not json at all", PIXELS}},
-        {"single",          {R"({"colors":[[255,0,0]]})", PIXELS}},
-        {"two_even",        {R"({"colors":[[255,0,0],[0,0,255]]})", PIXELS}},
-        {"two_ranges_30",   {R"({"colors":[[255,0,0],[0,0,255]],"ranges":[30]})", PIXELS}},
-        {"bad_entries",     {R"({"colors":[[255,0,0],[1,2],"nope",[0,0,255]]})", PIXELS}},
-        {"gradient",        {R"({"colors":[[255,0,0],[0,0,255]],"gradient":true})", PIXELS}},
-        {"many",            {manyColorsParams(), WIDE_PIXELS}},
+        {"defaults", {"{}", PIXELS}},
+        {"no_params", {"", PIXELS}}, // createShow(name) overload
+        {"malformed", {"{not json at all", PIXELS}},
+        {"single", {R"({"colors":[[255,0,0]]})", PIXELS}},
+        {"two_even", {R"({"colors":[[255,0,0],[0,0,255]]})", PIXELS}},
+        {"two_ranges_30", {R"({"colors":[[255,0,0],[0,0,255]],"ranges":[30]})", PIXELS}},
+        {"bad_entries", {R"({"colors":[[255,0,0],[1,2],"nope",[0,0,255]]})", PIXELS}},
+        {"gradient", {R"({"colors":[[255,0,0],[0,0,255]],"gradient":true})", PIXELS}},
+        {"many", {manyColorsParams(), WIDE_PIXELS}},
     };
 
     std::vector<std::unique_ptr<MockStrip>> strips;
@@ -78,13 +77,12 @@ static void renderAll() {
     std::vector<std::string> labels;
 
     // Phase 1: construct all shows.
-    for (const auto &entry: scenarios) {
+    for (const auto& entry : scenarios) {
         auto strip = std::unique_ptr<MockStrip>(new MockStrip(entry.second.pixelCount));
-        auto show = entry.second.params.empty()
-                        ? factory.createShow("Solid")
-                        : factory.createShow("Solid", entry.second.params);
+        auto show = entry.second.params.empty() ? factory.createShow("Solid")
+                                                : factory.createShow("Solid", entry.second.params);
         if (show == nullptr) {
-            continue;  // asserted separately; skip rather than crash here
+            continue; // asserted separately; skip rather than crash here
         }
         labels.push_back(entry.first);
         shows.push_back(std::move(show));
@@ -116,7 +114,7 @@ static void renderAll() {
     }
 }
 
-static const std::vector<Strip::Color> &pixelsOf(const std::string &label) {
+static const std::vector<Strip::Color>& pixelsOf(const std::string& label) {
     auto it = settled.find(label);
     TEST_ASSERT_TRUE_MESSAGE(it != settled.end(), label.c_str());
     return it->second;
@@ -133,17 +131,18 @@ static float blendScale() {
 // Assert a captured pixel matches the requested colour once the shared blend
 // scale is applied. A zero channel must stay exactly zero: the strip starts
 // black, so 0 * anything is 0 regardless of progress.
-static void assertColor(Strip::Color expected, Strip::Color actual, const char *what) {
+static void assertColor(Strip::Color expected, Strip::Color actual, const char* what) {
     const float s = blendScale();
-    const Strip::ColorComponent ec[3] = {Support::Color::red(expected), Support::Color::green(expected), Support::Color::blue(expected)};
-    const Strip::ColorComponent ac[3] = {Support::Color::red(actual), Support::Color::green(actual), Support::Color::blue(actual)};
+    const Strip::ColorComponent ec[3] = {Support::Color::red(expected), Support::Color::green(expected),
+                                         Support::Color::blue(expected)};
+    const Strip::ColorComponent ac[3] = {Support::Color::red(actual), Support::Color::green(actual),
+                                         Support::Color::blue(actual)};
 
     for (int c = 0; c < 3; c++) {
         if (ec[c] == 0) {
             TEST_ASSERT_EQUAL_UINT8_MESSAGE(0, ac[c], what);
         } else {
-            TEST_ASSERT_UINT8_WITHIN_MESSAGE(
-                3, static_cast<Strip::ColorComponent>(ec[c] * s), ac[c], what);
+            TEST_ASSERT_UINT8_WITHIN_MESSAGE(3, static_cast<Strip::ColorComponent>(ec[c] * s), ac[c], what);
         }
     }
 }
@@ -151,11 +150,10 @@ static void assertColor(Strip::Color expected, Strip::Color actual, const char *
 // The blend must actually have moved, or every assertion above would pass
 // vacuously against an all-black strip.
 static void assertBlendProgressed() {
-    TEST_ASSERT_TRUE_MESSAGE(blendScale() > 0.3f,
-                             "blend did not progress; SETTLE_MS may exceed the blend duration");
+    TEST_ASSERT_TRUE_MESSAGE(blendScale() > 0.3f, "blend did not progress; SETTLE_MS may exceed the blend duration");
 }
 
-static ShowFactory *factory;
+static ShowFactory* factory;
 
 void setUp() {
     factory = new ShowFactory();
@@ -168,10 +166,8 @@ void tearDown() {
 // --- registration -----------------------------------------------------------
 
 void test_all_shows_are_registered() {
-    const char *expected[] = {
-        "Solid", "Fire", "Starlight", "Stroboscope", "ColorRun", "Jump",
-        "Rainbow", "Wave", "TheaterChase", "MorseCode", "Chaos", "Mandelbrot"
-    };
+    const char* expected[] = {"Solid",   "Fire", "Starlight",    "Stroboscope", "ColorRun", "Jump",
+                              "Rainbow", "Wave", "TheaterChase", "MorseCode",   "Chaos",    "Mandelbrot"};
     const size_t count = sizeof(expected) / sizeof(expected[0]);
 
     TEST_ASSERT_EQUAL(count, factory->listShows().size());
@@ -181,7 +177,7 @@ void test_all_shows_are_registered() {
 }
 
 void test_every_registered_show_constructs_with_empty_params() {
-    for (const auto &info: factory->listShows()) {
+    for (const auto& info : factory->listShows()) {
         auto show = factory->createShow(info.name, "{}");
         TEST_ASSERT_NOT_NULL_MESSAGE(show.get(), info.name.c_str());
     }
@@ -201,23 +197,18 @@ void test_unknown_show_returns_null() {
 // as a separate scenario.
 void test_merge_default_params_matches_json_for_every_show() {
     for (std::size_t i = 0; i < ShowVariants::kNumShows; ++i) {
-        const auto &entry = ShowVariants::kShows[i];
-        if (std::strlen(entry.default_params_json) == 0) continue;  // shows with no default
+        const auto& entry = ShowVariants::kShows[i];
+        if (std::strlen(entry.default_params_json) == 0) continue; // shows with no default
         std::string merged = factory->mergeDefaultParams(entry.name, "{}");
         std::string expected(entry.default_params_json);
-        TEST_ASSERT_EQUAL_STRING_MESSAGE(
-            expected.c_str(),
-            merged.c_str(),
-            entry.name);
+        TEST_ASSERT_EQUAL_STRING_MESSAGE(expected.c_str(), merged.c_str(), entry.name);
     }
 }
 
 void test_merge_default_params_user_overrides_default() {
     // Solid default is warm-white-ish 255/250/230; user override to pure red 255/0/0.
     std::string merged = factory->mergeDefaultParams("Solid", R"({"colors":[[255,0,0]],"gradient":false})");
-    TEST_ASSERT_EQUAL_STRING(
-        R"({"colors":[[255,0,0]],"gradient":false})",
-        merged.c_str());
+    TEST_ASSERT_EQUAL_STRING(R"({"colors":[[255,0,0]],"gradient":false})", merged.c_str());
 }
 
 void test_merge_default_params_user_partial_keeps_default() {
@@ -230,7 +221,7 @@ void test_merge_default_params_user_partial_keeps_default() {
 }
 
 void test_show_list_entries_have_descriptions() {
-    for (const auto &info: factory->listShows()) {
+    for (const auto& info : factory->listShows()) {
         TEST_ASSERT_FALSE(info.name.empty());
         TEST_ASSERT_FALSE_MESSAGE(info.description.empty(), info.name.c_str());
     }
@@ -241,25 +232,23 @@ void test_show_list_entries_have_descriptions() {
 void test_malformed_json_still_constructs_every_show() {
     // createShow logs and clears the document, so every parameter falls back
     // to its default via the | operator rather than the request failing.
-    for (const auto &info: factory->listShows()) {
+    for (const auto& info : factory->listShows()) {
         auto show = factory->createShow(info.name, "{\"colors\":");
         TEST_ASSERT_NOT_NULL_MESSAGE(show.get(), info.name.c_str());
     }
 }
 
 void test_malformed_json_yields_the_default_appearance() {
-    TEST_ASSERT_EQUAL_HEX32_ARRAY(pixelsOf("defaults").data(),
-                                  pixelsOf("malformed").data(), PIXELS);
+    TEST_ASSERT_EQUAL_HEX32_ARRAY(pixelsOf("defaults").data(), pixelsOf("malformed").data(), PIXELS);
 }
 
 void test_createShow_without_params_matches_empty_object() {
-    TEST_ASSERT_EQUAL_HEX32_ARRAY(pixelsOf("defaults").data(),
-                                  pixelsOf("no_params").data(), PIXELS);
+    TEST_ASSERT_EQUAL_HEX32_ARRAY(pixelsOf("defaults").data(), pixelsOf("no_params").data(), PIXELS);
 }
 
 void test_empty_params_give_warm_white() {
     assertBlendProgressed();
-    const auto &px = pixelsOf("defaults");
+    const auto& px = pixelsOf("defaults");
     for (Strip::PixelIndex i = 0; i < PIXELS; i++) {
         assertColor(Support::Color::from_rgb(255, 250, 230), px[i], "warm white default");
     }
@@ -269,7 +258,7 @@ void test_empty_params_give_warm_white() {
 
 void test_single_color_fills_the_strip() {
     assertBlendProgressed();
-    const auto &px = pixelsOf("single");
+    const auto& px = pixelsOf("single");
     for (Strip::PixelIndex i = 0; i < PIXELS; i++) {
         assertColor(Support::Color::from_rgb(255, 0, 0), px[i], "single colour");
     }
@@ -277,7 +266,7 @@ void test_single_color_fills_the_strip() {
 
 void test_two_colors_split_the_strip_evenly() {
     assertBlendProgressed();
-    const auto &px = pixelsOf("two_even");
+    const auto& px = pixelsOf("two_even");
     for (Strip::PixelIndex i = 0; i < PIXELS / 2; i++) {
         assertColor(Support::Color::from_rgb(255, 0, 0), px[i], "first half red");
     }
@@ -289,7 +278,7 @@ void test_two_colors_split_the_strip_evenly() {
 void test_ranges_move_the_boundary() {
     // 30% boundary: pixels 0-2 red, 3-9 blue.
     assertBlendProgressed();
-    const auto &px = pixelsOf("two_ranges_30");
+    const auto& px = pixelsOf("two_ranges_30");
     assertColor(Support::Color::from_rgb(255, 0, 0), px[0], "pixel 0 red");
     assertColor(Support::Color::from_rgb(255, 0, 0), px[2], "pixel 2 red");
     assertColor(Support::Color::from_rgb(0, 0, 255), px[3], "pixel 3 blue");
@@ -300,7 +289,7 @@ void test_malformed_color_entries_are_skipped() {
     // Entries with fewer than three components, and non-array entries, are
     // ignored; the two valid colours still split the strip.
     assertBlendProgressed();
-    const auto &px = pixelsOf("bad_entries");
+    const auto& px = pixelsOf("bad_entries");
     assertColor(Support::Color::from_rgb(255, 0, 0), px[0], "first valid colour");
     assertColor(Support::Color::from_rgb(0, 0, 255), px[PIXELS - 1], "last valid colour");
 }
@@ -311,7 +300,7 @@ void test_malformed_color_entries_are_skipped() {
 // every colour must survive regardless of how long the parameter string is.
 void test_many_colors_are_all_parsed() {
     assertBlendProgressed();
-    const auto &px = pixelsOf("many");
+    const auto& px = pixelsOf("many");
     TEST_ASSERT_EQUAL(WIDE_PIXELS, px.size());
     for (int i = 0; i < WIDE_PIXELS; i++) {
         assertColor(Support::Color::from_rgb(i * 10, 0, 255 - i * 10), px[i], "gradient stop");
@@ -319,8 +308,8 @@ void test_many_colors_are_all_parsed() {
 }
 
 void test_gradient_flag_changes_the_result() {
-    const auto &sharp = pixelsOf("two_even");
-    const auto &blended = pixelsOf("gradient");
+    const auto& sharp = pixelsOf("two_even");
+    const auto& blended = pixelsOf("gradient");
 
     bool differs = false;
     for (Strip::PixelIndex i = 0; i < PIXELS; i++) {
@@ -339,8 +328,7 @@ void test_wave_parses_all_parameters_from_json() {
     // behaviourally: Wave with decay_rate=8.0 must produce a much darker strip
     // than Wave with the default decay_rate=2.0, because brightness decays
     // exponentially from the source.
-    const std::string params =
-        R"({"decay_rate":8.0,"brightness_frequency":0.1})";
+    const std::string params = R"({"decay_rate":8.0,"brightness_frequency":0.1})";
 
     auto fast = factory->createShow("Wave", params);
     auto slow = factory->createShow("Wave", "{}");
@@ -355,7 +343,7 @@ void test_wave_parses_all_parameters_from_json() {
 
     // Count lit pixels (any channel > 0) on each strip; with a much higher
     // decay rate the bright region around the source is narrower.
-    auto countLit = [](const MockStrip &s) {
+    auto countLit = [](const MockStrip& s) {
         int lit = 0;
         for (Strip::PixelIndex i = 0; i < s.length(); i++) {
             auto c = s.getPixelColor(i);
@@ -381,8 +369,8 @@ void test_wave_ignores_legacy_fields() {
     // must not break construction, and the resulting pixels must match a
     // default-config run because the remaining real parameters all default
     // to the same values.
-    auto with_legacy = factory->createShow("Wave",
-        R"({"wave_speed":5.0,"wavelength":12.0,"decay_rate":2.0,"brightness_frequency":0.1})");
+    auto with_legacy = factory->createShow(
+        "Wave", R"({"wave_speed":5.0,"wavelength":12.0,"decay_rate":2.0,"brightness_frequency":0.1})");
     auto with_defaults = factory->createShow("Wave", "{}");
     TEST_ASSERT_NOT_NULL(with_legacy.get());
     TEST_ASSERT_NOT_NULL(with_defaults.get());
@@ -393,8 +381,7 @@ void test_wave_ignores_legacy_fields() {
     with_defaults->execute(strip_b, 0);
 
     for (Strip::PixelIndex i = 0; i < 20; i++) {
-        TEST_ASSERT_EQUAL_HEX32_MESSAGE(strip_b.getPixelColor(i),
-                                        strip_a.getPixelColor(i),
+        TEST_ASSERT_EQUAL_HEX32_MESSAGE(strip_b.getPixelColor(i), strip_a.getPixelColor(i),
                                         "wave_speed and wavelength should be silently ignored");
     }
 }
@@ -405,10 +392,8 @@ void test_wave_bounce_and_traveling_modes_are_identical() {
     // differentiate was removed). A Wave built with mode="traveling" must
     // produce a rendered strip identical to a Wave built with mode="bounce"
     // when both are advanced past t=0.
-    const std::string traveling_params =
-        R"({"mode":"traveling","decay_rate":2.0,"brightness_frequency":0.1})";
-    const std::string bouncing_params =
-        R"({"mode":"bounce","decay_rate":2.0,"brightness_frequency":0.1})";
+    const std::string traveling_params = R"({"mode":"traveling","decay_rate":2.0,"brightness_frequency":0.1})";
+    const std::string bouncing_params = R"({"mode":"bounce","decay_rate":2.0,"brightness_frequency":0.1})";
 
     auto traveling = factory->createShow("Wave", traveling_params);
     auto bouncing = factory->createShow("Wave", bouncing_params);
@@ -423,8 +408,7 @@ void test_wave_bounce_and_traveling_modes_are_identical() {
     }
 
     for (Strip::PixelIndex i = 0; i < 60; i++) {
-        TEST_ASSERT_EQUAL_HEX32_MESSAGE(strip_b.getPixelColor(i),
-                                        strip_t.getPixelColor(i),
+        TEST_ASSERT_EQUAL_HEX32_MESSAGE(strip_b.getPixelColor(i), strip_t.getPixelColor(i),
                                         "bounce and traveling modes must produce identical pixels");
     }
 }
@@ -444,8 +428,7 @@ void test_wave_unknown_mode_falls_back_to_bounce() {
     bounce->execute(strip_b, 0);
 
     for (Strip::PixelIndex i = 0; i < 20; i++) {
-        TEST_ASSERT_EQUAL_HEX32_MESSAGE(strip_b.getPixelColor(i),
-                                        strip_u.getPixelColor(i),
+        TEST_ASSERT_EQUAL_HEX32_MESSAGE(strip_b.getPixelColor(i), strip_u.getPixelColor(i),
                                         "unknown mode should match bounce");
     }
 }

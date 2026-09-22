@@ -18,8 +18,8 @@ namespace Show {
 
         void log_result(unsigned long long j, float cre);
 
-        void execute(Strip::Strip &strip, Iteration iteration) override;
+        void execute(Strip::Strip& strip, Iteration iteration) override;
     };
 }
 
-#endif //LEDZ_MANDELBROT_H
+#endif // LEDZ_MANDELBROT_H

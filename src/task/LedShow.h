@@ -4,12 +4,12 @@
 
 namespace Task {
     class LedShow {
-        ShowController &controller;
+        ShowController& controller;
         TaskHandle_t taskHandle = nullptr;
 
-
-        static void taskWrapper(void *pvParameters);
+        static void taskWrapper(void* pvParameters);
         void task();
+
     public:
         LedShow(ShowController& controller);
 
@@ -17,5 +17,4 @@ namespace Task {
     };
 }
 
-
-#endif //LEDZ_LEDSHOW_H
+#endif // LEDZ_LEDSHOW_H

@@ -1,7 +1,7 @@
 # http-json-api Specification
 
 ## Purpose
-TBD - created by syncing change migrate-async-json-stack. Update Purpose after archive.
+The device's HTTP JSON API guarantees that request bodies are only parsed once fully received, capacity is not fixed at compile time, body-carrying routes are matched exactly with the right content type, malformed input is rejected by status code, and served responses are unchanged by transport-level handling.
 ## Requirements
 ### Requirement: A request body is parsed only after it has been fully received
 An endpoint that accepts a JSON request body SHALL reassemble the complete body before deserializing it, regardless of how many TCP segments the body arrives in. An endpoint SHALL NOT deserialize a partial body, and SHALL NOT discard body data that arrives after the first segment.

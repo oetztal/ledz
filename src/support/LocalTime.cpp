@@ -8,7 +8,7 @@
 namespace LocalTime {
     namespace {
         constexpr size_t TZ_MAX_LEN = 63;
-        constexpr const char *TZ_FALLBACK = "UTC0";
+        constexpr const char* TZ_FALLBACK = "UTC0";
 
         /**
          * Point libc at the requested zone.
@@ -23,12 +23,12 @@ namespace LocalTime {
          * tzset() is called explicitly rather than relying on localtime_r:
          * POSIX permits localtime_r not to call it.
          */
-        void applyTz(const char *tz) {
+        void applyTz(const char* tz) {
             if (tz == nullptr || tz[0] == '\0') {
                 tz = TZ_FALLBACK;
             }
 
-            if (const char *current = getenv("TZ"); current != nullptr && strcmp(current, tz) == 0) {
+            if (const char* current = getenv("TZ"); current != nullptr && strcmp(current, tz) == 0) {
                 return;
             }
 
@@ -36,7 +36,7 @@ namespace LocalTime {
             tzset();
         }
 
-        struct tm localParts(uint32_t epoch, const char *tz) {
+        struct tm localParts(uint32_t epoch, const char* tz) {
             applyTz(tz);
             const auto when = static_cast<time_t>(epoch);
             struct tm parts = {};
@@ -45,26 +45,25 @@ namespace LocalTime {
         }
     }
 
-    uint32_t secondsSinceMidnight(uint32_t epoch, const char *tz) {
+    uint32_t secondsSinceMidnight(uint32_t epoch, const char* tz) {
         if (epoch == 0) return 0;
 
         const struct tm parts = localParts(epoch, tz);
-        return static_cast<uint32_t>(parts.tm_hour) * 3600u +
-               static_cast<uint32_t>(parts.tm_min) * 60u +
+        return static_cast<uint32_t>(parts.tm_hour) * 3600u + static_cast<uint32_t>(parts.tm_min) * 60u +
                static_cast<uint32_t>(parts.tm_sec);
     }
 
-    uint16_t localDayOfYear(uint32_t epoch, const char *tz) {
+    uint16_t localDayOfYear(uint32_t epoch, const char* tz) {
         const struct tm parts = localParts(epoch, tz);
         return static_cast<uint16_t>(parts.tm_yday);
     }
 
-    uint8_t localWeekday(uint32_t epoch, const char *tz) {
+    uint8_t localWeekday(uint32_t epoch, const char* tz) {
         const struct tm parts = localParts(epoch, tz);
         return static_cast<uint8_t>(parts.tm_wday);
     }
 
-    Info describe(uint32_t epoch, const char *tz) {
+    Info describe(uint32_t epoch, const char* tz) {
         const struct tm local = localParts(epoch, tz);
 
         // tm_gmtoff and tm_zone are BSD/GNU extensions, and the ESP32's
@@ -82,9 +81,8 @@ namespace LocalTime {
         }
 
         Info info = {};
-        info.offset_minutes = static_cast<int16_t>(dayDelta * 1440 +
-                                                   (local.tm_hour - utc.tm_hour) * 60 +
-                                                   (local.tm_min - utc.tm_min));
+        info.offset_minutes =
+            static_cast<int16_t>(dayDelta * 1440 + (local.tm_hour - utc.tm_hour) * 60 + (local.tm_min - utc.tm_min));
         info.is_dst = local.tm_isdst > 0;
 
         // %Z resolves to the designator tzset() parsed out of the TZ string.
@@ -95,7 +93,7 @@ namespace LocalTime {
         return info;
     }
 
-    void legacyOffsetToPosix(int8_t hours, char *out, size_t len) {
+    void legacyOffsetToPosix(int8_t hours, char* out, size_t len) {
         if (out == nullptr || len == 0) return;
 
         // The negation is the point: POSIX counts west of UTC, so an old
@@ -103,7 +101,7 @@ namespace LocalTime {
         snprintf(out, len, "UTC%+d", -static_cast<int>(hours));
     }
 
-    bool isSyntacticallyValidTz(const char *tz) {
+    bool isSyntacticallyValidTz(const char* tz) {
         if (tz == nullptr) return false;
 
         const size_t length = strnlen(tz, TZ_MAX_LEN + 1);

@@ -48,4 +48,4 @@ namespace Support {
     };
 } // namespace Support
 
-#endif //LEDZ_GAMMA_H
+#endif // LEDZ_GAMMA_H

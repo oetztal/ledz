@@ -97,7 +97,7 @@ The codebase's resource budget is tight (no PSRAM, ~200 KB RAM, ~990 KB flash us
 
 ```diff
 - #define OTA_LOG(fmt, ...) Serial.printf("[OTA] " fmt "\n", ##__VA_ARGS__)
-- 
+-
 - OTA_LOG("HTTP open failed: %s", esp_err_to_name(err));
 + ESP_LOGW("ota", "HTTP open failed: %s", esp_err_to_name(err));
 ```

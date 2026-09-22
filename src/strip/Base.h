@@ -70,8 +70,7 @@ namespace Strip {
          */
         static uint8_t scaleComponent(uint8_t component, uint8_t scale);
 #endif
-
     };
 }
 
-#endif //LEDZ_WS2812_H
+#endif // LEDZ_WS2812_H

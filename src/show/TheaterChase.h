@@ -11,7 +11,7 @@ namespace Show {
     class TheaterChase : public Show {
     private:
         unsigned int num_steps_per_cycle; // Steps needed for one complete color rotation
-        unsigned int index = 0; // Current animation step
+        unsigned int index = 0;           // Current animation step
 
     public:
         /**
@@ -25,10 +25,10 @@ namespace Show {
          * @param strip LED strip to control
          * @param iteration Current iteration number
          */
-        void execute(Strip::Strip &strip, Iteration iteration) override;
+        void execute(Strip::Strip& strip, Iteration iteration) override;
 
-        const char *name() { return "TheaterChase"; }
+        const char* name() { return "TheaterChase"; }
     };
 } // namespace Show
 
-#endif //LEDZ_THEATERCHASE_H
+#endif // LEDZ_THEATERCHASE_H

@@ -3,11 +3,9 @@
 #include "unity.h"
 #include "support/Gamma.h"
 
-void setUp() {
-}
+void setUp() {}
 
-void tearDown() {
-}
+void tearDown() {}
 
 void test_correct8_endpoints() {
     TEST_ASSERT_EQUAL_UINT8(0, Support::Gamma::correct8(0));
@@ -29,10 +27,9 @@ void test_correct8_known_midpoints() {
 
 void test_correct8_is_monotonic() {
     for (int x = 1; x <= 255; x++) {
-        TEST_ASSERT_TRUE_MESSAGE(
-            Support::Gamma::correct8(static_cast<uint8_t>(x)) >=
-                Support::Gamma::correct8(static_cast<uint8_t>(x - 1)),
-            ("monotonicity violated at x=" + std::to_string(x)).c_str());
+        TEST_ASSERT_TRUE_MESSAGE(Support::Gamma::correct8(static_cast<uint8_t>(x)) >=
+                                     Support::Gamma::correct8(static_cast<uint8_t>(x - 1)),
+                                 ("monotonicity violated at x=" + std::to_string(x)).c_str());
     }
 }
 
@@ -49,8 +46,7 @@ void test_correct32_black_and_white() {
 // The inverse table is the identity for every 8-bit input.
 void test_uncorrect8_is_identity() {
     for (int x = 0; x <= 255; x++) {
-        TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(x),
-                                Support::Gamma::uncorrect8(static_cast<uint8_t>(x)));
+        TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(x), Support::Gamma::uncorrect8(static_cast<uint8_t>(x)));
     }
 }
 

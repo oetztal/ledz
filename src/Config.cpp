@@ -9,8 +9,7 @@
 static const char* const TAG = "cfg";
 
 namespace Config {
-    ConfigManager::ConfigManager() {
-    }
+    ConfigManager::ConfigManager() {}
 
     void ConfigManager::requestRestart(uint32_t delayMs) {
         restartAt = millis() + delayMs;
@@ -71,7 +70,7 @@ namespace Config {
         return config;
     }
 
-    void ConfigManager::saveWiFiConfig(const WiFiConfig &config) {
+    void ConfigManager::saveWiFiConfig(const WiFiConfig& config) {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, false); // Read-write mode
 
@@ -109,7 +108,7 @@ namespace Config {
         return config;
     }
 
-    void ConfigManager::saveShowConfig(const ShowConfig &config) {
+    void ConfigManager::saveShowConfig(const ShowConfig& config) {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, false); // Read-write mode
 
@@ -150,7 +149,7 @@ namespace Config {
         return config;
     }
 
-    void ConfigManager::saveDeviceConfig(const DeviceConfig &config) {
+    void ConfigManager::saveDeviceConfig(const DeviceConfig& config) {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, false); // Read-write mode
 
@@ -169,7 +168,7 @@ namespace Config {
     void ConfigManager::reset() {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, false); // Read-write mode
-        prefs.clear(); // Clear all keys in this namespace
+        prefs.clear();                 // Clear all keys in this namespace
         prefs.end();
 #endif
     }
@@ -181,8 +180,7 @@ namespace Config {
         memcpy(mac_bytes.data(), &mac, 6);
 
         std::array<char, 16> id;
-        snprintf(id.data(), id.size(), "%02X%02X%02X",
-                 mac_bytes[3], mac_bytes[4], mac_bytes[5]);
+        snprintf(id.data(), id.size(), "%02X%02X%02X", mac_bytes[3], mac_bytes[4], mac_bytes[5]);
         return String(id.data());
 #else
         return String("ledz-000000");
@@ -235,7 +233,7 @@ namespace Config {
         return config;
     }
 
-    void ConfigManager::saveLayoutConfig(const LayoutConfig &config) {
+    void ConfigManager::saveLayoutConfig(const LayoutConfig& config) {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, false); // Read-write mode
         prefs.putBool("layout_reverse", config.reverse);
@@ -243,8 +241,8 @@ namespace Config {
         prefs.putUShort("layout_dead", config.dead_leds);
         prefs.end();
 
-        ESP_LOGD(TAG, "Saved layout - reverse=%d, mirror=%d, dead_leds=%u",
-                      config.reverse, config.mirror, config.dead_leds);
+        ESP_LOGD(TAG, "Saved layout - reverse=%d, mirror=%d, dead_leds=%u", config.reverse, config.mirror,
+                 config.dead_leds);
 #endif
     }
 
@@ -264,10 +262,12 @@ namespace Config {
                 prefs.getString(key.data(), presetsConfig.presets[i].name.data(), presetsConfig.presets[i].name.size());
 
                 snprintf(key.data(), key.size(), "preset_%u_show", i);
-                prefs.getString(key.data(), presetsConfig.presets[i].show_name.data(), presetsConfig.presets[i].show_name.size());
+                prefs.getString(key.data(), presetsConfig.presets[i].show_name.data(),
+                                presetsConfig.presets[i].show_name.size());
 
                 snprintf(key.data(), key.size(), "preset_%u_params", i);
-                prefs.getString(key.data(), presetsConfig.presets[i].params_json.data(), presetsConfig.presets[i].params_json.size());
+                prefs.getString(key.data(), presetsConfig.presets[i].params_json.data(),
+                                presetsConfig.presets[i].params_json.size());
 
                 snprintf(key.data(), key.size(), "preset_%u_rev", i);
                 presetsConfig.presets[i].layout_reverse = prefs.getBool(key.data(), false);
@@ -286,7 +286,7 @@ namespace Config {
         return presetsConfig;
     }
 
-    bool ConfigManager::savePreset(uint8_t index, const Preset &preset) {
+    bool ConfigManager::savePreset(uint8_t index, const Preset& preset) {
         if (index >= PresetsConfig::MAX_PRESETS) {
             return false;
         }
@@ -349,7 +349,7 @@ namespace Config {
 #endif
     }
 
-    int ConfigManager::findPresetByName(const char *name) {
+    int ConfigManager::findPresetByName(const char* name) {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, true); // Read-only mode
 
@@ -413,8 +413,8 @@ namespace Config {
             LocalTime::legacyOffsetToPosix(legacyOffsetHours, timersConfig.timezone.data(),
                                            timersConfig.timezone.size());
             migrated = true;
-            ESP_LOGI(TAG, "Migrating timezone: legacy offset %d hours -> \"%s\"",
-                          legacyOffsetHours, timersConfig.timezone.data());
+            ESP_LOGI(TAG, "Migrating timezone: legacy offset %d hours -> \"%s\"", legacyOffsetHours,
+                     timersConfig.timezone.data());
         }
 
         std::array<char, 20> key;
@@ -492,7 +492,7 @@ namespace Config {
         return timersConfig;
     }
 
-    void ConfigManager::saveTimersConfig(const TimersConfig &config) {
+    void ConfigManager::saveTimersConfig(const TimersConfig& config) {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, false); // Read-write mode
 
@@ -554,14 +554,13 @@ namespace Config {
 
         prefs.end();
 
-        ESP_LOGD(TAG, "TouchConfig: Loaded - enabled=%d, threshold=%u",
-                      touchConfig.enabled, touchConfig.threshold);
+        ESP_LOGD(TAG, "TouchConfig: Loaded - enabled=%d, threshold=%u", touchConfig.enabled, touchConfig.threshold);
 #endif
 
         return touchConfig;
     }
 
-    void ConfigManager::saveTouchConfig(const TouchConfig &config) {
+    void ConfigManager::saveTouchConfig(const TouchConfig& config) {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, false); // Read-write mode
 
@@ -570,8 +569,7 @@ namespace Config {
 
         prefs.end();
 
-        ESP_LOGD(TAG, "TouchConfig: Saved - enabled=%d, threshold=%u",
-                      config.enabled, config.threshold);
+        ESP_LOGD(TAG, "TouchConfig: Saved - enabled=%d, threshold=%u", config.enabled, config.threshold);
 #endif
     }
 } // namespace Config

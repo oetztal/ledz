@@ -8,12 +8,9 @@
 
 namespace Show {
     Wave::Wave(float decay_rate, float brightness_frequency, WaveMode mode)
-        : decay_rate(decay_rate),
-          brightness_frequency(brightness_frequency),
-          mode(mode) {
-    }
+        : decay_rate(decay_rate), brightness_frequency(brightness_frequency), mode(mode) {}
 
-    void Wave::execute(Strip::Strip &strip, Iteration iteration) {
+    void Wave::execute(Strip::Strip& strip, Iteration iteration) {
         time += 0.05f;
         color_time += 0.05f;
 
@@ -22,8 +19,8 @@ namespace Show {
         // Cosine-bouncing source position: oscillates between 0 and N-1 with
         // continuous velocity (no jolt at the bounce). Drives both the
         // distance-decay envelope and the hue-from-emission-time computation.
-        float source_pos = (static_cast<float>(num_leds) - 1.0f) * 0.5f
-                         * (1.0f - cosf(time * brightness_frequency * 2.0f * static_cast<float>(M_PI)));
+        float source_pos = (static_cast<float>(num_leds) - 1.0f) * 0.5f *
+                           (1.0f - cosf(time * brightness_frequency * 2.0f * static_cast<float>(M_PI)));
 
         // Subtle source brightness oscillation in [0.30, 1.00].
         float source_brightness = 0.65f + 0.35f * sinf(time * brightness_frequency * 2.0f * static_cast<float>(M_PI));

@@ -36,7 +36,7 @@
 // for at least this many milliseconds AND has served at least one HTTP
 // request. This replaces the old "set OTA_AUTO_CONFIRM_DELAY_MS to enable"
 // model with a stability threshold that catches boot-crash regressions.
-#define OTA_AUTO_CONFIRM_MIN_UPTIME_MS 300000  // 5 minutes
+#define OTA_AUTO_CONFIRM_MIN_UPTIME_MS 300000 // 5 minutes
 
 // If non-zero, the device must have served at least one HTTP request before
 // auto-confirming. Set to 0 for headless deployments where no web UI is used.
@@ -89,7 +89,7 @@
 // ============================================================================
 
 // Minimum free heap required before starting an OTA worker (bytes).
-#define OTA_MIN_FREE_HEAP_BYTES 65536  // 64 KB
+#define OTA_MIN_FREE_HEAP_BYTES 65536 // 64 KB
 
 // ============================================================================
 // Logging

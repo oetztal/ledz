@@ -15,8 +15,8 @@ namespace Show {
     class ColorRanges : public Show {
     private:
         std::vector<Strip::Color> colors; // List of colors to display
-        std::vector<float> ranges; // Boundary percentages (0-100)
-        bool gradient; // Gradient mode: smooth interpolation between colors
+        std::vector<float> ranges;        // Boundary percentages (0-100)
+        bool gradient;                    // Gradient mode: smooth interpolation between colors
         std::unique_ptr<Support::SmoothBlend> blend;
         bool initialized = false;
 
@@ -30,8 +30,7 @@ namespace Show {
          * @param gradient If true, colors act as waypoints with smooth interpolation between them.
          *                 If false (default), colors fill sections with sharp boundaries.
          */
-        ColorRanges(const std::vector<Strip::Color> &colors,
-                    const std::vector<float> &ranges = {},
+        ColorRanges(const std::vector<Strip::Color>& colors, const std::vector<float>& ranges = {},
                     bool gradient = false);
 
         /**
@@ -39,7 +38,7 @@ namespace Show {
          * @param strip LED strip to control
          * @param iteration Current iteration number
          */
-        void execute(Strip::Strip &strip, Iteration iteration) override;
+        void execute(Strip::Strip& strip, Iteration iteration) override;
 
         /**
          * Check if the show has reached its final static state
@@ -47,8 +46,8 @@ namespace Show {
          */
         [[nodiscard]] bool isComplete() const override;
 
-        static const char *name();
+        static const char* name();
     };
 } // namespace Show
 
-#endif //LEDZ_COLORRANGES_H
+#endif // LEDZ_COLORRANGES_H

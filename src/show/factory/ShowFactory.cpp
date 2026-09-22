@@ -15,219 +15,237 @@
 #include "show/Fire.h"
 #include "ColorRangesFactory.h"
 
-
 static const char* const TAG = "show";
 
 namespace Show::Factory {
 
-ShowFactory::ShowFactory() {
-    // Register all available shows (in display order)
-    // Each lambda receives a JsonDocument and uses defaults via | operator
+    ShowFactory::ShowFactory() {
+        // Register all available shows (in display order)
+        // Each lambda receives a JsonDocument and uses defaults via | operator
 
-    registerShow("Solid", "Static light: one color, or the strip split into sections with optional gradient blending (flags, patterns)", ColorRangesFactory::createSolid);
+        registerShow("Solid",
+                     "Static light: one color, or the strip split into sections with optional gradient blending "
+                     "(flags, patterns)",
+                     ColorRangesFactory::createSolid);
 
-    registerShow("Fire", "Flickering flames rising from one end, fed by random sparks and cooling into embers", [](const JsonDocument &doc) {
-        float cooling = doc["cooling"] | 0.1f;
-        float spread = doc["spread"] | 10.0f;
-        float ignition = doc["ignition"] | 0.5f;
-        float spark_amount = doc["spark_amount"] | 0.5f;
-        int start_offset = doc["start_offset"] | 5;
-        int spark_range = doc["spark_range"] | 5;
-        ESP_LOGI(TAG, "Creating Fire cooling=%.2f, spread=%.2f, ignition=%.2f, spark_amount=%.2f, start_offset=%d, spark_range=%d",
-                      cooling, spread, ignition, spark_amount, start_offset, spark_range);
-        return std::make_unique<Fire>(cooling, spread, ignition, spark_amount, std::vector<float>{1.0f}, start_offset, spark_range);
-    });
+        registerShow("Fire", "Flickering flames rising from one end, fed by random sparks and cooling into embers",
+                     [](const JsonDocument& doc) {
+                         float cooling = doc["cooling"] | 0.1f;
+                         float spread = doc["spread"] | 10.0f;
+                         float ignition = doc["ignition"] | 0.5f;
+                         float spark_amount = doc["spark_amount"] | 0.5f;
+                         int start_offset = doc["start_offset"] | 5;
+                         int spark_range = doc["spark_range"] | 5;
+                         ESP_LOGI(TAG,
+                                  "Creating Fire cooling=%.2f, spread=%.2f, ignition=%.2f, spark_amount=%.2f, "
+                                  "start_offset=%d, spark_range=%d",
+                                  cooling, spread, ignition, spark_amount, start_offset, spark_range);
+                         return std::make_unique<Fire>(cooling, spread, ignition, spark_amount,
+                                                       std::vector<float>{1.0f}, start_offset, spark_range);
+                     });
 
-    registerShow("Starlight", "Single pixels light up at random and slowly fade away, like stars in a night sky", [](const JsonDocument &doc) {
-        float probability = doc["probability"] | 0.1f;
-        unsigned long length_ms = doc["length"] | 5000;
-        unsigned long fade_ms = doc["fade"] | 1000;
-        uint8_t r = static_cast<uint8_t>(doc["r"] | 255);
-        uint8_t g = static_cast<uint8_t>(doc["g"] | 180);
-        uint8_t b = static_cast<uint8_t>(doc["b"] | 50);
-        ESP_LOGI(TAG, "Creating Starlight probability=%.2f, length=%lums, fade=%lums, RGB(%d,%d,%d)",
-                      probability, length_ms, fade_ms, r, g, b);
-        return std::make_unique<Starlight>(probability, length_ms, fade_ms, r, g, b);
-    });
+        registerShow("Starlight", "Single pixels light up at random and slowly fade away, like stars in a night sky",
+                     [](const JsonDocument& doc) {
+                         float probability = doc["probability"] | 0.1f;
+                         unsigned long length_ms = doc["length"] | 5000;
+                         unsigned long fade_ms = doc["fade"] | 1000;
+                         uint8_t r = static_cast<uint8_t>(doc["r"] | 255);
+                         uint8_t g = static_cast<uint8_t>(doc["g"] | 180);
+                         uint8_t b = static_cast<uint8_t>(doc["b"] | 50);
+                         ESP_LOGI(TAG, "Creating Starlight probability=%.2f, length=%lums, fade=%lums, RGB(%d,%d,%d)",
+                                  probability, length_ms, fade_ms, r, g, b);
+                         return std::make_unique<Starlight>(probability, length_ms, fade_ms, r, g, b);
+                     });
 
-    registerShow("Stroboscope", "Hard on/off flashes of a single color at an adjustable rhythm", [](const JsonDocument &doc) {
-        uint8_t r = static_cast<uint8_t>(doc["r"] | 255);
-        uint8_t g = static_cast<uint8_t>(doc["g"] | 255);
-        uint8_t b = static_cast<uint8_t>(doc["b"] | 255);
-        unsigned int on_cycles = doc["on_cycles"] | 1;
-        unsigned int off_cycles = doc["off_cycles"] | 10;
-        ESP_LOGI(TAG, "Creating Stroboscope RGB(%d,%d,%d), on=%u, off=%u",
-                      r, g, b, on_cycles, off_cycles);
-        return std::make_unique<Stroboscope>(r, g, b, on_cycles, off_cycles);
-    });
+        registerShow("Stroboscope", "Hard on/off flashes of a single color at an adjustable rhythm",
+                     [](const JsonDocument& doc) {
+                         uint8_t r = static_cast<uint8_t>(doc["r"] | 255);
+                         uint8_t g = static_cast<uint8_t>(doc["g"] | 255);
+                         uint8_t b = static_cast<uint8_t>(doc["b"] | 255);
+                         unsigned int on_cycles = doc["on_cycles"] | 1;
+                         unsigned int off_cycles = doc["off_cycles"] | 10;
+                         ESP_LOGI(TAG, "Creating Stroboscope RGB(%d,%d,%d), on=%u, off=%u", r, g, b, on_cycles,
+                                  off_cycles);
+                         return std::make_unique<Stroboscope>(r, g, b, on_cycles, off_cycles);
+                     });
 
-    registerShow("ColorRun", "Colored dots appear at random and race along the strip at their own speed", [](const JsonDocument &doc) {
-        // ColorRun has no parameters yet
-        return std::make_unique<ColorRun>();
-    });
+        registerShow("ColorRun", "Colored dots appear at random and race along the strip at their own speed",
+                     [](const JsonDocument& doc) {
+                         // ColorRun has no parameters yet
+                         return std::make_unique<ColorRun>();
+                     });
 
-    registerShow("Jump", "Several balls bounce along the strip at different heights and speeds, swapping colors at each bounce", [](const JsonDocument &doc) {
-        // Jump has no parameters yet
-        return std::make_unique<Jump>();
-    });
+        registerShow(
+            "Jump",
+            "Several balls bounce along the strip at different heights and speeds, swapping colors at each bounce",
+            [](const JsonDocument& doc) {
+                // Jump has no parameters yet
+                return std::make_unique<Jump>();
+            });
 
-    registerShow("Rainbow", "The full color spectrum drifting smoothly along the strip", [](const JsonDocument &doc) {
-        float time_step = doc["time_step"] | 1.0f;
-        float pixel_step = doc["pixel_step"] | 1.0f;
-        ESP_LOGI(TAG, "Creating Rainbow time_step=%.2f, pixel_step=%.2f",
-                      time_step, pixel_step);
-        return std::make_unique<Rainbow>(time_step, pixel_step);
-    });
+        registerShow("Rainbow", "The full color spectrum drifting smoothly along the strip",
+                     [](const JsonDocument& doc) {
+                         float time_step = doc["time_step"] | 1.0f;
+                         float pixel_step = doc["pixel_step"] | 1.0f;
+                         ESP_LOGI(TAG, "Creating Rainbow time_step=%.2f, pixel_step=%.2f", time_step, pixel_step);
+                         return std::make_unique<Rainbow>(time_step, pixel_step);
+                     });
 
-    registerShow("Wave", "Cosine-bouncing rainbow source with exponential brightness decay; mode is accepted for future expansion but currently produces identical output in both values", [](const JsonDocument &doc) {
-        // wave_speed and wavelength are no longer used; if present in JSON they
-        // are silently ignored so existing configs keep loading.
-        const char *mode_str = doc["mode"] | "bounce";
-        WaveMode mode = (strcmp(mode_str, "traveling") == 0)
-                            ? WaveMode::Traveling
-                            : WaveMode::Bounce;
-        float decay_rate = doc["decay_rate"] | 2.0f;
-        float brightness_frequency = doc["brightness_frequency"] | 0.1f;
-        ESP_LOGI(TAG, "Creating Wave mode=%s, decay=%.2f, freq=%.2f",
-                      mode_str, decay_rate, brightness_frequency);
-        return std::make_unique<Wave>(decay_rate, brightness_frequency, mode);
-    });
+        registerShow("Wave",
+                     "Cosine-bouncing rainbow source with exponential brightness decay; mode is accepted for future "
+                     "expansion but currently produces identical output in both values",
+                     [](const JsonDocument& doc) {
+                         // wave_speed and wavelength are no longer used; if present in JSON they
+                         // are silently ignored so existing configs keep loading.
+                         const char* mode_str = doc["mode"] | "bounce";
+                         WaveMode mode = (strcmp(mode_str, "traveling") == 0) ? WaveMode::Traveling : WaveMode::Bounce;
+                         float decay_rate = doc["decay_rate"] | 2.0f;
+                         float brightness_frequency = doc["brightness_frequency"] | 0.1f;
+                         ESP_LOGI(TAG, "Creating Wave mode=%s, decay=%.2f, freq=%.2f", mode_str, decay_rate,
+                                  brightness_frequency);
+                         return std::make_unique<Wave>(decay_rate, brightness_frequency, mode);
+                     });
 
-    registerShow("TheaterChase", "Evenly spaced rainbow dots march along the strip, like lights around a theater marquee", [](const JsonDocument &doc) {
-        unsigned int num_steps_per_cycle = doc["num_steps_per_cycle"] | 21;
-        ESP_LOGI(TAG, "Creating TheaterChase num_steps_per_cycle=%u",
-                      num_steps_per_cycle);
-        return std::make_unique<TheaterChase>(num_steps_per_cycle);
-    });
+        registerShow("TheaterChase",
+                     "Evenly spaced rainbow dots march along the strip, like lights around a theater marquee",
+                     [](const JsonDocument& doc) {
+                         unsigned int num_steps_per_cycle = doc["num_steps_per_cycle"] | 21;
+                         ESP_LOGI(TAG, "Creating TheaterChase num_steps_per_cycle=%u", num_steps_per_cycle);
+                         return std::make_unique<TheaterChase>(num_steps_per_cycle);
+                     });
 
-    registerShow("MorseCode", "Your own message spelled out in Morse code, scrolling across the strip as dots and dashes", [](const JsonDocument &doc) {
-        // MorseCode takes a const std::string& and copies, so handing it the
-        // document's own pointer is safe for the duration of the call.
-        // Canonical default "HELLO WORLD" is also declared in scripts/show_variants.json
-        // MorseCode.default.params.message and data/control.html#morseMessage — keep all four in sync.
-        const char *message = doc["message"] | "HELLO WORLD";
-        float speed = doc["speed"] | 0.5f;
-        unsigned int dot_length = doc["dot_length"] | 2;
-        unsigned int dash_length = doc["dash_length"] | 4;
-        unsigned int symbol_space = doc["symbol_space"] | 2;
-        unsigned int letter_space = doc["letter_space"] | 3;
-        unsigned int word_space = doc["word_space"] | 5;
-        ESP_LOGI(TAG, "Creating MorseCode message=\"%s\", speed=%.2f, dot=%u, dash=%u",
-                      message, speed, dot_length, dash_length);
-        return std::make_unique<MorseCode>(message, speed, dot_length, dash_length,
-                                                 symbol_space, letter_space, word_space);
-    });
+        registerShow("MorseCode",
+                     "Your own message spelled out in Morse code, scrolling across the strip as dots and dashes",
+                     [](const JsonDocument& doc) {
+                         // MorseCode takes a const std::string& and copies, so handing it the
+                         // document's own pointer is safe for the duration of the call.
+                         // Canonical default "HELLO WORLD" is also declared in scripts/show_variants.json
+                         // MorseCode.default.params.message and data/control.html#morseMessage — keep all four in sync.
+                         const char* message = doc["message"] | "HELLO WORLD";
+                         float speed = doc["speed"] | 0.5f;
+                         unsigned int dot_length = doc["dot_length"] | 2;
+                         unsigned int dash_length = doc["dash_length"] | 4;
+                         unsigned int symbol_space = doc["symbol_space"] | 2;
+                         unsigned int letter_space = doc["letter_space"] | 3;
+                         unsigned int word_space = doc["word_space"] | 5;
+                         ESP_LOGI(TAG, "Creating MorseCode message=\"%s\", speed=%.2f, dot=%u, dash=%u", message, speed,
+                                  dot_length, dash_length);
+                         return std::make_unique<MorseCode>(message, speed, dot_length, dash_length, symbol_space,
+                                                            letter_space, word_space);
+                     });
 
-    registerShow("Chaos", "The logistic map drawn live: steady points split again and again until they dissolve into chaos", [](const JsonDocument &doc) {
-        float Rmin = doc["Rmin"] | 2.95f;
-        float Rmax = doc["Rmax"] | 4.0f;
-        float Rdelta = doc["Rdelta"] | 0.0002f;
-        ESP_LOGI(TAG, "Creating Chaos Rmin=%.4f, Rmax=%.4f, Rdelta=%.6f",
-                      Rmin, Rmax, Rdelta);
-        return std::make_unique<Chaos>(Rmin, Rmax, Rdelta);
-    });
+        registerShow("Chaos",
+                     "The logistic map drawn live: steady points split again and again until they dissolve into chaos",
+                     [](const JsonDocument& doc) {
+                         float Rmin = doc["Rmin"] | 2.95f;
+                         float Rmax = doc["Rmax"] | 4.0f;
+                         float Rdelta = doc["Rdelta"] | 0.0002f;
+                         ESP_LOGI(TAG, "Creating Chaos Rmin=%.4f, Rmax=%.4f, Rdelta=%.6f", Rmin, Rmax, Rdelta);
+                         return std::make_unique<Chaos>(Rmin, Rmax, Rdelta);
+                     });
 
-    registerShow("Mandelbrot", "A slow scan across the Mandelbrot set, one fractal slice at a time, colored by escape time", [](const JsonDocument &doc) {
-        float Cre0 = doc["Cre0"] | -1.05f;
-        float Cim0 = doc["Cim0"] | -0.3616f;
-        float Cim1 = doc["Cim1"] | -0.3156f;
-        unsigned int scale = doc["scale"] | 5;
-        unsigned int max_iterations = doc["max_iterations"] | 50;
-        unsigned int color_scale = doc["color_scale"] | 10;
-        ESP_LOGI(TAG,
-            "Creating Mandelbrot Cre0=%.4f, Cim0=%.4f, Cim1=%.4f, scale=%u, max_iter=%u, color_scale=%u",
-            Cre0, Cim0, Cim1, scale, max_iterations, color_scale);
-        return std::make_unique<Mandelbrot>(Cre0, Cim0, Cim1, scale, max_iterations, color_scale);
-    });
-}
+        registerShow(
+            "Mandelbrot", "A slow scan across the Mandelbrot set, one fractal slice at a time, colored by escape time",
+            [](const JsonDocument& doc) {
+                float Cre0 = doc["Cre0"] | -1.05f;
+                float Cim0 = doc["Cim0"] | -0.3616f;
+                float Cim1 = doc["Cim1"] | -0.3156f;
+                unsigned int scale = doc["scale"] | 5;
+                unsigned int max_iterations = doc["max_iterations"] | 50;
+                unsigned int color_scale = doc["color_scale"] | 10;
+                ESP_LOGI(TAG,
+                         "Creating Mandelbrot Cre0=%.4f, Cim0=%.4f, Cim1=%.4f, scale=%u, max_iter=%u, color_scale=%u",
+                         Cre0, Cim0, Cim1, scale, max_iterations, color_scale);
+                return std::make_unique<Mandelbrot>(Cre0, Cim0, Cim1, scale, max_iterations, color_scale);
+            });
+    }
 
-void ShowFactory::registerShow(const std::string &name, const std::string &description, ShowConstructor &&constructor) {
-    showConstructors[name] = std::move(constructor);
-    showList.push_back({name, description});
-}
+    void ShowFactory::registerShow(const std::string& name, const std::string& description,
+                                   ShowConstructor&& constructor) {
+        showConstructors[name] = std::move(constructor);
+        showList.push_back({name, description});
+    }
 
-std::unique_ptr<Show> ShowFactory::createShow(const std::string &name) {
-    return createShow(name, "{}"); // Default to empty params
-}
+    std::unique_ptr<Show> ShowFactory::createShow(const std::string& name) {
+        return createShow(name, "{}"); // Default to empty params
+    }
 
-std::string ShowFactory::mergeDefaultParams(const std::string &name, const std::string &paramsJson) const {
-    JsonDocument merged;
-    if (const char *defaultJson = ShowVariants::findDefaultParamsJson(name.c_str());
-        defaultJson != nullptr && defaultJson[0] != '\0') {
-        DeserializationError defaultError = deserializeJson(merged, defaultJson);
-        if (defaultError) {
-            ESP_LOGW(TAG, "Failed to parse generated default for %s: %s; falling back to user payload",
-                           name.c_str(), defaultError.c_str());
-            merged.clear();
+    std::string ShowFactory::mergeDefaultParams(const std::string& name, const std::string& paramsJson) const {
+        JsonDocument merged;
+        if (const char* defaultJson = ShowVariants::findDefaultParamsJson(name.c_str());
+            defaultJson != nullptr && defaultJson[0] != '\0') {
+            DeserializationError defaultError = deserializeJson(merged, defaultJson);
+            if (defaultError) {
+                ESP_LOGW(TAG, "Failed to parse generated default for %s: %s; falling back to user payload",
+                         name.c_str(), defaultError.c_str());
+                merged.clear();
+            }
         }
-    }
 
-    JsonDocument user;
-    if (DeserializationError error = deserializeJson(user, paramsJson.c_str()); error) {
-        ESP_LOGW(TAG, "Failed to parse params for %s: %s; using default parameters",
-                       name.c_str(), error.c_str());
-    } else {
-        // ArduinoJson 7's JsonDocument::set() replaces the destination with
-        // the source (not a deep-merge), so manually copy each user key onto
-        // the merged doc to get the desired "user overrides, default fills"
-        // semantics. Works for flat scalars and one-level arrays.
-        for (JsonPairConst kv : user.as<JsonObjectConst>()) {
-            merged[kv.key().c_str()] = kv.value();
+        JsonDocument user;
+        if (DeserializationError error = deserializeJson(user, paramsJson.c_str()); error) {
+            ESP_LOGW(TAG, "Failed to parse params for %s: %s; using default parameters", name.c_str(), error.c_str());
+        } else {
+            // ArduinoJson 7's JsonDocument::set() replaces the destination with
+            // the source (not a deep-merge), so manually copy each user key onto
+            // the merged doc to get the desired "user overrides, default fills"
+            // semantics. Works for flat scalars and one-level arrays.
+            for (JsonPairConst kv : user.as<JsonObjectConst>()) {
+                merged[kv.key().c_str()] = kv.value();
+            }
         }
+
+        std::string out;
+        serializeJson(merged, out);
+        return out;
     }
 
-    std::string out;
-    serializeJson(merged, out);
-    return out;
-}
-
-std::unique_ptr<Show> ShowFactory::createShow(const std::string &name, const std::string &paramsJson) {
-    // Check if show exists
-    auto it = showConstructors.find(name);
-    if (it == showConstructors.end()) {
-        ESP_LOGW(TAG, "show %s not found", name.c_str());
-        return {};
-    }
-
-    // Merge JSON default (from the generated header) with the user-supplied
-    // paramsJson. The default is the source of truth at runtime; the user's
-    // payload is overlaid on top via per-key copy, so explicit user keys
-    // override the default and omitted user keys fall back to it.
-    JsonDocument merged;
-    if (const char *defaultJson = ShowVariants::findDefaultParamsJson(name.c_str());
-        defaultJson != nullptr && defaultJson[0] != '\0') {
-        DeserializationError defaultError = deserializeJson(merged, defaultJson);
-        if (defaultError) {
-            ESP_LOGW(TAG, "Failed to parse generated default for %s: %s; continuing without default",
-                           name.c_str(), defaultError.c_str());
-            merged.clear();
+    std::unique_ptr<Show> ShowFactory::createShow(const std::string& name, const std::string& paramsJson) {
+        // Check if show exists
+        auto it = showConstructors.find(name);
+        if (it == showConstructors.end()) {
+            ESP_LOGW(TAG, "show %s not found", name.c_str());
+            return {};
         }
-    }
 
-    JsonDocument user;
-    if (DeserializationError error = deserializeJson(user, paramsJson.c_str()); error) {
-        ESP_LOGW(TAG, "Failed to parse params for %s: %s; using default parameters",
-                       name.c_str(), error.c_str());
-    } else {
-        for (JsonPairConst kv : user.as<JsonObjectConst>()) {
-            merged[kv.key().c_str()] = kv.value();
+        // Merge JSON default (from the generated header) with the user-supplied
+        // paramsJson. The default is the source of truth at runtime; the user's
+        // payload is overlaid on top via per-key copy, so explicit user keys
+        // override the default and omitted user keys fall back to it.
+        JsonDocument merged;
+        if (const char* defaultJson = ShowVariants::findDefaultParamsJson(name.c_str());
+            defaultJson != nullptr && defaultJson[0] != '\0') {
+            DeserializationError defaultError = deserializeJson(merged, defaultJson);
+            if (defaultError) {
+                ESP_LOGW(TAG, "Failed to parse generated default for %s: %s; continuing without default", name.c_str(),
+                         defaultError.c_str());
+                merged.clear();
+            }
         }
+
+        JsonDocument user;
+        if (DeserializationError error = deserializeJson(user, paramsJson.c_str()); error) {
+            ESP_LOGW(TAG, "Failed to parse params for %s: %s; using default parameters", name.c_str(), error.c_str());
+        } else {
+            for (JsonPairConst kv : user.as<JsonObjectConst>()) {
+                merged[kv.key().c_str()] = kv.value();
+            }
+        }
+
+        // Call the stored factory function with the merged JSON document.
+        // The factory lambdas still carry `|` fallbacks as defense-in-depth
+        // (a missing JSON entry, an ArduinoJson 7 1-ULP rounding exception,
+        // etc.) but those branches are unreachable for any key the JSON default
+        // declares.
+        return it->second(merged);
     }
 
-    // Call the stored factory function with the merged JSON document.
-    // The factory lambdas still carry `|` fallbacks as defense-in-depth
-    // (a missing JSON entry, an ArduinoJson 7 1-ULP rounding exception,
-    // etc.) but those branches are unreachable for any key the JSON default
-    // declares.
-    return it->second(merged);
-}
+    const std::vector<ShowFactory::ShowInfo>& ShowFactory::listShows() const {
+        return showList;
+    }
 
-const std::vector<ShowFactory::ShowInfo> &ShowFactory::listShows() const {
-    return showList;
-}
-
-bool ShowFactory::hasShow(const std::string &name) const {
-    return showConstructors.find(name) != showConstructors.end();
-}
+    bool ShowFactory::hasShow(const std::string& name) const {
+        return showConstructors.find(name) != showConstructors.end();
+    }
 
 } // namespace Show::Factory

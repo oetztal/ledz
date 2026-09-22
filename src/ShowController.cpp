@@ -13,10 +13,8 @@ static constexpr size_t SHOW_COMMAND_QUEUE_SIZE = 5;
 
 static const char* const TAG = "ctrl";
 
-ShowController::ShowController(Show::Factory::ShowFactory &factory, Config::ConfigManager &config)
-    : factory(factory), config(config)
-{
-}
+ShowController::ShowController(Show::Factory::ShowFactory& factory, Config::ConfigManager& config)
+    : factory(factory), config(config) {}
 
 void ShowController::begin() {
 #ifdef ARDUINO
@@ -38,7 +36,7 @@ void ShowController::begin() {
     ESP_LOGI(TAG, "preparing show");
 #endif
     // Create initial show
-    if (const char *initialShowName = showConfig.current_show.data();
+    if (const char* initialShowName = showConfig.current_show.data();
         initialShowName[0] != '\0' && factory.hasShow(initialShowName)) {
         currentShowName = initialShowName;
     } else {
@@ -46,7 +44,7 @@ void ShowController::begin() {
     }
 
     // Load parameters if available
-    const char *params = (showConfig.params_json[0] != '\0') ? showConfig.params_json.data() : "{}";
+    const char* params = (showConfig.params_json[0] != '\0') ? showConfig.params_json.data() : "{}";
 #ifdef ARDUINO
     ESP_LOGI(TAG, "Creating initial show %s with params %s", currentShowName.c_str(), params);
 #endif
@@ -58,8 +56,7 @@ void ShowController::begin() {
 
     if (currentShow) {
 #ifdef ARDUINO
-        ESP_LOGI(TAG, "Initial show loaded: %s with params: %s",
-                       currentShowName.c_str(), params);
+        ESP_LOGI(TAG, "Initial show loaded: %s with params: %s", currentShowName.c_str(), params);
 #endif
     } else {
 #ifdef ARDUINO
@@ -68,7 +65,7 @@ void ShowController::begin() {
     }
 }
 
-bool ShowController::queueShowChange(const std::string &showName, const std::string &paramsJson) {
+bool ShowController::queueShowChange(const std::string& showName, const std::string& paramsJson) {
 #ifdef ARDUINO
     if (commandQueue == nullptr) {
         return false;
@@ -116,7 +113,7 @@ bool ShowController::queueBrightnessChange(uint8_t brightness) {
 #endif
 }
 
-void ShowController::applyCommand(const ShowCommand &cmd) {
+void ShowController::applyCommand(const ShowCommand& cmd) {
     switch (cmd.type) {
         case ShowCommandType::SET_SHOW: {
             // Create new show with parameters
@@ -129,8 +126,7 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
                 }
 
 #ifdef ARDUINO
-                ESP_LOGI(TAG, "Switched to show: %s with params: %s",
-                               currentShowName.c_str(), cmd.params_json);
+                ESP_LOGI(TAG, "Switched to show: %s with params: %s", currentShowName.c_str(), cmd.params_json);
 #endif
 
                 // Save to configuration
@@ -166,11 +162,11 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
 #ifdef ARDUINO
             if (layout != nullptr && baseStrip != nullptr) {
                 // Recreate layout with new parameters
-                layout = std::make_unique<Strip::Layout>(*baseStrip, cmd.layout_reverse,
-                                                         cmd.layout_mirror, cmd.layout_dead_leds);
+                layout = std::make_unique<Strip::Layout>(*baseStrip, cmd.layout_reverse, cmd.layout_mirror,
+                                                         cmd.layout_dead_leds);
 
-                ESP_LOGI(TAG, "Layout updated - reverse=%d, mirror=%d, dead_leds=%u",
-                              cmd.layout_reverse, cmd.layout_mirror, cmd.layout_dead_leds);
+                ESP_LOGI(TAG, "Layout updated - reverse=%d, mirror=%d, dead_leds=%u", cmd.layout_reverse,
+                         cmd.layout_mirror, cmd.layout_dead_leds);
 
                 // Save to configuration
                 Config::LayoutConfig layoutConfig;
@@ -181,7 +177,8 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
 
                 // Restart current show to pick up new layout dimensions
                 Config::ShowConfig showConfig = config.loadShowConfig();
-                std::unique_ptr<Show::Show> newShow = factory.createShow(currentShowName, showConfig.params_json.data());
+                std::unique_ptr<Show::Show> newShow =
+                    factory.createShow(currentShowName, showConfig.params_json.data());
                 if (newShow != nullptr) {
                     currentShow = std::move(newShow);
                     ESP_LOGI(TAG, "Restarted show '%s' with updated layout", currentShowName.c_str());
@@ -199,11 +196,11 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
 
             // 1. Update layout if we have valid strip pointers
             if (layout != nullptr && baseStrip != nullptr) {
-                layout = std::make_unique<Strip::Layout>(*baseStrip, cmd.layout_reverse,
-                                                         cmd.layout_mirror, cmd.layout_dead_leds);
+                layout = std::make_unique<Strip::Layout>(*baseStrip, cmd.layout_reverse, cmd.layout_mirror,
+                                                         cmd.layout_dead_leds);
 
-                ESP_LOGD(TAG, "Preset layout - reverse=%d, mirror=%d, dead_leds=%d",
-                              cmd.layout_reverse, cmd.layout_mirror, cmd.layout_dead_leds);
+                ESP_LOGD(TAG, "Preset layout - reverse=%d, mirror=%d, dead_leds=%d", cmd.layout_reverse,
+                         cmd.layout_mirror, cmd.layout_dead_leds);
 
                 // Save layout config
                 Config::LayoutConfig layoutConfig;
@@ -222,8 +219,7 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
                     currentShowName = cmd.show_name;
                 }
 
-                ESP_LOGI(TAG, "Preset show '%s' loaded with params: %s",
-                              currentShowName.c_str(), cmd.params_json);
+                ESP_LOGI(TAG, "Preset show '%s' loaded with params: %s", currentShowName.c_str(), cmd.params_json);
 
                 // Save show config
                 Config::ShowConfig showConfig = config.loadShowConfig();
@@ -283,7 +279,7 @@ bool ShowController::queueLayoutChange(bool reverse, bool mirror, int16_t dead_l
 #endif
 }
 
-bool ShowController::queuePresetLoad(const Config::Preset &preset) {
+bool ShowController::queuePresetLoad(const Config::Preset& preset) {
 #ifdef ARDUINO
     if (commandQueue == nullptr) {
         return false;
@@ -316,7 +312,7 @@ bool ShowController::queuePresetLoad(const Config::Preset &preset) {
 #endif
 }
 
-void ShowController::setStrip(std::unique_ptr<Strip::Strip> &&base) {
+void ShowController::setStrip(std::unique_ptr<Strip::Strip>&& base) {
     baseStrip = std::move(base);
 
     if (baseStrip) {
@@ -328,8 +324,8 @@ void ShowController::setStrip(std::unique_ptr<Strip::Strip> &&base) {
         layout = std::make_unique<Strip::Layout>(*baseStrip, layoutConfig.reverse, layoutConfig.mirror,
                                                  layoutConfig.dead_leds);
 #ifdef ARDUINO
-        ESP_LOGI(TAG, "Layout initialized: reverse=%d, mirror=%d, dead_leds=%u",
-                      layoutConfig.reverse, layoutConfig.mirror, layoutConfig.dead_leds);
+        ESP_LOGI(TAG, "Layout initialized: reverse=%d, mirror=%d, dead_leds=%u", layoutConfig.reverse,
+                 layoutConfig.mirror, layoutConfig.dead_leds);
 #endif
 
         // Load and apply gamma configuration
@@ -367,7 +363,7 @@ ShowController::~ShowController() {
 #endif
 }
 
-const std::vector<Show::Factory::ShowFactory::ShowInfo> &ShowController::listShows() const {
+const std::vector<Show::Factory::ShowFactory::ShowInfo>& ShowController::listShows() const {
     return factory.listShows();
 }
 
@@ -392,7 +388,7 @@ bool ShowController::isShowComplete() const {
     return currentShow && currentShow->isComplete();
 }
 
-void ShowController::updateStats(const ShowStats &newStats) {
+void ShowController::updateStats(const ShowStats& newStats) {
     std::lock_guard<std::mutex> lock(stateMutex);
     stats = newStats;
 }

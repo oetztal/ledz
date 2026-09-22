@@ -20,12 +20,12 @@ namespace Show {
         }
     }
 
-    void ColorRun::execute(Strip::Strip &strip, Iteration iteration) {
+    void ColorRun::execute(Strip::Strip& strip, Iteration iteration) {
         update_state(iteration);
 
         strip.fill(0x000000);
 
-        for (auto state: states) {
+        for (auto state : states) {
             strip.setPixelColor(state.position(iteration), state.getColor());
         }
 
@@ -33,12 +33,9 @@ namespace Show {
     }
 
     void ColorRun::clean_up_state(Strip::PixelIndex length, Iteration iteration) {
-        states.erase(
-            std::remove_if(states.begin(), states.end(), [&](const State &state) {
-                return state.position(iteration) >= length;
-            }),
-            states.end()
-        );
+        states.erase(std::remove_if(states.begin(), states.end(),
+                                    [&](const State& state) { return state.position(iteration) >= length; }),
+                     states.end());
     }
 
     Strip::PixelIndex ColorRun::State::position(Iteration iteration) const {

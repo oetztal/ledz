@@ -27,7 +27,7 @@ class ShowController;
  */
 enum class NetworkMode {
     STA, // Station mode (WiFi client)
-    AP, // Access Point mode (for configuration)
+    AP,  // Access Point mode (for configuration)
     NONE // Network disabled
 };
 
@@ -40,8 +40,8 @@ private:
     NTPClient ntpClient;
 #endif
 
-    Config::ConfigManager &config;
-    ShowController &showController;
+    Config::ConfigManager& config;
+    ShowController& showController;
     std::unique_ptr<WebServerManager> webServer = nullptr;
     std::unique_ptr<TimerScheduler> timerScheduler;
     std::unique_ptr<TouchController> touchController;
@@ -64,7 +64,7 @@ private:
      * @param ssid WiFi network name
      * @param password WiFi password
      */
-    void startSTA(const char *ssid, const char *password);
+    void startSTA(const char* ssid, const char* password);
 
     void configureUsingAPMode();
 
@@ -74,10 +74,10 @@ public:
      * @param config Configuration manager reference
      * @param showController Show controller reference
      */
-    Network(Config::ConfigManager &config, ShowController &showController);
+    Network(Config::ConfigManager& config, ShowController& showController);
 
     // disable copy constructor
-    Network(const Network &) = delete;
+    Network(const Network&) = delete;
 
     /**
      * Network task (runs on Core 1)
@@ -89,7 +89,7 @@ public:
     /**
      * Static trampoline function for FreeRTOS
      */
-    static void taskWrapper(void *pvParameters);
+    static void taskWrapper(void* pvParameters);
 
     /**
      * Get current network mode
@@ -119,5 +119,4 @@ public:
 #endif
 };
 
-
-#endif //LEDZ_WIFI_H
+#endif // LEDZ_WIFI_H

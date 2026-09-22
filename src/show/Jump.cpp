@@ -6,10 +6,10 @@
 #endif
 
 namespace Show {
-    void Jump::execute(Strip::Strip &strip, Iteration iteration) {
+    void Jump::execute(Strip::Strip& strip, Iteration iteration) {
         strip.fill(0x000000);
 
-        for (Ball &ball: balls) {
+        for (Ball& ball : balls) {
             auto pos = ball.get_position(iteration, strip.length());
             strip.setPixelColor(pos, ball.get_color());
 
@@ -23,9 +23,7 @@ namespace Show {
         spare_colors.push(0xffff00);
     }
 
-    Jump::Ball::Ball(const float peak_factor, Strip::Color color) : peak_factor(peak_factor), color(color) {
-    }
-
+    Jump::Ball::Ball(const float peak_factor, Strip::Color color) : peak_factor(peak_factor), color(color) {}
 
     Strip::PixelIndex Jump::Ball::get_position(Iteration iteration, Strip::PixelIndex stripe_size) {
         auto factor = 10.0f;
@@ -41,10 +39,11 @@ namespace Show {
 
         unsigned int position = iteration % period_length;
 
-        return static_cast<Strip::PixelIndex>(amplitude - std::pow((static_cast<float>(position) - center) / factor, 2));
+        return static_cast<Strip::PixelIndex>(amplitude -
+                                              std::pow((static_cast<float>(position) - center) / factor, 2));
     }
 
-    void Jump::Ball::swap_color(std::queue<Strip::Color> &colors) {
+    void Jump::Ball::swap_color(std::queue<Strip::Color>& colors) {
         colors.push(color);
         auto old_color = color;
         color = colors.front();

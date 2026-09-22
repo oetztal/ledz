@@ -1,7 +1,7 @@
 # rainbow-show Specification
 
 ## Purpose
-TBD - created by archiving change rainbow-configurable. Update Purpose after archive.
+The Rainbow show advances hue both over time and along the strip, with the time and pixel step configurable, persisted across reboots, and editable from the web UI.
 ## Requirements
 ### Requirement: Rainbow hue progression
 The Rainbow show SHALL advance hue across the strip such that pixel `i` at iteration `t` is rendered with hue `((t * time_step) + (i * pixel_step)) mod 255`.
@@ -53,4 +53,3 @@ The web control interface SHALL expose a Rainbow params section with two range s
 #### Scenario: Sliders populate from stored params on load
 - **WHEN** the page loads with Rainbow active and stored params `{"time_step":2.5,"pixel_step":0.5}`
 - **THEN** the time_step slider displays `2.5` and the pixel_step slider displays `0.5`
-

@@ -18,10 +18,10 @@ namespace Show {
         return std::make_tuple<float, float>(zre * zre - zim * zim + cre, 2 * zre * zim + cim);
     }
 
-    Mandelbrot::Mandelbrot(float cReMin, float cImMin, float cImMax, unsigned int scale,
-                           unsigned int max_iterations, unsigned int colorScale) : c_re_min(cReMin),
-        c_im_min(cImMin), c_im_max(cImMax), scale(scale), max_iterations(max_iterations), color_scale(colorScale) {
-    }
+    Mandelbrot::Mandelbrot(float cReMin, float cImMin, float cImMax, unsigned int scale, unsigned int max_iterations,
+                           unsigned int colorScale)
+        : c_re_min(cReMin), c_im_min(cImMin), c_im_max(cImMax), scale(scale), max_iterations(max_iterations),
+          color_scale(colorScale) {}
 
     void Mandelbrot::log_result(unsigned long long j, float cre) {
         std::stringstream ss;
@@ -29,7 +29,7 @@ namespace Show {
         ESP_LOGD(TAG, "%s", ss.str().c_str());
     }
 
-    void Mandelbrot::execute(Strip::Strip &strip, Iteration iteration) {
+    void Mandelbrot::execute(Strip::Strip& strip, Iteration iteration) {
         float cDelta = std::abs(c_im_max - c_im_min) / strip.length();
 
         auto j = iteration % (strip.length() * scale);

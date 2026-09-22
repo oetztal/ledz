@@ -1,7 +1,7 @@
 # wave-show Specification
 
 ## Purpose
-TBD - created by archiving change wave-interference. Update Purpose after archive.
+The Wave show renders an oscillating source whose light decays symmetrically and reflects off the strip ends, with colour tied to the wavefront's emission time and the motion controlled by configurable, persisted parameters exposed in the web UI.
 ## Requirements
 ### Requirement: Wave source oscillates along the strip
 

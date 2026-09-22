@@ -8,11 +8,9 @@ static constexpr Strip::Color RED = 0xFF0000;
 static constexpr Strip::Color GREEN = 0x00FF00;
 static constexpr Strip::Color BLUE = 0x0000FF;
 
-void setUp() {
-}
+void setUp() {}
 
-void tearDown() {
-}
+void tearDown() {}
 
 // Plain strip: no reverse, no mirror, no dead LEDs. Every logical index maps
 // 1:1 onto the physical strip.

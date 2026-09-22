@@ -13,20 +13,20 @@ namespace Show {
     class MorseCode : public Show {
     private:
         std::string message;
-        float speed; // Scrolling speed (LEDs per frame)
-        unsigned int dot_length; // Length of a dot in LEDs
-        unsigned int dash_length; // Length of a dash in LEDs
+        float speed;               // Scrolling speed (LEDs per frame)
+        unsigned int dot_length;   // Length of a dot in LEDs
+        unsigned int dash_length;  // Length of a dash in LEDs
         unsigned int symbol_space; // Space between dots/dashes within letters
         unsigned int letter_space; // Space between letters
-        unsigned int word_space; // Space between words
+        unsigned int word_space;   // Space between words
 
         std::vector<Strip::Color> pattern; // Precomputed color pattern
-        unsigned int index = 0; // Current frame index
+        unsigned int index = 0;            // Current frame index
 
         // Morse code encoding
         void buildPattern();
 
-        const char *getMorseCode(char c);
+        const char* getMorseCode(char c);
 
     public:
         /**
@@ -39,23 +39,18 @@ namespace Show {
          * @param letter_space Space between letters (default: 3)
          * @param word_space Space between words (default: 5)
          */
-        MorseCode(const std::string &message,
-                  float speed,
-                  unsigned int dot_length,
-                  unsigned int dash_length,
-                  unsigned int symbol_space,
-                  unsigned int letter_space,
-                  unsigned int word_space);
+        MorseCode(const std::string& message, float speed, unsigned int dot_length, unsigned int dash_length,
+                  unsigned int symbol_space, unsigned int letter_space, unsigned int word_space);
 
         /**
          * Execute the show - update scrolling morse code animation
          * @param strip LED strip to control
          * @param iteration Current iteration number
          */
-        void execute(Strip::Strip &strip, Iteration iteration) override;
+        void execute(Strip::Strip& strip, Iteration iteration) override;
 
-        const char *name() { return "MorseCode"; }
+        const char* name() { return "MorseCode"; }
     };
 } // namespace Show
 
-#endif //LEDZ_MORSECODE_H
+#endif // LEDZ_MORSECODE_H

@@ -322,4 +322,3 @@ Submitting the Countdown timer section's form, regardless of whether the duratio
 #### Scenario: Submit with edited preset duration
 - **WHEN** the user activates the "30 min" preset, changes the duration input to 45, and clicks "Set Countdown Timer"
 - **THEN** a countdown with duration 45 minutes and action "Turn Off LEDs" is created
-

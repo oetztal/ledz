@@ -5,15 +5,12 @@
 
 #include "support/Color.h"
 
-
 namespace Show {
     // Maximum heat transfer per frame - limits how fast heat propagates upward
     constexpr float MAX_SPREAD_PER_FRAME = 0.25f;
-    FireState::FireState(std::function<float()> randomFloat, Strip::PixelIndex length) :
-        _length(length),
-        randomFloat(std::move(randomFloat)),
-        temperature(std::vector<float>(length, 0.0f)),
-        prev_temperature(std::vector<float>(length, 0.0f)) {}
+    FireState::FireState(std::function<float()> randomFloat, Strip::PixelIndex length)
+        : _length(length), randomFloat(std::move(randomFloat)), temperature(std::vector<float>(length, 0.0f)),
+          prev_temperature(std::vector<float>(length, 0.0f)) {}
 
     Strip::PixelIndex FireState::length() const {
         return _length;
@@ -26,7 +23,7 @@ namespace Show {
     }
 
     void FireState::spread(float spread_rate, float ignition, Strip::PixelIndex spark_range, float spark_amount,
-                           const std::vector<float> &weights) {
+                           const std::vector<float>& weights) {
         prev_temperature = temperature;
 
         for (Strip::PixelIndex i = 0; i < length(); i++) {
@@ -35,7 +32,7 @@ namespace Show {
             float local_total_weight = 0.0f;
 
             for (size_t w_idx = 0; w_idx < weights.size(); ++w_idx) {
-                int prev_idx = i - 1 - (int) w_idx;
+                int prev_idx = i - 1 - (int)w_idx;
                 if (prev_idx >= 0) {
                     local_total_weight += weights[w_idx];
                 }
@@ -43,7 +40,7 @@ namespace Show {
 
             if (local_total_weight > 0) {
                 for (size_t w_idx = 0; w_idx < weights.size(); ++w_idx) {
-                    int prev_idx = i - 1 - (int) w_idx;
+                    int prev_idx = i - 1 - (int)w_idx;
                     if (prev_idx >= 0) {
                         float w = weights[w_idx] / local_total_weight;
                         // Read from previous frame snapshot
@@ -60,7 +57,7 @@ namespace Show {
             if (auto spread_amount = std::min(available_energy, spread_value); spread_amount > 0) {
                 temperature[i] += spread_amount;
                 for (size_t w_idx = 0; w_idx < weights.size(); ++w_idx) {
-                    int prev_idx = i - 1 - (int) w_idx;
+                    int prev_idx = i - 1 - (int)w_idx;
                     if (prev_idx >= 0) {
                         float w = weights[w_idx] / local_total_weight;
                         temperature[prev_idx] -= spread_amount * w;
@@ -87,24 +84,20 @@ namespace Show {
         }
     }
 
-
     Fire::Fire(float cooling, float spread, float ignition, float spark_amount, std::vector<float> weights,
-                Strip::PixelIndex start_offset, Strip::PixelIndex spark_range) :
-        cooling(cooling),
-        spread(spread), ignition(ignition), spark_amount(spark_amount),
-        weights(std::move(weights)),
-        start_offset(start_offset),
-        spark_range(spark_range) {
+               Strip::PixelIndex start_offset, Strip::PixelIndex spark_range)
+        : cooling(cooling), spread(spread), ignition(ignition), spark_amount(spark_amount), weights(std::move(weights)),
+          start_offset(start_offset), spark_range(spark_range) {
         gen.seed(Support::randomSeed());
     }
 
-    void Fire::ensureState(const Strip::Strip &strip) {
+    void Fire::ensureState(const Strip::Strip& strip) {
         if (!state || state->length() != strip.length() + start_offset) {
             state = std::make_unique<FireState>([this] { return randomFloat(gen); }, strip.length() + start_offset);
         }
     }
 
-    void Fire::execute(Strip::Strip &strip, [[maybe_unused]] Iteration iteration) {
+    void Fire::execute(Strip::Strip& strip, [[maybe_unused]] Iteration iteration) {
         ensureState(strip);
 
         state->cooldown(cooling * randomFloat(gen));

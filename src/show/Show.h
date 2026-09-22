@@ -11,10 +11,10 @@ namespace Show {
     public:
         virtual ~Show() = default;
 
-        virtual void execute(Strip::Strip &strip, Iteration iteration) = 0;
+        virtual void execute(Strip::Strip& strip, Iteration iteration) = 0;
 
         [[nodiscard]] virtual bool isComplete() const;
     };
 
 }
-#endif //LEDZ_SHOW_H
+#endif // LEDZ_SHOW_H

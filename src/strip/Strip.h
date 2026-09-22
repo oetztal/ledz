@@ -30,4 +30,4 @@ namespace Strip {
     };
 }
 
-#endif //LEDZ_STRIP_H
+#endif // LEDZ_STRIP_H

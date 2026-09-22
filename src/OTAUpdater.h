@@ -43,12 +43,12 @@ enum class UpdateState : uint8_t {
 };
 
 struct FirmwareInfo {
-    String version;        // Tag name (e.g., "v1.2.4")
-    String name;           // Release name
-    String downloadUrl;    // Direct download URL to .bin (must be github.com)
-    size_t size = 0;       // File size in bytes
-    String changelog;      // Release notes body (capped at 2 KB by parser)
-    bool isValid = false;  // True if the struct contains valid data
+    String version;       // Tag name (e.g., "v1.2.4")
+    String name;          // Release name
+    String downloadUrl;   // Direct download URL to .bin (must be github.com)
+    size_t size = 0;      // File size in bytes
+    String changelog;     // Release notes body (capped at 2 KB by parser)
+    bool isValid = false; // True if the struct contains valid data
 
     FirmwareInfo() = default;
     FirmwareInfo(const FirmwareInfo&) = default;
@@ -59,11 +59,11 @@ struct FirmwareInfo {
 
 struct Progress {
     UpdateState state = UpdateState::Idle;
-    uint8_t percent = 0;              // 0-100
+    uint8_t percent = 0; // 0-100
     size_t bytes_written = 0;
     size_t expected_bytes = 0;
     unsigned long started_at_ms = 0; // millis() when this run started
-    String error_message;             // populated on Failed
+    String error_message;            // populated on Failed
 
     Progress() = default;
     Progress(const Progress&) = default;
@@ -83,7 +83,7 @@ public:
     // Spawn `otaCheckTask` on Core 1. Refuses if a check is already running
     // or if a download/flash is in progress.
     // Returns true if the worker was created.
-    static bool startBackgroundCheck(const char *owner, const char *repo);
+    static bool startBackgroundCheck(const char* owner, const char* repo);
 
     // Spawn `otaWorkerTask` on Core 1 using the URL/size from the most recent
     // successful `getCheckResult()`. `force = true` bypasses the semver
@@ -110,25 +110,25 @@ public:
      * `requestRestart()` after a successful flash. Must be called once
      * during setup() before any update completes.
      */
-    static void setConfig(Config::ConfigManager *cfg);
+    static void setConfig(Config::ConfigManager* cfg);
 
     // ---- Partition + memory introspection (unchanged) ---------------------
 
-    static bool getRunningPartitionInfo(String &label, uint32_t &address);
-    static void getMemoryInfo(uint32_t &freeHeap, uint32_t &minFreeHeap, uint32_t &psramFree);
+    static bool getRunningPartitionInfo(String& label, uint32_t& address);
+    static void getMemoryInfo(uint32_t& freeHeap, uint32_t& minFreeHeap, uint32_t& psramFree);
     static bool hasEnoughMemory();
 
     // ---- Worker-task entry points (exposed for xTaskCreatePinnedToCore) ----
 
-    static void otaCheckTaskEntry(void *arg);
-    static void otaWorkerTaskEntry(void *arg);
+    static void otaCheckTaskEntry(void* arg);
+    static void otaWorkerTaskEntry(void* arg);
 
     static void publishProgress(int percent, size_t bytes);
 
 private:
     // ---- Private helpers (used by worker tasks) ---------------------------
 
-    static bool checkForUpdate(const char *owner, const char *repo, FirmwareInfo &out);
-    static bool performUpdate(const String &downloadUrl, size_t expectedSize,
-                              const std::function<void(int, size_t)> &onProgress);
+    static bool checkForUpdate(const char* owner, const char* repo, FirmwareInfo& out);
+    static bool performUpdate(const String& downloadUrl, size_t expectedSize,
+                              const std::function<void(int, size_t)>& onProgress);
 };

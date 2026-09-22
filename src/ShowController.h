@@ -26,10 +26,10 @@
  * Show command types for queue communication
  */
 enum class ShowCommandType {
-    SET_SHOW, // Change current show
+    SET_SHOW,       // Change current show
     SET_BRIGHTNESS, // Change brightness
-    SET_LAYOUT, // Change strip layout
-    LOAD_PRESET // Load a preset (show + params + layout)
+    SET_LAYOUT,     // Change strip layout
+    LOAD_PRESET     // Load a preset (show + params + layout)
 };
 
 /**
@@ -37,8 +37,8 @@ enum class ShowCommandType {
  */
 struct ShowCommand {
     ShowCommandType type;
-    char *show_name;
-    char *params_json; // JSON parameters for show
+    char* show_name;
+    char* params_json; // JSON parameters for show
     uint8_t brightness_value;
     bool layout_reverse;
     bool layout_mirror;
@@ -49,9 +49,9 @@ struct ShowCommand {
  * Show statistics for monitoring performance
  */
 struct ShowStats {
-    uint32_t avg_execution_time = 0; // ms
-    uint32_t avg_show_time = 0;      // ms
-    uint32_t avg_cycle_time = 0;     // ms
+    uint32_t avg_execution_time = 0;  // ms
+    uint32_t avg_show_time = 0;       // ms
+    uint32_t avg_cycle_time = 0;      // ms
     uint32_t last_execution_time = 0; // ms
     uint32_t last_show_time = 0;      // ms
 };
@@ -68,8 +68,8 @@ private:
     QueueHandle_t commandQueue = nullptr;
 #endif
 
-    Show::Factory::ShowFactory &factory;
-    Config::ConfigManager &config;
+    Show::Factory::ShowFactory& factory;
+    Config::ConfigManager& config;
 
     std::unique_ptr<Show::Show> currentShow;
     std::string currentShowName;
@@ -85,7 +85,7 @@ private:
     /**
      * Apply a command (called from LED task)
      */
-    void applyCommand(const ShowCommand &cmd);
+    void applyCommand(const ShowCommand& cmd);
 
 public:
     /**
@@ -93,10 +93,10 @@ public:
      * @param factory Show factory for creating shows
      * @param config Configuration manager for persistence
      */
-    ShowController(Show::Factory::ShowFactory &factory, Config::ConfigManager &config);
+    ShowController(Show::Factory::ShowFactory& factory, Config::ConfigManager& config);
 
     // disable copy constructor
-    ShowController(const ShowController &) = delete;
+    ShowController(const ShowController&) = delete;
 
     /**
      * Initialize the controller (call from setup)
@@ -109,7 +109,7 @@ public:
      * @param paramsJson JSON parameters (optional, defaults to "{}")
      * @return true if queued successfully
      */
-    bool queueShowChange(const std::string &showName, const std::string &paramsJson = "{}");
+    bool queueShowChange(const std::string& showName, const std::string& paramsJson = "{}");
 
     /**
      * Queue a brightness change command (called from Core 1 - webserver)
@@ -132,13 +132,13 @@ public:
      * @param preset Preset to load
      * @return true if queued successfully
      */
-    bool queuePresetLoad(const Config::Preset &preset);
+    bool queuePresetLoad(const Config::Preset& preset);
 
     /**
      * Set layout and base strip pointers for runtime reconfiguration
      * @param base Pointer to the base strip
      */
-    void setStrip(std::unique_ptr<Strip::Strip> &&base);
+    void setStrip(std::unique_ptr<Strip::Strip>&& base);
 
     /**
      * Process pending commands from queue (called from Core 0 - LED task)
@@ -175,7 +175,7 @@ public:
      */
     ~ShowController();
 
-    const std::vector<Show::Factory::ShowFactory::ShowInfo> &listShows() const;
+    const std::vector<Show::Factory::ShowFactory::ShowInfo>& listShows() const;
 
     void executeShow(unsigned int iteration) const;
 
@@ -192,7 +192,7 @@ public:
      * Update show statistics
      * @param stats New statistics
      */
-    void updateStats(const ShowStats &stats);
+    void updateStats(const ShowStats& stats);
 
     /**
      * Get current show statistics
@@ -201,4 +201,4 @@ public:
     ShowStats getStats() const;
 };
 
-#endif //LEDZ_SHOWCONTROLLER_H
+#endif // LEDZ_SHOWCONTROLLER_H

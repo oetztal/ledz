@@ -11,9 +11,7 @@ private:
     ::Strip::PixelIndex pixel_count;
 
 public:
-    MockStrip(::Strip::PixelIndex count) : pixel_count(count) {
-        pixels.resize(count, 0x000000);
-    }
+    MockStrip(::Strip::PixelIndex count) : pixel_count(count) { pixels.resize(count, 0x000000); }
 
     void fill(::Strip::Color c) override {
         for (::Strip::PixelIndex i = 0; i < pixel_count; i++) {
@@ -34,9 +32,7 @@ public:
         return 0;
     }
 
-    ::Strip::PixelIndex length() const override {
-        return pixel_count;
-    }
+    ::Strip::PixelIndex length() const override { return pixel_count; }
 
     void show() override {
         // Mock implementation
@@ -46,8 +42,6 @@ public:
         // Mock implementation
     }
 
-    [[nodiscard]] ::Strip::Brightness getBrightness() const override {
-        return 255;
-    }
+    [[nodiscard]] ::Strip::Brightness getBrightness() const override { return 255; }
 };
-#endif //UNTITLED_MOCKSTRIP_H
+#endif // UNTITLED_MOCKSTRIP_H

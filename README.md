@@ -231,4 +231,3 @@ Web files in `data/` are automatically minified and gzip-compressed into C++ hea
 ## License
 
 [Apache License 2.0](LICENSE)
-

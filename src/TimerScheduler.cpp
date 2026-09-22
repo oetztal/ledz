@@ -13,9 +13,8 @@
 
 static const char* const TAG = "timer";
 
-TimerScheduler::TimerScheduler(Config::ConfigManager &config, ShowController &showController)
-    : config(config), showController(showController) {
-}
+TimerScheduler::TimerScheduler(Config::ConfigManager& config, ShowController& showController)
+    : config(config), showController(showController) {}
 
 void TimerScheduler::begin() {
     timersConfig = config.loadTimersConfig();
@@ -24,15 +23,12 @@ void TimerScheduler::begin() {
     // guarantees it lands after configTime() has set TZ to UTC.
     tzDirty = true;
 #ifdef ARDUINO
-    ESP_LOGI(TAG, "Loaded %d timers, timezone: \"%s\"",
-                  Config::TimersConfig::MAX_TIMERS, timersConfig.timezone.data());
+    ESP_LOGI(TAG, "Loaded %d timers, timezone: \"%s\"", Config::TimersConfig::MAX_TIMERS, timersConfig.timezone.data());
 
     for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
         if (timersConfig.timers[i].enabled) {
-            ESP_LOGI(TAG, "  Timer %d: type=%d, action=%d, target=%u",
-                          i, static_cast<int>(timersConfig.timers[i].type),
-                          static_cast<int>(timersConfig.timers[i].action),
-                          timersConfig.timers[i].target_time);
+            ESP_LOGI(TAG, "  Timer %d: type=%d, action=%d, target=%u", i, static_cast<int>(timersConfig.timers[i].type),
+                     static_cast<int>(timersConfig.timers[i].action), timersConfig.timers[i].target_time);
         }
     }
 #endif
@@ -54,12 +50,10 @@ void TimerScheduler::checkTimers(uint32_t currentEpoch) {
         // libc actually made of it is the only diagnostic there is.
         const LocalTime::Info info = LocalTime::describe(currentEpoch, timersConfig.timezone.data());
 #ifdef ARDUINO
-        ESP_LOGI(TAG, "Applied timezone \"%s\": %s, UTC%+d:%02d%s",
-                      timersConfig.timezone.data(), info.abbrev.data(),
-                      info.offset_minutes / 60, abs(info.offset_minutes % 60),
-                      info.is_dst ? " (DST)" : "");
+        ESP_LOGI(TAG, "Applied timezone \"%s\": %s, UTC%+d:%02d%s", timersConfig.timezone.data(), info.abbrev.data(),
+                 info.offset_minutes / 60, abs(info.offset_minutes % 60), info.is_dst ? " (DST)" : "");
 #else
-        (void) info;
+        (void)info;
 #endif
     }
 
@@ -69,7 +63,7 @@ void TimerScheduler::checkTimers(uint32_t currentEpoch) {
     bool configChanged = false;
 
     for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
-        Config::TimerEntry &timer = timersConfig.timers[i];
+        Config::TimerEntry& timer = timersConfig.timers[i];
 
         if (!timer.enabled) {
             continue;
@@ -130,10 +124,9 @@ void TimerScheduler::checkTimers(uint32_t currentEpoch) {
 
 void TimerScheduler::executeTimer(uint8_t index) {
 #ifdef ARDUINO
-    const Config::TimerEntry &timer = timersConfig.timers[index];
+    const Config::TimerEntry& timer = timersConfig.timers[index];
 
-    ESP_LOGI(TAG, "Executing timer %d, action=%d",
-                  index, static_cast<int>(timer.action));
+    ESP_LOGI(TAG, "Executing timer %d, action=%d", index, static_cast<int>(timer.action));
 
     switch (timer.action) {
         case Config::TimerAction::TURN_OFF:
@@ -149,11 +142,10 @@ void TimerScheduler::executeTimer(uint8_t index) {
                 if (timer.preset_index < Config::PresetsConfig::MAX_PRESETS &&
                     presetsConfig.presets[timer.preset_index].valid) {
                     showController.queuePresetLoad(presetsConfig.presets[timer.preset_index]);
-                    ESP_LOGI(TAG, "Loaded preset %d (%s)",
-                                  timer.preset_index, presetsConfig.presets[timer.preset_index].name.data());
+                    ESP_LOGI(TAG, "Loaded preset %d (%s)", timer.preset_index,
+                             presetsConfig.presets[timer.preset_index].name.data());
                 } else {
-                    ESP_LOGW(TAG, "Preset %d is invalid, cancelling timer",
-                                  timer.preset_index);
+                    ESP_LOGW(TAG, "Preset %d is invalid, cancelling timer", timer.preset_index);
                 }
             }
             break;
@@ -161,14 +153,13 @@ void TimerScheduler::executeTimer(uint8_t index) {
 #endif
 }
 
-bool TimerScheduler::setCountdown(uint8_t index, uint32_t durationSeconds,
-                                   Config::TimerAction action, uint8_t presetIndex,
-                                   uint32_t currentEpoch) {
+bool TimerScheduler::setCountdown(uint8_t index, uint32_t durationSeconds, Config::TimerAction action,
+                                  uint8_t presetIndex, uint32_t currentEpoch) {
     if (index >= Config::TimersConfig::MAX_TIMERS) {
         return false;
     }
 
-    Config::TimerEntry &timer = timersConfig.timers[index];
+    Config::TimerEntry& timer = timersConfig.timers[index];
     timer.enabled = true;
     timer.type = Config::TimerType::COUNTDOWN;
     timer.action = action;
@@ -185,9 +176,8 @@ bool TimerScheduler::setCountdown(uint8_t index, uint32_t durationSeconds,
     return true;
 }
 
-bool TimerScheduler::setSchedule(uint8_t index, uint32_t secondsSinceMidnight,
-                                    Config::TimerAction action, uint8_t presetIndex,
-                                    uint8_t daysMask) {
+bool TimerScheduler::setSchedule(uint8_t index, uint32_t secondsSinceMidnight, Config::TimerAction action,
+                                 uint8_t presetIndex, uint8_t daysMask) {
     if (index >= Config::TimersConfig::MAX_TIMERS) {
         return false;
     }
@@ -202,7 +192,7 @@ bool TimerScheduler::setSchedule(uint8_t index, uint32_t secondsSinceMidnight,
         return false;
     }
 
-    Config::TimerEntry &timer = timersConfig.timers[index];
+    Config::TimerEntry& timer = timersConfig.timers[index];
     // Updating an existing schedule in place keeps its paused state: Edit and
     // Resume are separate controls, and an edit that silently re-armed the
     // schedule would turn the lights on while the user is away. A slot that
@@ -224,8 +214,8 @@ bool TimerScheduler::setSchedule(uint8_t index, uint32_t secondsSinceMidnight,
 #ifdef ARDUINO
     uint8_t hours = static_cast<uint8_t>(secondsSinceMidnight / 3600);
     uint8_t minutes = static_cast<uint8_t>((secondsSinceMidnight % 3600) / 60);
-    ESP_LOGI(TAG, "Set schedule %d for %02d:%02d, days=0x%02X%s", index, hours, minutes,
-                  daysMask, timer.paused ? " (paused)" : "");
+    ESP_LOGI(TAG, "Set schedule %d for %02d:%02d, days=0x%02X%s", index, hours, minutes, daysMask,
+             timer.paused ? " (paused)" : "");
 #endif
 
     return true;
@@ -236,7 +226,7 @@ bool TimerScheduler::setPaused(uint8_t index, bool paused) {
         return false;
     }
 
-    Config::TimerEntry &timer = timersConfig.timers[index];
+    Config::TimerEntry& timer = timersConfig.timers[index];
     if (!timer.enabled || timer.type != Config::TimerType::SCHEDULE) {
         return false; // Nothing to pause, or a countdown, which has no pause semantic
     }
@@ -276,7 +266,7 @@ uint32_t TimerScheduler::getRemainingSeconds(uint8_t index, uint32_t currentEpoc
         return 0;
     }
 
-    const Config::TimerEntry &timer = timersConfig.timers[index];
+    const Config::TimerEntry& timer = timersConfig.timers[index];
 
     if (!timer.enabled) {
         return 0;
@@ -325,7 +315,7 @@ uint32_t TimerScheduler::getRemainingSeconds(uint8_t index, uint32_t currentEpoc
     return 0;
 }
 
-bool TimerScheduler::setTimezone(const char *tz) {
+bool TimerScheduler::setTimezone(const char* tz) {
     if (!LocalTime::isSyntacticallyValidTz(tz)) {
         return false;
     }

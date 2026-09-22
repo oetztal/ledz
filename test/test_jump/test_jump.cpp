@@ -3,11 +3,9 @@
 
 Show::Jump::Ball ball(1.0f, 0xff0000);
 
-void setUp() {
-}
+void setUp() {}
 
-void tearDown() {
-}
+void tearDown() {}
 
 void test_jump_basic_position() {
     auto position = ball.get_position(0, 100);

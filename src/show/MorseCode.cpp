@@ -5,7 +5,7 @@
 
 namespace Show {
     // International Morse Code dictionary
-    const char *MorseCode::getMorseCode(char c) {
+    const char* MorseCode::getMorseCode(char c) {
         // Convert to uppercase
         c = static_cast<char>(toupper(c));
 
@@ -69,7 +69,7 @@ namespace Show {
         std::vector<std::string> words;
         std::string current_word;
 
-        for (char c: message) {
+        for (char c : message) {
             if (c == ' ') {
                 if (!current_word.empty()) {
                     words.push_back(current_word);
@@ -91,14 +91,14 @@ namespace Show {
         // Encode each word with a unique color
         for (size_t word_idx = 0; word_idx < words.size(); word_idx++) {
             // Assign color from wheel based on word index
-            auto color_index = (uint8_t) ((word_idx * 255) / std::max(1, (int) words.size()));
+            auto color_index = (uint8_t)((word_idx * 255) / std::max(1, (int)words.size()));
             Strip::Color word_color = Support::Color::wheel(color_index);
 
-            const std::string &word = words[word_idx];
+            const std::string& word = words[word_idx];
 
             // Encode each letter in the word
             for (size_t char_idx = 0; char_idx < word.length(); char_idx++) {
-                const char *morse = getMorseCode(word[char_idx]);
+                const char* morse = getMorseCode(word[char_idx]);
 
                 // Skip unknown characters
                 if (morse[0] == '\0') continue;
@@ -141,22 +141,18 @@ namespace Show {
         }
     }
 
-    MorseCode::MorseCode(const std::string &message, float speed,
-                         unsigned int dot_length, unsigned int dash_length,
-                         unsigned int symbol_space, unsigned int letter_space,
-                         unsigned int word_space)
-        : message(message), speed(speed), dot_length(dot_length),
-          dash_length(dash_length), symbol_space(symbol_space),
+    MorseCode::MorseCode(const std::string& message, float speed, unsigned int dot_length, unsigned int dash_length,
+                         unsigned int symbol_space, unsigned int letter_space, unsigned int word_space)
+        : message(message), speed(speed), dot_length(dot_length), dash_length(dash_length), symbol_space(symbol_space),
           letter_space(letter_space), word_space(word_space) {
         // Convert message to uppercase
-        std::transform(this->message.begin(), this->message.end(),
-                       this->message.begin(), ::toupper);
+        std::transform(this->message.begin(), this->message.end(), this->message.begin(), ::toupper);
 
         // Build the pattern
         buildPattern();
     }
 
-    void MorseCode::execute(Strip::Strip &strip, Iteration iteration) {
+    void MorseCode::execute(Strip::Strip& strip, Iteration iteration) {
         uint16_t num_leds = strip.length();
         unsigned int pattern_length = pattern.size();
 

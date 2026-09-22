@@ -3,11 +3,11 @@
 
 #include <cstring>
 
-using Support::WiFiCredentialUpdate;
 using Support::mergeWiFiCredentials;
+using Support::WiFiCredentialUpdate;
 
 namespace {
-    Config::WiFiConfig storedConfig(const char *ssid, const char *password) {
+    Config::WiFiConfig storedConfig(const char* ssid, const char* password) {
         Config::WiFiConfig config;
         strncpy(config.ssid.data(), ssid, config.ssid.size() - 1);
         config.ssid[config.ssid.size() - 1] = '\0';
@@ -135,7 +135,7 @@ void test_null_ssid_preserves_stored_ssid() {
     TEST_ASSERT_EQUAL_STRING("secret", merged.password.data());
 }
 
-int main(int, char **) {
+int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_absent_password_is_preserved);
     RUN_TEST(test_empty_password_clears);

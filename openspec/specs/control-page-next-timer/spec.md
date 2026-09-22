@@ -1,7 +1,7 @@
 # control-page-next-timer Specification
 
 ## Purpose
-TBD - created by archiving change promote-off-button-and-timer-banner. Update Purpose after archive.
+The control page surfaces the timer that will fire next — whether it is a countdown or a schedule — as a compact banner above the brightness controls, so the user can see upcoming automatic changes without opening the timers page.
 ## Requirements
 ### Requirement: Control page renders a next-timer banner when at least one timer is enabled
 
@@ -95,4 +95,3 @@ The banner SHALL be styled with the same purple gradient, `padding: 20px`, and `
 - **WHEN** the banner is rendered on the control page
 - **THEN** its background matches the gradient of the page header
 - **THEN** its border-radius matches the timezone band's radius on the timers page
-

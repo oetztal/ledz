@@ -6,7 +6,6 @@
 #include <USBCDC.h>
 #endif
 
-
 namespace Strip {
     PixelIndex Layout::real_index(PixelIndex index) const {
         // if not 0 <= index < len(self):
@@ -118,8 +117,8 @@ namespace Strip {
         }
     }
 
-    Layout::Layout(Strip &strip, bool reverse, bool mirror, PixelIndex dead_leds) : strip(strip), reverse(reverse),
-        mirror(mirror), dead_leds(dead_leds) {
+    Layout::Layout(Strip& strip, bool reverse, bool mirror, PixelIndex dead_leds)
+        : strip(strip), reverse(reverse), mirror(mirror), dead_leds(dead_leds) {
         turnOffDeadLeds(); // Clear dead LEDs on initialization
     }
 

@@ -14,18 +14,18 @@ static const char* const TAG = "main";
 
 namespace {
 
-struct App {
-    Config::ConfigManager config;
-    Show::Factory::ShowFactory showFactory;
-    ShowController showController{showFactory, config};
-    Task::LedShow ledShow{showController};
-    Network network{config, showController};
-};
+    struct App {
+        Config::ConfigManager config;
+        Show::Factory::ShowFactory showFactory;
+        ShowController showController{showFactory, config};
+        Task::LedShow ledShow{showController};
+        Network network{config, showController};
+    };
 
-App& app() {
-    static App instance;
-    return instance;
-}
+    App& app() {
+        static App instance;
+        return instance;
+    }
 
 } // namespace
 
@@ -54,13 +54,12 @@ void setup() {
 
         // Set layout pointers for runtime reconfiguration
         showController.setStrip(std::move(base));
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
         ESP_LOGE(TAG, "Error initializing LED strip: %s", e.what());
     } catch (...) {
         ESP_LOGE(TAG, "Unknown error initializing LED strip");
     }
 #endif
-
 
     // Initialize show controller
     showController.begin();
@@ -71,7 +70,7 @@ void setup() {
 
     try {
         ledShow.startTask();
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
         ESP_LOGE(TAG, "Error starting LED show task: %s", e.what());
     } catch (...) {
         ESP_LOGE(TAG, "Unknown error starting LED show task");
@@ -79,7 +78,7 @@ void setup() {
 
     try {
         network.startTask();
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
         ESP_LOGE(TAG, "Error starting network task: %s", e.what());
     } catch (...) {
         ESP_LOGE(TAG, "Unknown error starting network task");

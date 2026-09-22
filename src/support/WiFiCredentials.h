@@ -27,8 +27,8 @@ namespace Support {
      * empty one clears it (an open network).
      */
     struct WiFiCredentialUpdate {
-        const char *ssid = nullptr;     // required; nullptr/empty is rejected by the caller
-        const char *password = nullptr; // nullptr == key absent from the request body
+        const char* ssid = nullptr;     // required; nullptr/empty is rejected by the caller
+        const char* password = nullptr; // nullptr == key absent from the request body
     };
 
     /**
@@ -40,8 +40,7 @@ namespace Support {
      *         only when update.password is non-null, configured set to true.
      *         Both strings are truncated to fit their buffers.
      */
-    Config::WiFiConfig mergeWiFiCredentials(const Config::WiFiConfig &existing,
-                                            const WiFiCredentialUpdate &update);
+    Config::WiFiConfig mergeWiFiCredentials(const Config::WiFiConfig& existing, const WiFiCredentialUpdate& update);
 }
 
 #endif // LEDZ_WIFI_CREDENTIALS_H

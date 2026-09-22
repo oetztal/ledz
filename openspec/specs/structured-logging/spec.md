@@ -1,7 +1,7 @@
 # structured-logging Specification
 
 ## Purpose
-TBD - created by archiving change structured-logging. Update Purpose after archive.
+All project code emits logs through one `ESP_LOGx(TAG, ...)` macro surface with a uniform timestamped line format, compile-time level gating, and a single dispatch point, so firmware and native test output stay consistent and every log line identifies its source file.
 ## Requirements
 ### Requirement: Single logging macro surface
 

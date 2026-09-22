@@ -48,4 +48,4 @@ public:
     bool isRunning() const { return running; }
 };
 
-#endif //LEDZ_CAPTIVEPORTAL_H
+#endif // LEDZ_CAPTIVEPORTAL_H

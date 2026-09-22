@@ -6,9 +6,12 @@ namespace Support {
 
     namespace {
         Strip::Color linear_blend(Strip::Color start_color, Strip::Color end_color, float progress) {
-            auto r = static_cast<Strip::ColorComponent>(Support::Color::red(start_color) * (1.0f - progress) + Support::Color::red(end_color) * progress);
-            auto g = static_cast<Strip::ColorComponent>(Support::Color::green(start_color) * (1.0f - progress) + Support::Color::green(end_color) * progress);
-            auto b = static_cast<Strip::ColorComponent>(Support::Color::blue(start_color) * (1.0f - progress) + Support::Color::blue(end_color) * progress);
+            auto r = static_cast<Strip::ColorComponent>(Support::Color::red(start_color) * (1.0f - progress) +
+                                                        Support::Color::red(end_color) * progress);
+            auto g = static_cast<Strip::ColorComponent>(Support::Color::green(start_color) * (1.0f - progress) +
+                                                        Support::Color::green(end_color) * progress);
+            auto b = static_cast<Strip::ColorComponent>(Support::Color::blue(start_color) * (1.0f - progress) +
+                                                        Support::Color::blue(end_color) * progress);
             return Support::Color::from_rgb(r, g, b);
         }
     }

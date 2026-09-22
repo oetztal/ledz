@@ -44,7 +44,7 @@ namespace Support {
         // Sentinel -1 means "no override"; kept as a signed value so any caller-
         // supplied unsigned value can never accidentally hit it. C++11 guarantees
         // thread-safe first-read initialisation, so no lock is needed.
-        inline Random::result_type &seedOverride() {
+        inline Random::result_type& seedOverride() {
             static Random::result_type forcedSeed = -1;
             return forcedSeed;
         }
@@ -76,10 +76,9 @@ namespace Support {
 #ifdef ARDUINO
         return static_cast<Random::result_type>(esp_random());
 #else
-        return static_cast<Random::result_type>(
-            std::chrono::steady_clock::now().time_since_epoch().count());
+        return static_cast<Random::result_type>(std::chrono::steady_clock::now().time_since_epoch().count());
 #endif
     }
 } // Support
 
-#endif //LEDZ_RANDOM_H
+#endif // LEDZ_RANDOM_H

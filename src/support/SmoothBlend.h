@@ -17,7 +17,7 @@ namespace Support {
          * @param target_colors Vector of target colors for each LED
          * @param duration_ms Duration of the blend in milliseconds (default: 2000ms)
          */
-        SmoothBlend(Strip::Strip &strip, const std::vector<Strip::Color> &target_colors,
+        SmoothBlend(Strip::Strip& strip, const std::vector<Strip::Color>& target_colors,
                     unsigned long duration_ms = 2000);
 
         /**
@@ -26,7 +26,7 @@ namespace Support {
          * @param target_color Single target color for all LEDs
          * @param duration_ms Duration of the blend in milliseconds (default: 2000ms)
          */
-        SmoothBlend(Strip::Strip &strip, Strip::Color target_color, unsigned long duration_ms = 2000);
+        SmoothBlend(Strip::Strip& strip, Strip::Color target_color, unsigned long duration_ms = 2000);
 
         /**
          * Perform one step of the blend animation.
@@ -41,7 +41,7 @@ namespace Support {
         bool isComplete() const;
 
     private:
-        Strip::Strip &strip;
+        Strip::Strip& strip;
         std::vector<Strip::Color> initial_colors;
         std::vector<Strip::Color> target_colors;
         unsigned long start_time;
@@ -49,4 +49,4 @@ namespace Support {
     };
 } // namespace Support
 
-#endif //LEDZ_SMOOTHBLEND_H
+#endif // LEDZ_SMOOTHBLEND_H

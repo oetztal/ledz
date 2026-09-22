@@ -11,9 +11,9 @@ namespace Show {
      */
     class Starlight : public Show {
     private:
-        float probability; // Probability of spawning a new star each frame (0.0-1.0)
+        float probability;       // Probability of spawning a new star each frame (0.0-1.0)
         unsigned long length_ms; // Duration at full brightness (milliseconds)
-        unsigned long fade_ms; // Fade-in/fade-out duration (milliseconds)
+        unsigned long fade_ms;   // Fade-in/fade-out duration (milliseconds)
         Strip::Color star_color; // Color of the stars
 
         // Track active stars: LED index -> start time (milliseconds)
@@ -30,9 +30,7 @@ namespace Show {
          * Get total star lifetime (fade-in + hold + fade-out)
          * @return Total lifetime in milliseconds
          */
-        unsigned long getTotalLifetime() const {
-            return fade_ms + length_ms + fade_ms;
-        }
+        unsigned long getTotalLifetime() const { return fade_ms + length_ms + fade_ms; }
 
     public:
         /**
@@ -44,22 +42,17 @@ namespace Show {
          * @param g Green component of star color (default: 180)
          * @param b Blue component of star color (default: 50)
          */
-        Starlight(float probability,
-                  unsigned long length_ms,
-                  unsigned long fade_ms,
-                  uint8_t r,
-                  uint8_t g,
-                  uint8_t b);
+        Starlight(float probability, unsigned long length_ms, unsigned long fade_ms, uint8_t r, uint8_t g, uint8_t b);
 
         /**
          * Execute the show - update twinkling stars
          * @param strip LED strip to control
          * @param iteration Current iteration number
          */
-        void execute(Strip::Strip &strip, Iteration iteration) override;
+        void execute(Strip::Strip& strip, Iteration iteration) override;
 
-        const char *name() { return "Starlight"; }
+        const char* name() { return "Starlight"; }
     };
 } // namespace Show
 
-#endif //LEDZ_STARLIGHT_H
+#endif // LEDZ_STARLIGHT_H

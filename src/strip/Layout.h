@@ -4,7 +4,7 @@
 
 namespace Strip {
     class Layout : public Strip {
-        Strip &strip;
+        Strip& strip;
         bool reverse;
         bool mirror;
         PixelIndex dead_leds;
@@ -29,7 +29,7 @@ namespace Strip {
         void setRangeToBlack(PixelIndex start, PixelIndex end);
 
     public:
-        Layout(Strip &strip, bool reverse = false, bool mirror = false, PixelIndex dead_leds = 0);
+        Layout(Strip& strip, bool reverse = false, bool mirror = false, PixelIndex dead_leds = 0);
 
         void fill(Color color) override;
 
@@ -47,4 +47,4 @@ namespace Strip {
     };
 }
 
-#endif //LEDZ_LAYOUT_H
+#endif // LEDZ_LAYOUT_H

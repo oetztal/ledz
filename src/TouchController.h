@@ -16,8 +16,8 @@ class ShowController;
 
 class TouchController {
 private:
-    Config::ConfigManager &config;
-    ShowController &showController;
+    Config::ConfigManager& config;
+    ShowController& showController;
     Config::TouchConfig touchConfig;
 
     // Touch pin GPIO numbers for ESP32-S3
@@ -28,16 +28,16 @@ private:
     std::array<bool, Config::TouchConfig::MAX_TOUCH_PINS> wasTouched;
     std::array<uint32_t, Config::TouchConfig::MAX_TOUCH_PINS> lastTouchTime;
     static constexpr uint32_t DEBOUNCE_MS = 500; // Minimum time between triggers
-    
+
     struct ShowVariantGroup {
         const char* showName;
         const char* const* variants;
         size_t numVariants;
     };
-    
+
     static constexpr size_t NUM_SHOW_VARIANTS = 11;
     static const std::array<ShowVariantGroup, NUM_SHOW_VARIANTS> SHOW_VARIANTS;
-    
+
     int currentShowIdx = 0;
     int currentVariantIdx = 0;
 
@@ -47,7 +47,7 @@ public:
      * @param config Configuration manager reference
      * @param showController Show controller reference for loading presets
      */
-    TouchController(Config::ConfigManager &config, ShowController &showController);
+    TouchController(Config::ConfigManager& config, ShowController& showController);
 
     /**
      * Initialize the touch controller - loads config from NVS
@@ -107,4 +107,4 @@ public:
     }
 };
 
-#endif //LEDZ_TOUCH_CONTROLLER_H
+#endif // LEDZ_TOUCH_CONTROLLER_H

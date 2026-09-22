@@ -4,7 +4,7 @@
 #include <WiFi.h>
 #include <Adafruit_NeoPixel.h>
 #include <sys/time.h>
-#include <lwip/dns.h>  // dns_setserver() — install fallback resolvers
+#include <lwip/dns.h> // dns_setserver() — install fallback resolvers
 #endif
 
 #include "Network.h"
@@ -21,13 +21,12 @@
 
 static const char* const TAG = "net";
 
-Network::Network(Config::ConfigManager &config, ShowController &showController)
+Network::Network(Config::ConfigManager& config, ShowController& showController)
     :
 #ifdef ARDUINO
       ntpClient(wifiUdp),
 #endif
-      config(config), showController(showController)
-{
+      config(config), showController(showController) {
 }
 
 String Network::generateHostname() {
@@ -87,7 +86,7 @@ void Network::startAP() {
 #endif
 }
 
-void Network::startSTA(const char *ssid, const char *password) {
+void Network::startSTA(const char* ssid, const char* password) {
 #ifdef ARDUINO
     mode = NetworkMode::STA;
 
@@ -178,17 +177,15 @@ void Network::startSTA(const char *ssid, const char *password) {
         // queries no longer breaks every outbound name lookup (OTA included).
         // Slots 1+ are untouched by DHCP, which only ever writes slot 0 here.
         for (uint8_t slot = 1; slot <= 2; ++slot) {
-            const char *addr = (slot == 1) ? NET_FALLBACK_DNS_1 : NET_FALLBACK_DNS_2;
+            const char* addr = (slot == 1) ? NET_FALLBACK_DNS_1 : NET_FALLBACK_DNS_2;
             ip_addr_t fallback;
             if (!ipaddr_aton(addr, &fallback)) continue;
-            if (const ip_addr_t *existing = dns_getserver(slot);
-                existing && !ip_addr_isany(existing)) continue;  // respect DHCP-supplied
+            if (const ip_addr_t* existing = dns_getserver(slot); existing && !ip_addr_isany(existing))
+                continue; // respect DHCP-supplied
             dns_setserver(slot, &fallback);
         }
-        ESP_LOGD(TAG, "  Resolvers: %s, %s, %s",
-                      WiFi.dnsIP(0).toString().c_str(),
-                      WiFi.dnsIP(1).toString().c_str(),
-                      WiFi.dnsIP(2).toString().c_str());
+        ESP_LOGD(TAG, "  Resolvers: %s, %s, %s", WiFi.dnsIP(0).toString().c_str(), WiFi.dnsIP(1).toString().c_str(),
+                 WiFi.dnsIP(2).toString().c_str());
 
         // Start NTP client
         ntpClient.begin();
@@ -355,9 +352,7 @@ void Network::configureUsingAPMode() {
 
             if (ntpClient.getEpochTime() - lastNtpUpdate > 600) {
                 bool result = ntpClient.update();
-                ESP_LOGD(TAG, "NTP update: %s - %s",
-                               ntpClient.getFormattedTime(),
-                               result ? "success" : "failed");
+                ESP_LOGD(TAG, "NTP update: %s - %s", ntpClient.getFormattedTime(), result ? "success" : "failed");
                 lastNtpUpdate = ntpClient.getEpochTime();
             }
 
@@ -370,8 +365,8 @@ void Network::configureUsingAPMode() {
             // up long enough AND has served at least one HTTP request.
             if (OTAUpdater::hasUnconfirmedUpdate()) {
                 bool minUptime = (now - bootTimeMs) >= OTA_AUTO_CONFIRM_MIN_UPTIME_MS;
-                bool servedRequest = !OTA_AUTO_CONFIRM_REQUIRE_REQUEST ||
-                                     (webServer && webServer->hasServedAnyRequest());
+                bool servedRequest =
+                    !OTA_AUTO_CONFIRM_REQUIRE_REQUEST || (webServer && webServer->hasServedAnyRequest());
                 if (minUptime && servedRequest) {
                     if (OTAUpdater::confirmBoot()) {
                         ESP_LOGI(TAG, "Auto-confirmed after %lu ms uptime", now - bootTimeMs);
@@ -384,19 +379,18 @@ void Network::configureUsingAPMode() {
 }
 
 void Network::startTask() {
-    xTaskCreatePinnedToCore(
-        taskWrapper, // Task Function
-        "Network", // Task Name
-        10000, // Stack Size
-        this, // Parameters
-        1, // Priority
-        &taskHandle, // Task Handle
-        0 // Core Number
+    xTaskCreatePinnedToCore(taskWrapper, // Task Function
+                            "Network",   // Task Name
+                            10000,       // Stack Size
+                            this,        // Parameters
+                            1,           // Priority
+                            &taskHandle, // Task Handle
+                            0            // Core Number
     );
 }
 
-void Network::taskWrapper(void *pvParameters) {
+void Network::taskWrapper(void* pvParameters) {
     ESP_LOGI(TAG, "taskWrapper()");
-    auto *instance = static_cast<Network *>(pvParameters);
+    auto* instance = static_cast<Network*>(pvParameters);
     instance->task();
 }

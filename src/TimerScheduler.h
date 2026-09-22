@@ -13,8 +13,8 @@ class ShowController;
 
 class TimerScheduler {
 private:
-    Config::ConfigManager &config;
-    ShowController &showController;
+    Config::ConfigManager& config;
+    ShowController& showController;
     Config::TimersConfig timersConfig;
     bool ntpAvailable = false;
     // Set by setTimezone() on whatever task handled the request, consumed by
@@ -38,7 +38,7 @@ public:
      * @param config Configuration manager reference
      * @param showController Show controller reference
      */
-    TimerScheduler(Config::ConfigManager &config, ShowController &showController);
+    TimerScheduler(Config::ConfigManager& config, ShowController& showController);
 
     /**
      * Initialize the scheduler - loads config from NVS
@@ -67,8 +67,8 @@ public:
      * @param currentEpoch Current NTP epoch time
      * @return true if timer was set successfully
      */
-    bool setCountdown(uint8_t index, uint32_t durationSeconds, Config::TimerAction action,
-                      uint8_t presetIndex, uint32_t currentEpoch);
+    bool setCountdown(uint8_t index, uint32_t durationSeconds, Config::TimerAction action, uint8_t presetIndex,
+                      uint32_t currentEpoch);
 
     /**
      * Set a schedule.
@@ -87,8 +87,8 @@ public:
      *                 above 0x7F are rejected.
      * @return true if schedule was set successfully
      */
-    bool setSchedule(uint8_t index, uint32_t secondsSinceMidnight, Config::TimerAction action,
-                       uint8_t presetIndex, uint8_t daysMask = Config::SCHEDULE_EVERY_DAY);
+    bool setSchedule(uint8_t index, uint32_t secondsSinceMidnight, Config::TimerAction action, uint8_t presetIndex,
+                     uint8_t daysMask = Config::SCHEDULE_EVERY_DAY);
 
     /**
      * Pause or resume a schedule without changing any of its settings.
@@ -135,13 +135,13 @@ public:
      * @param tz POSIX TZ string, e.g. "CET-1CEST,M3.5.0,M10.5.0/3"
      * @return true if the string was accepted and stored
      */
-    bool setTimezone(const char *tz);
+    bool setTimezone(const char* tz);
 
     /**
      * Get the configured timezone
      * @return POSIX TZ string
      */
-    [[nodiscard]] const char *getTimezone() const { return timersConfig.timezone.data(); }
+    [[nodiscard]] const char* getTimezone() const { return timersConfig.timezone.data(); }
 };
 
-#endif //LEDZ_TIMER_SCHEDULER_H
+#endif // LEDZ_TIMER_SCHEDULER_H

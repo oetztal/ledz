@@ -214,4 +214,3 @@ When invoked with `--landing`, `scripts/build_pages.py` SHALL also render `docs/
 
 - **WHEN** a pull request is opened against `main`
 - **THEN** `.github/workflows/pages.yml` does not run (no `pull_request` trigger)
-

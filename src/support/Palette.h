@@ -7,11 +7,7 @@
 
 namespace Support {
 
-    enum class InterpolationType {
-        Linear,
-        Step,
-        Power
-    };
+    enum class InterpolationType { Linear, Step, Power };
 
     struct ColorPoint {
         float position;
@@ -22,9 +18,7 @@ namespace Support {
         ColorPoint(float pos, Strip::Color col, InterpolationType interp = InterpolationType::Linear, float pwr = 1.0f)
             : position(pos), color(col), interpolation(interp), power(pwr) {}
 
-        bool operator<(const ColorPoint& other) const {
-            return position < other.position;
-        }
+        bool operator<(const ColorPoint& other) const { return position < other.position; }
     };
 
     class Palette {
@@ -33,7 +27,8 @@ namespace Support {
         explicit Palette(std::vector<ColorPoint> points);
 
         void addPoint(const ColorPoint& point);
-        void addPoint(float position, Strip::Color color, InterpolationType interpolation = InterpolationType::Linear, float power = 1.0f);
+        void addPoint(float position, Strip::Color color, InterpolationType interpolation = InterpolationType::Linear,
+                      float power = 1.0f);
 
         [[nodiscard]] Strip::Color get_color(float position) const;
 
@@ -44,4 +39,4 @@ namespace Support {
 
 } // namespace Support
 
-#endif //LEDZ_SUPPORT_PALETTE_H
+#endif // LEDZ_SUPPORT_PALETTE_H

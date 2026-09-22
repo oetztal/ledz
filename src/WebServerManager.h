@@ -33,7 +33,7 @@ public:
     // Pointer to the currently-running WebServerManager. AccessLogger middleware
     // uses this to flip the per-instance hasServedAnyRequestFlag. Only one
     // webserver is alive at a time (AP mode -> STA mode -> restart).
-    static WebServerManager *activeInstance;
+    static WebServerManager* activeInstance;
 
 protected:
 #ifdef ARDUINO
@@ -41,9 +41,9 @@ protected:
     AccessLogger logging;
 #endif
 
-    Config::ConfigManager &config;
-    Network &network;
-    ShowController &showController;
+    Config::ConfigManager& config;
+    Network& network;
+    ShowController& showController;
 
     // Set true the first time any HTTP handler runs. The Network task reads
     // this to satisfy OTA_AUTO_CONFIRM_REQUIRE_REQUEST.
@@ -68,7 +68,7 @@ protected:
      * Handle WiFi configuration POST request
      */
 #ifdef ARDUINO
-    void handleWiFiConfig(AsyncWebServerRequest *request, const JsonVariant &doc);
+    void handleWiFiConfig(AsyncWebServerRequest* request, const JsonVariant& doc);
 #endif
 
     /**
@@ -83,7 +83,7 @@ public:
      * @param network Network manager reference
      * @param showController ShowController reference
      */
-    WebServerManager(Config::ConfigManager &config, Network &network, ShowController &showController);
+    WebServerManager(Config::ConfigManager& config, Network& network, ShowController& showController);
 
     /**
      * Virtual destructor
@@ -123,7 +123,7 @@ protected:
     void setupRoutes() override;
 
 public:
-    ConfigWebServerManager(Config::ConfigManager &config, Network &network, ShowController &showController);
+    ConfigWebServerManager(Config::ConfigManager& config, Network& network, ShowController& showController);
 };
 
 /**
@@ -135,7 +135,7 @@ protected:
     void setupRoutes() override;
 
 public:
-    OperationalWebServerManager(Config::ConfigManager &config, Network &network, ShowController &showController);
+    OperationalWebServerManager(Config::ConfigManager& config, Network& network, ShowController& showController);
 };
 
-#endif //LEDZ_WEBSERVERMANAGER_H
+#endif // LEDZ_WEBSERVERMANAGER_H
