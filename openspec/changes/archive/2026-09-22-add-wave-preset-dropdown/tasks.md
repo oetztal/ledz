@@ -70,11 +70,11 @@
 
 - [x] 6.1 Run `pio test -e native` and confirm existing tests still pass. No test source change.
 - [x] 6.2 Run `pio run -e adafruit_qtpy_esp32s3_nopsram` and confirm firmware builds cleanly.
-- [ ] 6.3 Manual: open `/`, pick `Wave` from the show dropdown. Confirm the Preset row appears at the top of the params block with four options, default selected. Confirm Mode / Decay Rate / Brightness Frequency rows and Apply Parameters button are unchanged below it.
-- [ ] 6.4 Manual: pick `Tight fast` from the Preset dropdown. Confirm Decay Rate = `4.0`, Brightness Frequency = `0.4`, Mode = `Bounce`. Confirm no request is sent to the device yet (network panel quiet).
-- [ ] 6.5 Manual: click `Apply Parameters`. Confirm `POST /api/show` body is `{"name":"Wave","params":{"mode":"bounce","decay_rate":4.0,"brightness_frequency":0.4}}` (decay_rate and brightness_frequency flipped to the new values; mode forced to bounce).
-- [ ] 6.6 Manual: wait for one status poll (≤ 10 s). Confirm the Preset dropdown has reset to `-- select a preset --` while Decay Rate and Brightness Frequency still show `4.0` and `0.4`.
-- [ ] 6.7 Manual: pick `Calm broad`. Confirm Decay Rate = `1.0`, Brightness Frequency = `0.05`, Mode = `Bounce`. Apply. Verify the strip behaviour visually matches `Calm broad` (slow broad oscillation).
-- [ ] 6.8 Manual: pick `Default bounce (no change)`. Confirm the inputs are unchanged visually (still show whatever values they had), Mode is forced to `Bounce` if it was previously `Traveling`. Apply. Confirm the device responds normally.
-- [ ] 6.9 Manual: pick Mode = `Traveling` from the Mode dropdown, then pick `Tight fast`. Confirm Mode snaps back to `Bounce`. This proves the implicit mode reset works.
-- [ ] 6.10 Manual: with `Tight fast` applied and applied across a reboot, confirm Wave restarts with `decay_rate=4.0, brightness_frequency=0.4` (NVS persistence untouched by this change but worth verifying).
+- [x] 6.3 Manual: open `/`, pick `Wave` from the show dropdown. Confirm the Preset row appears at the top of the params block with four options, default selected. Confirm Mode / Decay Rate / Brightness Frequency rows and Apply Parameters button are unchanged below it.
+- [x] 6.4 Manual: pick `Tight fast` from the Preset dropdown. Confirm Decay Rate = `4.0`, Brightness Frequency = `0.4`, Mode = `Bounce`. Confirm no request is sent to the device yet (network panel quiet).
+- [x] 6.5 Manual: click `Apply Parameters`. Confirm `POST /api/show` body is `{"name":"Wave","params":{"mode":"bounce","decay_rate":4.0,"brightness_frequency":0.4}}` (decay_rate and brightness_frequency flipped to the new values; mode forced to bounce).
+- [x] 6.6 Manual: wait for one status poll (≤ 10 s). Confirm the Preset dropdown has reset to `-- select a preset --` while Decay Rate and Brightness Frequency still show `4.0` and `0.4`.
+- [x] 6.7 Manual: pick `Calm broad`. Confirm Decay Rate = `1.0`, Brightness Frequency = `0.05`, Mode = `Bounce`. Apply. Verify the strip behaviour visually matches `Calm broad` (slow broad oscillation).
+- [x] 6.8 Manual: pick `Default bounce (no change)`. Confirm the inputs are unchanged visually (still show whatever values they had), Mode is forced to `Bounce` if it was previously `Traveling`. Apply. Confirm the device responds normally.
+- [x] 6.9 Manual: pick Mode = `Traveling` from the Mode dropdown, then pick `Tight fast`. Confirm Mode snaps back to `Bounce`. This proves the implicit mode reset works.
+- [x] 6.10 Manual: with `Tight fast` applied and applied across a reboot, confirm Wave restarts with `decay_rate=4.0, brightness_frequency=0.4` (NVS persistence untouched by this change but worth verifying).
