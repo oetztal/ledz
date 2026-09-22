@@ -32,7 +32,7 @@ namespace Strip {
     void Base::fill(Color c) {
 #ifdef ARDUINO
         uint32_t scaled = applyBrightness(applyGammaCorrection(c));
-        for (int i=0; i<strip->numPixels(); i++) {
+        for (uint16_t i=0; i<strip->numPixels(); i++) {
             colors[i]=c;
         }
 
@@ -76,7 +76,7 @@ namespace Strip {
             // Re-emit every cached pixel with the new brightness factor.
             // Adafruit's setBrightness is never called: it stays pinned at 255
             // so the hardware buffer is written verbatim.
-            for (int i=0; i<strip->numPixels(); i++) {
+            for (uint16_t i=0; i<strip->numPixels(); i++) {
                 strip->setPixelColor(i, applyBrightness(applyGammaCorrection(colors[i])));
             }
         }

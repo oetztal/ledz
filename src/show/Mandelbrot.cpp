@@ -33,12 +33,12 @@ namespace Show {
         float cDelta = std::abs(c_im_max - c_im_min) / strip.length();
 
         auto j = iteration % (strip.length() * scale);
-        float cre = c_re_min + (cDelta / scale) * j;
+        float cre = c_re_min + (cDelta / scale) * static_cast<float>(j);
 
         unsigned int line_max_iterations = 0;
 
         for (unsigned int i = 0; i < strip.length(); i++) {
-            float cim = c_im_min + cDelta * i;
+            float cim = c_im_min + cDelta * static_cast<float>(i);
 
             float zre = 0.0, zim = 0.0;
 
@@ -61,7 +61,7 @@ namespace Show {
                 color = 0x000000;
             }
 
-            strip.setPixelColor(i, color);
+            strip.setPixelColor(static_cast<Strip::PixelIndex>(i), color);
 
             line_max_iterations = std::max(line_max_iterations, iterations);
         }

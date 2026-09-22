@@ -61,9 +61,9 @@ namespace Show {
         if (float spawn_chance = randomChance(); spawn_chance < probability) {
             // Pick a random LED that's not already an active star
 #ifdef ARDUINO
-            uint16_t led = random(num_leds);
+            uint16_t led = static_cast<uint16_t>(random(num_leds));
 #else
-            uint16_t led = rand() % num_leds;
+            uint16_t led = static_cast<uint16_t>(rand() % num_leds);
 #endif
             if (active_stars.find(led) == active_stars.end()) {
                 active_stars[led] = current_time;

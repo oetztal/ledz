@@ -48,7 +48,7 @@ namespace Strip {
     }
 
     PixelIndex Layout::length() const {
-        return int((strip.length() - abs(dead_leds)) / (mirror ? 2 : 1));
+        return static_cast<PixelIndex>((strip.length() - abs(dead_leds)) / (mirror ? 2 : 1));
     }
 
     void Layout::show() {
@@ -92,7 +92,7 @@ namespace Strip {
 
     void Layout::turnOffEdgeLeds() {
         // Turn off LEDs at both edges (negative dead, mirrored)
-        PixelIndex half_dead = abs(dead_leds / 2);
+        PixelIndex half_dead = static_cast<PixelIndex>(abs(dead_leds / 2));
         Color black = Support::Color::from_rgb(0, 0, 0);
         for (PixelIndex i = 0; i < half_dead; i++) {
             strip.setPixelColor(i, black);
@@ -102,7 +102,7 @@ namespace Strip {
 
     void Layout::turnOffBeginningLeds() {
         // Turn off LEDs at the beginning (positive dead, non-mirrored)
-        setRangeToBlack(0, abs(dead_leds));
+        setRangeToBlack(0, static_cast<PixelIndex>(abs(dead_leds)));
     }
 
     void Layout::turnOffEndLeds() {

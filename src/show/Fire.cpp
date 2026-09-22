@@ -98,7 +98,7 @@ namespace Show {
         gen.seed(Support::randomSeed());
     }
 
-    void Fire::ensureState(Strip::Strip &strip) {
+    void Fire::ensureState(const Strip::Strip &strip) {
         if (!state || state->length() != strip.length() + start_offset) {
             state = std::make_unique<FireState>([this] { return randomFloat(gen); }, strip.length() + start_offset);
         }

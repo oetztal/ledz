@@ -42,18 +42,18 @@ ShowFactory::ShowFactory() {
         float probability = doc["probability"] | 0.1f;
         unsigned long length_ms = doc["length"] | 5000;
         unsigned long fade_ms = doc["fade"] | 1000;
-        uint8_t r = doc["r"] | 255;
-        uint8_t g = doc["g"] | 180;
-        uint8_t b = doc["b"] | 50;
+        uint8_t r = static_cast<uint8_t>(doc["r"] | 255);
+        uint8_t g = static_cast<uint8_t>(doc["g"] | 180);
+        uint8_t b = static_cast<uint8_t>(doc["b"] | 50);
         ESP_LOGI(TAG, "Creating Starlight probability=%.2f, length=%lums, fade=%lums, RGB(%d,%d,%d)",
                       probability, length_ms, fade_ms, r, g, b);
         return std::make_unique<Starlight>(probability, length_ms, fade_ms, r, g, b);
     });
 
     registerShow("Stroboscope", "Hard on/off flashes of a single color at an adjustable rhythm", [](const JsonDocument &doc) {
-        uint8_t r = doc["r"] | 255;
-        uint8_t g = doc["g"] | 255;
-        uint8_t b = doc["b"] | 255;
+        uint8_t r = static_cast<uint8_t>(doc["r"] | 255);
+        uint8_t g = static_cast<uint8_t>(doc["g"] | 255);
+        uint8_t b = static_cast<uint8_t>(doc["b"] | 255);
         unsigned int on_cycles = doc["on_cycles"] | 1;
         unsigned int off_cycles = doc["off_cycles"] | 10;
         ESP_LOGI(TAG, "Creating Stroboscope RGB(%d,%d,%d), on=%u, off=%u",

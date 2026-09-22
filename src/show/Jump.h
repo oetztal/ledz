@@ -32,11 +32,11 @@ namespace Show {
 
     private:
         std::array<Ball, 5> balls = {
-            Ball(1.0, 0xff0000),
-            Ball(0.5, 0x00ff00),
-            Ball(0.75, 0xffff00),
-            Ball(0.80, 0xff00ff),
-            Ball(0.66, 0x0000ff)
+            Ball(1.0f, 0xff0000),
+            Ball(0.5f, 0x00ff00),
+            Ball(0.75f, 0xffff00),
+            Ball(0.80f, 0xff00ff),
+            Ball(0.66f, 0x0000ff)
         };
 
         std::queue<Strip::Color> spare_colors;

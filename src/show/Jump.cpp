@@ -33,7 +33,7 @@ namespace Show {
         auto duration = 2.0f * std::sqrt(amplitude) * factor;
         auto center = duration / 2.0f;
         auto period_length = static_cast<uint>(duration);
-        if (unsigned int current_period = iteration / period_length;
+        if (unsigned int current_period = static_cast<unsigned int>(iteration / period_length);
             period != current_period && !next) {
             period = current_period;
             next = true;
@@ -41,7 +41,7 @@ namespace Show {
 
         unsigned int position = iteration % period_length;
 
-        return static_cast<Strip::PixelIndex>(amplitude - std::pow((position - center) / factor, 2));
+        return static_cast<Strip::PixelIndex>(amplitude - std::pow((static_cast<float>(position) - center) / factor, 2));
     }
 
     void Jump::Ball::swap_color(std::queue<Strip::Color> &colors) {

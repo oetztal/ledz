@@ -68,7 +68,7 @@ protected:
      * Handle WiFi configuration POST request
      */
 #ifdef ARDUINO
-    void handleWiFiConfig(AsyncWebServerRequest *request, JsonVariant &doc);
+    void handleWiFiConfig(AsyncWebServerRequest *request, const JsonVariant &doc);
 #endif
 
     /**

@@ -57,7 +57,7 @@ namespace Show {
                 ESP_LOGD(TAG, "Using equal distribution for %zu colors", colors.size());
 #endif
                 for (size_t i = 1; i < colors.size(); i++) {
-                    uint16_t boundary = (uint16_t) ((float) num_leds * i / colors.size());
+                    uint16_t boundary = static_cast<uint16_t>(static_cast<float>(num_leds) * static_cast<float>(i) / static_cast<float>(colors.size()));
                     boundaries.push_back(boundary);
                 }
             } else {

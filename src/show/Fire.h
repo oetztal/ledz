@@ -54,7 +54,7 @@ namespace Show {
              std::vector<float> weights, Strip::PixelIndex start_offset,
              Strip::PixelIndex spark_range);
 
-        void ensureState(Strip::Strip &strip);
+        void ensureState(const Strip::Strip &strip);
 
         void execute(Strip::Strip &strip, Iteration iteration) override;
     };

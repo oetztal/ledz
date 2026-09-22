@@ -222,8 +222,8 @@ bool TimerScheduler::setSchedule(uint8_t index, uint32_t secondsSinceMidnight,
     config.saveTimersConfig(timersConfig);
 
 #ifdef ARDUINO
-    uint8_t hours = secondsSinceMidnight / 3600;
-    uint8_t minutes = (secondsSinceMidnight % 3600) / 60;
+    uint8_t hours = static_cast<uint8_t>(secondsSinceMidnight / 3600);
+    uint8_t minutes = static_cast<uint8_t>((secondsSinceMidnight % 3600) / 60);
     ESP_LOGI(TAG, "Set schedule %d for %02d:%02d, days=0x%02X%s", index, hours, minutes,
                   daysMask, timer.paused ? " (paused)" : "");
 #endif

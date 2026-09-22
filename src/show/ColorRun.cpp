@@ -13,7 +13,7 @@ namespace Show {
 
     void ColorRun::update_state(Iteration iteration) {
         if (randomPercent(gen) >= 95) {
-            auto speed = randomSpeed(gen) / 100.0f;
+            auto speed = static_cast<float>(randomSpeed(gen)) / 100.0f;
             auto color = phases[randomPhase(gen)];
             auto state = State{iteration, speed, color};
             states.push_back(state);
@@ -42,7 +42,7 @@ namespace Show {
     }
 
     Strip::PixelIndex ColorRun::State::position(Iteration iteration) const {
-        return speed * (iteration - start);
+        return static_cast<Strip::PixelIndex>(speed * static_cast<float>(iteration - start));
     }
 
     Strip::Color ColorRun::State::getColor() const {

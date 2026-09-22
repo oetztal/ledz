@@ -7,7 +7,7 @@ namespace Show {
     // International Morse Code dictionary
     const char *MorseCode::getMorseCode(char c) {
         // Convert to uppercase
-        c = toupper(c);
+        c = static_cast<char>(toupper(c));
 
         // Letters
         if (c == 'A') return ".-";
@@ -161,7 +161,7 @@ namespace Show {
         unsigned int pattern_length = pattern.size();
 
         // Calculate scroll offset
-        unsigned int offset = (unsigned int) (index * speed) % pattern_length;
+        unsigned int offset = static_cast<unsigned int>(static_cast<float>(index) * speed) % pattern_length;
 
         // Map pattern to strip with scrolling
         for (uint16_t i = 0; i < num_leds; i++) {

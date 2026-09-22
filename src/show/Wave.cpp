@@ -23,10 +23,10 @@ namespace Show {
         // continuous velocity (no jolt at the bounce). Drives both the
         // distance-decay envelope and the hue-from-emission-time computation.
         float source_pos = (static_cast<float>(num_leds) - 1.0f) * 0.5f
-                         * (1.0f - cosf(time * brightness_frequency * 2.0f * M_PI));
+                         * (1.0f - cosf(time * brightness_frequency * 2.0f * static_cast<float>(M_PI)));
 
         // Subtle source brightness oscillation in [0.30, 1.00].
-        float source_brightness = 0.65f + 0.35f * sinf(time * brightness_frequency * 2.0f * M_PI);
+        float source_brightness = 0.65f + 0.35f * sinf(time * brightness_frequency * 2.0f * static_cast<float>(M_PI));
 
         float inv_num_leds = 1.0f / static_cast<float>(num_leds);
         // Wavefront propagation speed at the source, in pixels per second.
