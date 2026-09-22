@@ -57,9 +57,7 @@ namespace Show {
             // We can't take more than what's available in any of the contributing pixels if we want to be safe,
             // but the weighted_previous already gives us a good limit.
             // To ensure energy conservation, we must ensure spread_amount <= sum of contributing temperatures.
-            auto spread_amount = std::min(available_energy, spread_value);
-
-            if (spread_amount > 0) {
+            if (auto spread_amount = std::min(available_energy, spread_value); spread_amount > 0) {
                 temperature[i] += spread_amount;
                 for (size_t w_idx = 0; w_idx < weights.size(); ++w_idx) {
                     int prev_idx = i - 1 - (int) w_idx;

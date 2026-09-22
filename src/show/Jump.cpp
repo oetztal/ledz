@@ -33,9 +33,8 @@ namespace Show {
         auto duration = 2.0f * std::sqrt(amplitude) * factor;
         auto center = duration / 2.0f;
         auto period_length = static_cast<uint>(duration);
-        unsigned int current_period = iteration / period_length;
-
-        if (period != current_period && !next) {
+        if (unsigned int current_period = iteration / period_length;
+            period != current_period && !next) {
             period = current_period;
             next = true;
         }

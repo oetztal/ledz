@@ -56,9 +56,7 @@ void Network::startAP() {
     ESP_LOGI(TAG, "AP IP address: %s", ip_address.toString().c_str());
 
     // Start mDNS responder
-    String hostname = generateHostname();
-
-    if (MDNS.begin(hostname.c_str())) {
+    if (String hostname = generateHostname(); MDNS.begin(hostname.c_str())) {
         ESP_LOGI(TAG, "mDNS responder started: %s.local", hostname.c_str());
 
         // Load device config for custom name
@@ -144,9 +142,7 @@ void Network::startSTA(const char *ssid, const char *password) {
         ESP_LOGD(TAG, "  Auto Reconnect: %d", WiFi.getAutoReconnect());
 
         // Start mDNS responder
-        String hostname = generateHostname();
-
-        if (MDNS.begin(hostname.c_str())) {
+        if (String hostname = generateHostname(); MDNS.begin(hostname.c_str())) {
             ESP_LOGI(TAG, "mDNS responder started: %s.local", hostname.c_str());
 
             // Load device config for custom name
@@ -184,8 +180,8 @@ void Network::startSTA(const char *ssid, const char *password) {
             const char *addr = (slot == 1) ? NET_FALLBACK_DNS_1 : NET_FALLBACK_DNS_2;
             ip_addr_t fallback;
             if (!ipaddr_aton(addr, &fallback)) continue;
-            const ip_addr_t *existing = dns_getserver(slot);
-            if (existing && !ip_addr_isany(existing)) continue;  // respect DHCP-supplied
+            if (const ip_addr_t *existing = dns_getserver(slot);
+                existing && !ip_addr_isany(existing)) continue;  // respect DHCP-supplied
             dns_setserver(slot, &fallback);
         }
         ESP_LOGD(TAG, "  Resolvers: %s, %s, %s",

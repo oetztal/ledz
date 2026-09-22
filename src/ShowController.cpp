@@ -42,9 +42,8 @@ void ShowController::begin() {
     ESP_LOGI(TAG, "preparing show");
 #endif
     // Create initial show
-    const char *initialShowName = showConfig.current_show;
-
-    if (strlen(initialShowName) > 0 && factory.hasShow(initialShowName)) {
+    if (const char *initialShowName = showConfig.current_show;
+        strlen(initialShowName) > 0 && factory.hasShow(initialShowName)) {
         currentShowName = initialShowName;
     } else {
         currentShowName = "Rainbow";
@@ -125,8 +124,8 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
     switch (cmd.type) {
         case ShowCommandType::SET_SHOW: {
             // Create new show with parameters
-            std::unique_ptr<Show::Show> newShow = factory.createShow(cmd.show_name, cmd.params_json);
-            if (newShow != nullptr) {
+            if (std::unique_ptr<Show::Show> newShow = factory.createShow(cmd.show_name, cmd.params_json);
+                newShow != nullptr) {
                 currentShow = std::move(newShow);
                 {
                     std::lock_guard<std::mutex> lock(stateMutex);
@@ -219,8 +218,8 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
             }
 
             // 2. Create show with preset parameters
-            std::unique_ptr<Show::Show> newShow = factory.createShow(cmd.show_name, cmd.params_json);
-            if (newShow != nullptr) {
+            if (std::unique_ptr<Show::Show> newShow = factory.createShow(cmd.show_name, cmd.params_json);
+                newShow != nullptr) {
                 currentShow = std::move(newShow);
                 {
                     std::lock_guard<std::mutex> lock(stateMutex);

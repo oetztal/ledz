@@ -29,8 +29,8 @@ namespace Support {
         // supplied unsigned value can never accidentally hit it. C++11 guarantees
         // thread-safe first-read initialisation, so no lock is needed.
         inline Random::result_type &seedOverride() {
-            static Random::result_type override = -1;
-            return override;
+            static Random::result_type forcedSeed = -1;
+            return forcedSeed;
         }
     }
 
@@ -54,9 +54,8 @@ namespace Support {
      *         on the ESP32, wall clock elsewhere
      */
     inline Random::result_type randomSeed() {
-        const auto override = detail::seedOverride();
-        if (override >= 0) {
-            return override;
+        if (const auto forcedSeed = detail::seedOverride(); forcedSeed >= 0) {
+            return forcedSeed;
         }
 #ifdef ARDUINO
         return static_cast<Random::result_type>(esp_random());

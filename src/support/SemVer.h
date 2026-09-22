@@ -108,9 +108,8 @@ int comparePrereleaseIdentifiers(const std::string &a, const std::string &b) {
         }
 
         bool aNum = isDigit(ida[0]);
-        bool bNum = isDigit(idb[0]);
 
-        if (aNum && bNum) {
+        if (bool bNum = isDigit(idb[0]); aNum && bNum) {
             long va = 0, vb = 0;
             for (char c : ida) va = va * 10 + (c - '0');
             for (char c : idb) vb = vb * 10 + (c - '0');
@@ -144,11 +143,9 @@ inline std::optional<SemVer> parseSemVer(const std::string &tag) {
     std::string core = body;
     std::string pre;
 
-    auto plus = body.find('+');
-    if (plus != std::string::npos) core = body.substr(0, plus);
+    if (auto plus = body.find('+'); plus != std::string::npos) core = body.substr(0, plus);
 
-    auto dash = core.find('-');
-    if (dash != std::string::npos) {
+    if (auto dash = core.find('-'); dash != std::string::npos) {
         pre = core.substr(dash + 1);
         core = core.substr(0, dash);
     }

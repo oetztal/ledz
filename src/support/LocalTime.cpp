@@ -28,8 +28,7 @@ namespace LocalTime {
                 tz = TZ_FALLBACK;
             }
 
-            const char *current = getenv("TZ");
-            if (current != nullptr && strcmp(current, tz) == 0) {
+            if (const char *current = getenv("TZ"); current != nullptr && strcmp(current, tz) == 0) {
                 return;
             }
 

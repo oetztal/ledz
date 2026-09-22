@@ -106,8 +106,7 @@ void TouchController::begin() {
 #endif
 
     // Sync currentShowIdx with the actual current show
-    std::string currentShowName = showController.getCurrentShowName();
-    if (currentShowName.length() > 0) {
+    if (std::string currentShowName = showController.getCurrentShowName(); currentShowName.length() > 0) {
         for (size_t i = 0; i < NUM_SHOW_VARIANTS; i++) {
             if (strcmp(SHOW_VARIANTS[i].showName, currentShowName.c_str()) == 0) {
                 currentShowIdx = i;

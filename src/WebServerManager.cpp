@@ -101,8 +101,7 @@ void AccessLogger::run(AsyncWebServerRequest *request, ArMiddlewareNext next) {
     next();
     elapsed = millis() - elapsed;
 
-    AsyncWebServerResponse *response = request->getResponse();
-    if (response) {
+    if (AsyncWebServerResponse *response = request->getResponse(); response) {
         snprintf(logBuf, sizeof(logBuf), "%s %s %s (%u ms) %u",
                  ip.c_str(), url.c_str(), method, elapsed, response->code());
     } else {
@@ -177,8 +176,8 @@ void WebServerManager::setupAPIRoutes() {
         doc["firmware_version"] = FIRMWARE_VERSION;
 
         // OTA partition info
-        const esp_partition_t *running_partition = esp_ota_get_running_partition();
-        if (running_partition != nullptr) {
+        if (const esp_partition_t *running_partition = esp_ota_get_running_partition();
+            running_partition != nullptr) {
             doc["ota_partition"] = running_partition->label;
         }
 
@@ -186,8 +185,7 @@ void WebServerManager::setupAPIRoutes() {
         doc[JSON_KEY_CURRENT_SHOW] = showController.getCurrentShowName();
 
         // Current show configuration
-        Config::ShowConfig showConfig = config.loadShowConfig();
-        if (strlen(showConfig.params_json) > 0) {
+        if (Config::ShowConfig showConfig = config.loadShowConfig(); strlen(showConfig.params_json) > 0) {
             // Parse the params_json and include it
             JsonDocument paramsDoc;
             if (DeserializationError error = deserializeJson(paramsDoc, showConfig.params_json); !error) {
@@ -1091,8 +1089,7 @@ void WebServerManager::setupAPIRoutes() {
                     return;
                 }
 
-                const char *tz = doc["tz"];
-                if (!scheduler->setTimezone(tz)) {
+                if (const char *tz = doc["tz"]; !scheduler->setTimezone(tz)) {
                     request->send(400, CONTENT_TYPE_JSON,
                                   R"({"success":false,"error":"Invalid POSIX timezone string"})");
                     return;
@@ -1201,8 +1198,7 @@ void WebServerManager::setupAPIRoutes() {
             request->send(202, CONTENT_TYPE_JSON, "{\"started\":true}");
         } else {
             String reason = "OTA already in progress or no completed check";
-            CheckState cs = OTAUpdater::getCheckState();
-            if (cs == CheckState::Done) {
+            if (CheckState cs = OTAUpdater::getCheckState(); cs == CheckState::Done) {
                 reason = "Latest version is not newer than running (use ?force=true to override)";
             } else if (cs == CheckState::InProgress) {
                 reason = "A check is still running";
@@ -1227,8 +1223,8 @@ void WebServerManager::setupAPIRoutes() {
         doc["build_time"] = FIRMWARE_BUILD_TIME;
 
         String partitionLabel;
-        uint32_t partitionAddress;
-        if (OTAUpdater::getRunningPartitionInfo(partitionLabel, partitionAddress)) {
+        if (uint32_t partitionAddress = 0;
+            OTAUpdater::getRunningPartitionInfo(partitionLabel, partitionAddress)) {
             doc["partition"] = partitionLabel;
             doc["partition_address"] = partitionAddress;
         }

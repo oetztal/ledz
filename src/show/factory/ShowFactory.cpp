@@ -152,8 +152,8 @@ std::unique_ptr<Show> ShowFactory::createShow(const std::string &name) {
 
 std::string ShowFactory::mergeDefaultParams(const std::string &name, const std::string &paramsJson) const {
     JsonDocument merged;
-    const char *defaultJson = ShowVariants::findDefaultParamsJson(name.c_str());
-    if (defaultJson != nullptr && defaultJson[0] != '\0') {
+    if (const char *defaultJson = ShowVariants::findDefaultParamsJson(name.c_str());
+        defaultJson != nullptr && defaultJson[0] != '\0') {
         DeserializationError defaultError = deserializeJson(merged, defaultJson);
         if (defaultError) {
             ESP_LOGW(TAG, "Failed to parse generated default for %s: %s; falling back to user payload",
@@ -163,8 +163,7 @@ std::string ShowFactory::mergeDefaultParams(const std::string &name, const std::
     }
 
     JsonDocument user;
-    DeserializationError error = deserializeJson(user, paramsJson.c_str());
-    if (error) {
+    if (DeserializationError error = deserializeJson(user, paramsJson.c_str()); error) {
         ESP_LOGW(TAG, "Failed to parse params for %s: %s; using default parameters",
                        name.c_str(), error.c_str());
     } else {
@@ -195,8 +194,8 @@ std::unique_ptr<Show> ShowFactory::createShow(const std::string &name, const std
     // payload is overlaid on top via per-key copy, so explicit user keys
     // override the default and omitted user keys fall back to it.
     JsonDocument merged;
-    const char *defaultJson = ShowVariants::findDefaultParamsJson(name.c_str());
-    if (defaultJson != nullptr && defaultJson[0] != '\0') {
+    if (const char *defaultJson = ShowVariants::findDefaultParamsJson(name.c_str());
+        defaultJson != nullptr && defaultJson[0] != '\0') {
         DeserializationError defaultError = deserializeJson(merged, defaultJson);
         if (defaultError) {
             ESP_LOGW(TAG, "Failed to parse generated default for %s: %s; continuing without default",
@@ -206,8 +205,7 @@ std::unique_ptr<Show> ShowFactory::createShow(const std::string &name, const std
     }
 
     JsonDocument user;
-    DeserializationError error = deserializeJson(user, paramsJson.c_str());
-    if (error) {
+    if (DeserializationError error = deserializeJson(user, paramsJson.c_str()); error) {
         ESP_LOGW(TAG, "Failed to parse params for %s: %s; using default parameters",
                        name.c_str(), error.c_str());
     } else {

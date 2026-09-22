@@ -7,6 +7,16 @@
 #include <cstdlib>  // For rand(), RAND_MAX
 #endif
 
+namespace {
+    float randomChance() {
+#ifdef ARDUINO
+        return (float) random(1000) / 1000.0f;
+#else
+        return (float) rand() / (float) RAND_MAX;
+#endif
+    }
+} // namespace
+
 namespace Show {
     Starlight::Starlight(float probability, unsigned long length_ms, unsigned long fade_ms,
                          uint8_t r, uint8_t g, uint8_t b)
@@ -27,9 +37,8 @@ namespace Show {
         }
 
         // Phase 3: Fade-out (hold_end to hold_end + fade_ms)
-        unsigned long fade_out_start = hold_end;
-        unsigned long fade_out_end = fade_out_start + fade_ms;
-        if (elapsed_ms < fade_out_end) {
+        if (unsigned long fade_out_start = hold_end;
+            elapsed_ms < fade_out_start + fade_ms) {
             unsigned long fade_out_elapsed = elapsed_ms - fade_out_start;
             return 1.0f - ((float) fade_out_elapsed / (float) fade_ms);
         }
@@ -49,12 +58,7 @@ namespace Show {
 
         // Spawn new stars based on probability
         // Use a random float between 0.0 and 1.0
-#ifdef ARDUINO
-        float spawn_chance = (float) random(1000) / 1000.0f;
-#else
-        float spawn_chance = (float) rand() / (float) RAND_MAX;
-#endif
-        if (spawn_chance < probability) {
+        if (float spawn_chance = randomChance(); spawn_chance < probability) {
             // Pick a random LED that's not already an active star
 #ifdef ARDUINO
             uint16_t led = random(num_leds);

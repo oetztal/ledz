@@ -12,11 +12,8 @@ namespace Show {
         // Calculate total cycle length
         unsigned int total_cycles = on_cycles + off_cycles;
 
-        // Determine current position in cycle
-        unsigned int cycle_position = current_cycle % total_cycles;
-
         // Check if we're in the "on" phase
-        if (cycle_position < on_cycles) {
+        if (unsigned int cycle_position = current_cycle % total_cycles; cycle_position < on_cycles) {
             // Flash the color
             Strip::Color flash_color = Support::Color::from_rgb(r, g, b);
             strip.fill(flash_color);

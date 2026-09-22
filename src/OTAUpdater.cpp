@@ -201,8 +201,7 @@ struct EspHttpReader {
     int read() {
         if (eof || !handle) return -1;
         char c;
-        int n = esp_http_client_read(handle, &c, 1);
-        if (n <= 0) { eof = true; return -1; }
+        if (int n = esp_http_client_read(handle, &c, 1); n <= 0) { eof = true; return -1; }
         return static_cast<unsigned char>(c);
     }
 
@@ -524,8 +523,7 @@ bool logTcpProbe(uint32_t ip4, uint16_t port, const char *label) {
     dst.sin_port = htons(port);
     dst.sin_addr.s_addr = ip4;
 
-    int rc = connect(fd, reinterpret_cast<struct sockaddr *>(&dst), sizeof(dst));
-    if (rc == 0) {
+    if (int rc = connect(fd, reinterpret_cast<struct sockaddr *>(&dst), sizeof(dst)); rc == 0) {
         ESP_LOGD(TAG, "OTA diag: tcp %s connected immediately (%lu ms)",
                 label, (unsigned long)(millis() - start));
         close(fd);
@@ -612,8 +610,7 @@ void explainNetworkFailure(const char *host) {
     // if sockets or UDP PCBs are exhausted every lookup fails instantly and
     // permanently — a fault that looks exactly like a dead DNS server.
     bool socketsOk = true;
-    int probe = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (probe < 0) {
+    if (int probe = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP); probe < 0) {
         socketsOk = false;
         ESP_LOGD(TAG, "OTA diag: UDP socket allocation FAILED (errno=%d)", errno);
     } else {
@@ -664,7 +661,9 @@ void explainNetworkFailure(const char *host) {
 bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
     out = FirmwareInfo{};
 
-    InProgressGuard guard;
+    // Must outlive the `if`: the destructor releases the in-progress flag at
+    // function exit, so it cannot be scoped to the init-statement.
+    InProgressGuard guard; // NOSONAR - released by the destructor at function exit
     if (!guard.ok()) {
         ESP_LOGW(TAG, "check refused: another OTA in progress");
         return false;
@@ -685,8 +684,7 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
     // link) or the STA link has dropped. The TLS handshake then fails
     // with EHOSTUNREACH or ETIMEDOUT; rather than burying that as a
     // generic -1, surface it explicitly.
-    wl_status_t wifi = WiFi.status();
-    if (wifi != WL_CONNECTED) {
+    if (wl_status_t wifi = WiFi.status(); wifi != WL_CONNECTED) {
         ESP_LOGD(TAG, "GitHub API check skipped: WiFi not connected (status=%d, mode=%d, heap=%u)",
                 (int)wifi, (int)WiFi.getMode(), ESP.getFreeHeap());
         SemaphoreHandle_t m = checkResultMutex();
@@ -773,8 +771,7 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
 
     esp_http_client_set_header(client.handle, "Accept", "application/vnd.github.v3+json");
 
-    int status = client.openWithRedirects();
-    if (status != 200) {
+    if (int status = client.openWithRedirects(); status != 200) {
         // EINPROGRESS is the in-flight state of a non-blocking connect, not a
         // fault, so don't present it as the reason for the failure.
         if (client.lastSocketErrno == 0 || client.lastSocketErrno == EINPROGRESS) {
@@ -896,14 +893,13 @@ bool doPerformUpdate(const String &downloadUrl, size_t expectedSize,
         return false;
     }
 
-    int status = client.openWithRedirects();
-    if (status != 200) {
+    if (int status = client.openWithRedirects(); status != 200) {
         ESP_LOGW(TAG, "download HTTP status %d (free heap: %u)", status, ESP.getFreeHeap());
         return false;
     }
 
-    int64_t contentLen = esp_http_client_get_content_length(client.handle);
-    if (contentLen > 0 && static_cast<size_t>(contentLen) != expectedSize) {
+    if (int64_t contentLen = esp_http_client_get_content_length(client.handle);
+        contentLen > 0 && static_cast<size_t>(contentLen) != expectedSize) {
         ESP_LOGW(TAG, "Content-Length mismatch: header=%lld expected=%zu", contentLen, expectedSize);
         return false;
     }
@@ -943,8 +939,8 @@ bool doPerformUpdate(const String &downloadUrl, size_t expectedSize,
     unsigned long lastDataReceived = millis();
 
     while (totalRead < expectedSize) {
-        int n = esp_http_client_read(client.handle, reinterpret_cast<char *>(buffer.get()), DOWNLOAD_CHUNK_SIZE);
-        if (n > 0) {
+        if (int n = esp_http_client_read(client.handle, reinterpret_cast<char *>(buffer.get()), DOWNLOAD_CHUNK_SIZE);
+            n > 0) {
             size_t written = Update.write(buffer.get(), n);
             if (written != static_cast<size_t>(n)) {
                 ESP_LOGE(TAG, "Flash write failed: %d vs %d (%s)", written, n, Update.errorString());
@@ -1113,9 +1109,9 @@ bool OTAUpdater::startBackgroundCheck(const char *owner, const char *repo) {
     strncpy(job->owner, owner, sizeof(job->owner) - 1);
     strncpy(job->repo, repo, sizeof(job->repo) - 1);
 
-    BaseType_t rc = xTaskCreatePinnedToCore(
+    if (BaseType_t rc = xTaskCreatePinnedToCore(
         otaCheckTask, "ota_check", OTA_CHECK_TASK_STACK, job, 1, nullptr, 1);
-    if (rc != pdPASS) {
+        rc != pdPASS) {
         delete job;
         ESP_LOGE(TAG, "xTaskCreate for ota_check failed");
         return false;
@@ -1124,8 +1120,7 @@ bool OTAUpdater::startBackgroundCheck(const char *owner, const char *repo) {
 }
 
 bool OTAUpdater::startBackgroundUpdateFromLatestCheck(bool force) {
-    bool expected = false;
-    if (!otaState().updateInProgress.compare_exchange_strong(expected, true)) {
+    if (bool expected = false; !otaState().updateInProgress.compare_exchange_strong(expected, true)) {
         ESP_LOGW(TAG, "startBackgroundUpdate refused: updateInProgress already true");
         return false;
     }
@@ -1174,9 +1169,9 @@ bool OTAUpdater::startBackgroundUpdateFromLatestCheck(bool force) {
 
     auto *job = new OtaUpdateJob{info.downloadUrl, info.size, force};
 
-    BaseType_t rc = xTaskCreatePinnedToCore(
+    if (BaseType_t rc = xTaskCreatePinnedToCore(
         otaWorkerTask, "ota_update", OTA_UPDATE_TASK_STACK, job, 1, nullptr, 1);
-    if (rc != pdPASS) {
+        rc != pdPASS) {
         delete job;
         otaState().updateInProgress.store(false);
         ESP_LOGE(TAG, "xTaskCreate for ota_update failed");
@@ -1253,8 +1248,7 @@ bool OTAUpdater::performUpdate(const String &downloadUrl, size_t expectedSize,
 
 bool OTAUpdater::confirmBoot() {
     ESP_LOGI(TAG, "Confirming OTA boot");
-    esp_err_t err = esp_ota_mark_app_valid_cancel_rollback();
-    if (err != ESP_OK) {
+    if (esp_err_t err = esp_ota_mark_app_valid_cancel_rollback(); err != ESP_OK) {
         ESP_LOGE(TAG, "Boot confirmation failed: %s", esp_err_to_name(err));
         return false;
     }
@@ -1265,8 +1259,7 @@ bool OTAUpdater::confirmBoot() {
 bool OTAUpdater::hasUnconfirmedUpdate() {
     const esp_partition_t *runningPartition = esp_ota_get_running_partition();
     esp_ota_img_states_t state;
-    esp_err_t err = esp_ota_get_state_partition(runningPartition, &state);
-    if (err != ESP_OK) return false;
+    if (esp_err_t err = esp_ota_get_state_partition(runningPartition, &state); err != ESP_OK) return false;
     return (state == ESP_OTA_IMG_NEW);
 }
 
