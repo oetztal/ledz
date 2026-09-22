@@ -1,14 +1,14 @@
 #include "WiFiCredentials.h"
 
+#include <cstdio>
 #include <cstring>
 
 namespace Support {
     namespace {
-        // strncpy into a fixed buffer, always NUL-terminated.
+        // Copy into a fixed buffer, always NUL-terminated and never overrunning.
         template<size_t N>
         void copyBounded(char (&dest)[N], const char *src) {
-            strncpy(dest, src, N - 1);
-            dest[N - 1] = '\0';
+            snprintf(dest, N, "%s", src);
         }
     }
 

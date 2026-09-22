@@ -18,6 +18,8 @@
 #include "support/SemVer.h"
 
 #include <atomic>
+#include <cstdio>
+#include <cstring>
 #include <memory>
 #include <new>
 
@@ -355,13 +357,13 @@ bool parseHexSha256(const String &hex, uint8_t out[32]) {
 size_t encodeQName(const char *name, uint8_t *buf, size_t cap) {
     size_t n = 0;
     for (const char *p = name; *p;) {
-        const char *dot = strchr(p, '.');
-        size_t len = dot ? static_cast<size_t>(dot - p) : strlen(p);
+        size_t len = strcspn(p, ".");
         if (len == 0 || len > 63 || n + len + 2 > cap) return 0;
         buf[n++] = static_cast<uint8_t>(len);
         memcpy(buf + n, p, len);
         n += len;
-        p = dot ? dot + 1 : p + len;
+        p += len;
+        if (*p == '.') ++p;
     }
     if (n + 1 > cap) return 0;
     buf[n++] = 0;  // root label
@@ -1003,8 +1005,8 @@ void otaCheckTask(void *arg) {
     auto *job = static_cast<OtaCheckJob *>(arg);
     char owner[sizeof(job->owner)];
     char repo[sizeof(job->repo)];
-    strncpy(owner, job->owner, sizeof(owner));
-    strncpy(repo, job->repo, sizeof(repo));
+    snprintf(owner, sizeof(owner), "%s", job->owner);
+    snprintf(repo, sizeof(repo), "%s", job->repo);
     delete job;
 
     FirmwareInfo info;
@@ -1106,8 +1108,8 @@ bool OTAUpdater::startBackgroundCheck(const char *owner, const char *repo) {
     }
 
     auto *job = new OtaCheckJob{};
-    strncpy(job->owner, owner, sizeof(job->owner) - 1);
-    strncpy(job->repo, repo, sizeof(job->repo) - 1);
+    snprintf(job->owner, sizeof(job->owner), "%s", owner);
+    snprintf(job->repo, sizeof(job->repo), "%s", repo);
 
     if (BaseType_t rc = xTaskCreatePinnedToCore(
         otaCheckTask, "ota_check", OTA_CHECK_TASK_STACK, job, 1, nullptr, 1);

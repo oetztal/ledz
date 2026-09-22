@@ -43,14 +43,14 @@ void ShowController::begin() {
 #endif
     // Create initial show
     if (const char *initialShowName = showConfig.current_show;
-        strlen(initialShowName) > 0 && factory.hasShow(initialShowName)) {
+        initialShowName[0] != '\0' && factory.hasShow(initialShowName)) {
         currentShowName = initialShowName;
     } else {
         currentShowName = "Rainbow";
     }
 
     // Load parameters if available
-    const char *params = (strlen(showConfig.params_json) > 0) ? showConfig.params_json : "{}";
+    const char *params = (showConfig.params_json[0] != '\0') ? showConfig.params_json : "{}";
 #ifdef ARDUINO
     ESP_LOGI(TAG, "Creating initial show %s with params %s", currentShowName.c_str(), params);
 #endif

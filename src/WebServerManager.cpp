@@ -185,7 +185,7 @@ void WebServerManager::setupAPIRoutes() {
         doc[JSON_KEY_CURRENT_SHOW] = showController.getCurrentShowName();
 
         // Current show configuration
-        if (Config::ShowConfig showConfig = config.loadShowConfig(); strlen(showConfig.params_json) > 0) {
+        if (Config::ShowConfig showConfig = config.loadShowConfig(); showConfig.params_json[0] != '\0') {
             // Parse the params_json and include it
             JsonDocument paramsDoc;
             if (DeserializationError error = deserializeJson(paramsDoc, showConfig.params_json); !error) {

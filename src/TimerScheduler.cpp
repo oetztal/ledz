@@ -3,6 +3,7 @@
 #include "ShowController.h"
 #include "support/LocalTime.h"
 
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
@@ -329,8 +330,7 @@ bool TimerScheduler::setTimezone(const char *tz) {
         return false;
     }
 
-    strncpy(timersConfig.timezone, tz, sizeof(timersConfig.timezone) - 1);
-    timersConfig.timezone[sizeof(timersConfig.timezone) - 1] = '\0';
+    snprintf(timersConfig.timezone, sizeof(timersConfig.timezone), "%s", tz);
     config.saveTimersConfig(timersConfig);
 
     // Deliberately no setenv/tzset here: this runs on the request handler's
