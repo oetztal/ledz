@@ -102,7 +102,9 @@ ShowFactory::ShowFactory() {
     registerShow("MorseCode", "Your own message spelled out in Morse code, scrolling across the strip as dots and dashes", [](const JsonDocument &doc) {
         // MorseCode takes a const std::string& and copies, so handing it the
         // document's own pointer is safe for the duration of the call.
-        const char *message = doc["message"] | "HELLO";
+        // Canonical default "HELLO WORLD" is also declared in scripts/show_variants.json
+        // MorseCode.default.params.message and data/control.html#morseMessage — keep all four in sync.
+        const char *message = doc["message"] | "HELLO WORLD";
         float speed = doc["speed"] | 0.5f;
         unsigned int dot_length = doc["dot_length"] | 2;
         unsigned int dash_length = doc["dash_length"] | 4;
