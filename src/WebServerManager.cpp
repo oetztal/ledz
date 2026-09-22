@@ -1,5 +1,6 @@
 #include "WebServerManager.h"
 
+#include <array>
 #include <cstdio>
 
 #include "Config.h"
@@ -89,7 +90,7 @@ void AccessLogger::run(AsyncWebServerRequest *request, ArMiddlewareNext next) {
         WebServerManager::activeInstance->markServedRequest();
     }
 
-    char logBuf[128];
+    std::array<char, 128> logBuf;
     // Named locals, not const char*: remoteIP().toString() and url() both
     // return String temporaries that would be destroyed at the end of the
     // declaration, leaving c_str() dangling before snprintf reads it.
@@ -102,13 +103,13 @@ void AccessLogger::run(AsyncWebServerRequest *request, ArMiddlewareNext next) {
     elapsed = millis() - elapsed;
 
     if (AsyncWebServerResponse *response = request->getResponse(); response) {
-        snprintf(logBuf, sizeof(logBuf), "%s %s %s (%u ms) %u",
+        snprintf(logBuf.data(), logBuf.size(), "%s %s %s (%u ms) %u",
                  ip.c_str(), url.c_str(), method, elapsed, response->code());
     } else {
-        snprintf(logBuf, sizeof(logBuf), "%s %s %s (%u ms) (no response)",
+        snprintf(logBuf.data(), logBuf.size(), "%s %s %s (%u ms) (no response)",
                  ip.c_str(), url.c_str(), method, elapsed);
     }
-    ESP_LOGD(TAG, "%s", logBuf);
+    ESP_LOGD(TAG, "%s", logBuf.data());
 }
 
 void WebServerManager::setupCommonRoutes() {
@@ -166,8 +167,8 @@ void WebServerManager::setupAPIRoutes() {
 
         // Device info
         Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
-        doc["device_id"] = deviceConfig.device_id;
-        doc["device_name"] = deviceConfig.device_name;
+        doc["device_id"] = deviceConfig.device_id.data();
+        doc["device_name"] = deviceConfig.device_name.data();
         doc["num_pixels"] = deviceConfig.num_pixels;
         doc["led_pin"] = deviceConfig.led_pin;
         doc["brightness"] = showController.getBrightness();
@@ -188,7 +189,7 @@ void WebServerManager::setupAPIRoutes() {
         if (Config::ShowConfig showConfig = config.loadShowConfig(); showConfig.params_json[0] != '\0') {
             // Parse the params_json and include it
             JsonDocument paramsDoc;
-            if (DeserializationError error = deserializeJson(paramsDoc, showConfig.params_json); !error) {
+            if (DeserializationError error = deserializeJson(paramsDoc, showConfig.params_json.data()); !error) {
                 doc[JSON_KEY_SHOW_PARAMS] = paramsDoc.as<JsonObject>();
             }
         }
@@ -202,7 +203,7 @@ void WebServerManager::setupAPIRoutes() {
         // Configured SSID, independent of connection state: the settings page
         // prefills from this, and needs it in AP mode too.
         Config::WiFiConfig wifiConfig = config.loadWiFiConfig();
-        doc["wifi_configured_ssid"] = wifiConfig.ssid;
+        doc["wifi_configured_ssid"] = wifiConfig.ssid.data();
 
         String response;
         serializeJson(doc, response);
@@ -334,15 +335,15 @@ void WebServerManager::setupAPIRoutes() {
             if (presetsConfig.presets[i].valid) {
                 JsonObject preset = presets.add<JsonObject>();
                 preset[JSON_KEY_INDEX] = i;
-                preset[JSON_KEY_NAME] = presetsConfig.presets[i].name;
-                preset[JSON_KEY_SHOW_NAME] = presetsConfig.presets[i].show_name;
+                preset[JSON_KEY_NAME] = presetsConfig.presets[i].name.data();
+                preset[JSON_KEY_SHOW_NAME] = presetsConfig.presets[i].show_name.data();
                 preset["layout_reverse"] = presetsConfig.presets[i].layout_reverse;
                 preset["layout_mirror"] = presetsConfig.presets[i].layout_mirror;
                 preset["layout_dead_leds"] = presetsConfig.presets[i].layout_dead_leds;
 
                 // Parse and include params_json
                 JsonDocument paramsDoc;
-                if (!deserializeJson(paramsDoc, presetsConfig.presets[i].params_json)) {
+                if (!deserializeJson(paramsDoc, presetsConfig.presets[i].params_json.data())) {
                     preset[JSON_KEY_PARAMS] = paramsDoc.as<JsonObject>();
                 }
             }
@@ -397,8 +398,8 @@ void WebServerManager::setupAPIRoutes() {
                 if (showController.queuePresetLoad(preset)) {
                     JsonDocument responseDoc;
                     responseDoc["success"] = true;
-                    responseDoc["name"] = preset.name;
-                    responseDoc["show_name"] = preset.show_name;
+                    responseDoc["name"] = preset.name.data();
+                    responseDoc["show_name"] = preset.show_name.data();
 
                     String response;
                     serializeJson(responseDoc, response);
@@ -449,14 +450,14 @@ void WebServerManager::setupAPIRoutes() {
                 Config::Preset preset;
                 preset.valid = true;
 
-                strncpy(preset.name, presetName, sizeof(preset.name) - 1);
-                preset.name[sizeof(preset.name) - 1] = '\0';
+                strncpy(preset.name.data(), presetName, preset.name.size() - 1);
+                preset.name[preset.name.size() - 1] = '\0';
 
-                strncpy(preset.show_name, showConfig.current_show, sizeof(preset.show_name) - 1);
-                preset.show_name[sizeof(preset.show_name) - 1] = '\0';
+                strncpy(preset.show_name.data(), showConfig.current_show.data(), preset.show_name.size() - 1);
+                preset.show_name[preset.show_name.size() - 1] = '\0';
 
-                strncpy(preset.params_json, showConfig.params_json, sizeof(preset.params_json) - 1);
-                preset.params_json[sizeof(preset.params_json) - 1] = '\0';
+                strncpy(preset.params_json.data(), showConfig.params_json.data(), preset.params_json.size() - 1);
+                preset.params_json[preset.params_json.size() - 1] = '\0';
 
                 preset.layout_reverse = layoutConfig.reverse;
                 preset.layout_mirror = layoutConfig.mirror;
@@ -466,7 +467,7 @@ void WebServerManager::setupAPIRoutes() {
                     JsonDocument responseDoc;
                     responseDoc["success"] = true;
                     responseDoc["index"] = slotIndex;
-                    responseDoc["name"] = preset.name;
+                    responseDoc["name"] = preset.name.data();
 
                     String response;
                     serializeJson(responseDoc, response);
@@ -555,7 +556,7 @@ void WebServerManager::setupAPIRoutes() {
                     Support::mergeWiFiCredentials(config.loadWiFiConfig(), update);
                 config.saveWiFiConfig(wifiConfig);
 
-                ESP_LOGI(TAG, "WiFi credentials updated: SSID=%s", wifiConfig.ssid);
+                ESP_LOGI(TAG, "WiFi credentials updated: SSID=%s", wifiConfig.ssid.data());
 
                 // Send success response and restart
                 request->send(200, CONTENT_TYPE_JSON,
@@ -582,11 +583,11 @@ void WebServerManager::setupAPIRoutes() {
 
                 // Load current config, update name, and save
                 Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
-                strncpy(deviceConfig.device_name, name, sizeof(deviceConfig.device_name) - 1);
-                deviceConfig.device_name[sizeof(deviceConfig.device_name) - 1] = '\0';
+                strncpy(deviceConfig.device_name.data(), name, deviceConfig.device_name.size() - 1);
+                deviceConfig.device_name[deviceConfig.device_name.size() - 1] = '\0';
                 config.saveDeviceConfig(deviceConfig);
 
-                ESP_LOGI(TAG, "Device name updated: %s", deviceConfig.device_name);
+                ESP_LOGI(TAG, "Device name updated: %s", deviceConfig.device_name.data());
 
                 // Send success response (no restart needed)
                 request->send(200, CONTENT_TYPE_JSON, "{\"success\":true}");
@@ -705,7 +706,7 @@ void WebServerManager::setupAPIRoutes() {
 
         // Device info
         Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
-        doc["device_id"] = deviceConfig.device_id;
+        doc["device_id"] = deviceConfig.device_id.data();
         doc["num_pixels"] = deviceConfig.num_pixels;
         doc["led_pin"] = deviceConfig.led_pin;
         doc["cycle_time"] = deviceConfig.cycle_time;
@@ -772,7 +773,7 @@ void WebServerManager::setupAPIRoutes() {
         const Config::TimersConfig &timersConfig = scheduler->getTimersConfig();
 
         JsonDocument doc;
-        doc["timezone"] = timersConfig.timezone;
+        doc["timezone"] = timersConfig.timezone.data();
         doc["current_epoch"] = currentEpoch;
 
         // Include local time as seconds since midnight for UI convenience.
@@ -785,8 +786,8 @@ void WebServerManager::setupAPIRoutes() {
         if (currentEpoch != 0) {
             doc["local_seconds_since_midnight"] = scheduler->getSecondsSinceMidnight(currentEpoch);
 
-            tzInfo = LocalTime::describe(currentEpoch, timersConfig.timezone);
-            doc["tz_abbrev"] = static_cast<const char *>(tzInfo.abbrev);
+            tzInfo = LocalTime::describe(currentEpoch, timersConfig.timezone.data());
+            doc["tz_abbrev"] = tzInfo.abbrev.data();
             doc["tz_offset_minutes"] = tzInfo.offset_minutes;
             doc["is_dst"] = tzInfo.is_dst;
         } else {
@@ -1126,8 +1127,8 @@ void WebServerManager::setupAPIRoutes() {
         }
 
         // Current touch values for debugging/calibration
-        uint32_t touchValues[Config::TouchConfig::MAX_TOUCH_PINS];
-        touch->getTouchValues(touchValues);
+        std::array<uint32_t, Config::TouchConfig::MAX_TOUCH_PINS> touchValues;
+        touch->getTouchValues(touchValues.data());
         JsonArray values = doc["values"].to<JsonArray>();
         for (uint8_t i = 0; i < Config::TouchConfig::MAX_TOUCH_PINS; i++) {
             values.add(touchValues[i]);
@@ -1333,12 +1334,12 @@ void WebServerManager::handleWiFiConfig(AsyncWebServerRequest *request, JsonVari
 
     // Create WiFi config
     Config::WiFiConfig wifiConfig;
-    strncpy(wifiConfig.ssid, ssid, sizeof(wifiConfig.ssid) - 1);
-    wifiConfig.ssid[sizeof(wifiConfig.ssid) - 1] = '\0';
+    strncpy(wifiConfig.ssid.data(), ssid, wifiConfig.ssid.size() - 1);
+    wifiConfig.ssid[wifiConfig.ssid.size() - 1] = '\0';
 
     if (password != nullptr) {
-        strncpy(wifiConfig.password, password, sizeof(wifiConfig.password) - 1);
-        wifiConfig.password[sizeof(wifiConfig.password) - 1] = '\0';
+        strncpy(wifiConfig.password.data(), password, wifiConfig.password.size() - 1);
+        wifiConfig.password[wifiConfig.password.size() - 1] = '\0';
     } else {
         wifiConfig.password[0] = '\0';
     }
@@ -1348,7 +1349,7 @@ void WebServerManager::handleWiFiConfig(AsyncWebServerRequest *request, JsonVari
     // Save configuration
     config.saveWiFiConfig(wifiConfig);
 
-    ESP_LOGI(TAG, "WiFi configured: SSID=%s", wifiConfig.ssid);
+    ESP_LOGI(TAG, "WiFi configured: SSID=%s", wifiConfig.ssid.data());
 
     // Generate mDNS hostname for response
     String deviceId = DeviceId::getDeviceId();

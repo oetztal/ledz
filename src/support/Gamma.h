@@ -1,6 +1,7 @@
 #ifndef LEDZ_GAMMA_H
 #define LEDZ_GAMMA_H
 
+#include <array>
 #include <cstdint>
 
 namespace Support {
@@ -42,8 +43,8 @@ namespace Support {
 
     private:
         // Pre-computed gamma correction table for performance
-        static const uint8_t gammaTable[256];
-        static const uint8_t invGammaTable[256];
+        static const std::array<uint8_t, 256> gammaTable;
+        static const std::array<uint8_t, 256> invGammaTable;
     };
 } // namespace Support
 

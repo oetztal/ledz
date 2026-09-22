@@ -19,6 +19,7 @@
 #ifndef LEDZ_LOCAL_TIME_H
 #define LEDZ_LOCAL_TIME_H
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 
@@ -29,7 +30,7 @@ namespace LocalTime {
     struct Info {
         int16_t offset_minutes; // minutes east of UTC, so +120 for CEST
         bool is_dst;            // true while the daylight-saving rule is in effect
-        char abbrev[8];         // "CEST", "IST", "+0545"
+        std::array<char, 8> abbrev; // "CEST", "IST", "+0545"
     };
 
     /**

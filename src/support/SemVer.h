@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <array>
 #include <cctype>
 #include <optional>
 #include <string>
@@ -151,7 +152,7 @@ inline std::optional<SemVer> parseSemVer(const std::string &tag) {
     }
 
     // core must be exactly three numeric components separated by dots.
-    int dots[2] = {-1, -1};
+    std::array<int, 2> dots = {-1, -1};
     int dotCount = 0;
     for (size_t i = 0; i < core.size(); i++) {
         if (core[i] == '.') {

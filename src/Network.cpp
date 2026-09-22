@@ -62,14 +62,14 @@ void Network::startAP() {
         // Load device config for custom name
         Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
         bool hasCustomName = (deviceConfig.device_name[0] != '\0' &&
-                              strcmp(deviceConfig.device_name, deviceConfig.device_id) != 0);
+                              strcmp(deviceConfig.device_name.data(), deviceConfig.device_id.data()) != 0);
 
         // Set instance name with custom device name or device ID
         String instanceName;
         if (hasCustomName) {
-            instanceName = "ledz " + String(deviceConfig.device_name);
+            instanceName = "ledz " + String(deviceConfig.device_name.data());
         } else {
-            instanceName = "ledz " + String(deviceConfig.device_id);
+            instanceName = "ledz " + String(deviceConfig.device_id.data());
         }
         MDNS.setInstanceName(instanceName.c_str());
         ESP_LOGI(TAG, "mDNS instance name: %s", instanceName.c_str());
@@ -148,14 +148,14 @@ void Network::startSTA(const char *ssid, const char *password) {
             // Load device config for custom name
             Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
             bool hasCustomName = (deviceConfig.device_name[0] != '\0' &&
-                                  strcmp(deviceConfig.device_name, deviceConfig.device_id) != 0);
+                                  strcmp(deviceConfig.device_name.data(), deviceConfig.device_id.data()) != 0);
 
             // Set instance name with custom device name or device ID
             String instanceName;
             if (hasCustomName) {
-                instanceName = "ledz " + String(deviceConfig.device_name);
+                instanceName = "ledz " + String(deviceConfig.device_name.data());
             } else {
-                instanceName = "ledz " + String(deviceConfig.device_id);
+                instanceName = "ledz " + String(deviceConfig.device_id.data());
             }
             MDNS.setInstanceName(instanceName.c_str());
             ESP_LOGI(TAG, "mDNS instance name: %s", instanceName.c_str());
@@ -285,7 +285,7 @@ void Network::configureUsingAPMode() {
     ESP_LOGI(TAG, "WiFi configured - starting STA mode");
 
     // Start Station mode
-    startSTA(wifiConfig.ssid, wifiConfig.password);
+    startSTA(wifiConfig.ssid.data(), wifiConfig.password.data());
 
     // Check if connection succeeded
     if (WiFi.status() != WL_CONNECTED) {

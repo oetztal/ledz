@@ -61,8 +61,8 @@ namespace Config {
         config.connection_failures = prefs.getUChar("wifi_failures", 0);
 
         if (config.configured) {
-            prefs.getString("wifi_ssid", config.ssid, sizeof(config.ssid));
-            prefs.getString("wifi_pass", config.password, sizeof(config.password));
+            prefs.getString("wifi_ssid", config.ssid.data(), config.ssid.size());
+            prefs.getString("wifi_pass", config.password.data(), config.password.size());
         }
 
         prefs.end();
@@ -75,8 +75,8 @@ namespace Config {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, false); // Read-write mode
 
-        prefs.putString("wifi_ssid", config.ssid);
-        prefs.putString("wifi_pass", config.password);
+        prefs.putString("wifi_ssid", config.ssid.data());
+        prefs.putString("wifi_pass", config.password.data());
         prefs.putBool("configured", config.configured);
 
         prefs.end();
@@ -89,18 +89,18 @@ namespace Config {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, true); // Read-only mode
 
-        prefs.getString("show_name", config.current_show, sizeof(config.current_show));
+        prefs.getString("show_name", config.current_show.data(), config.current_show.size());
 
         // If no show name is stored, default constructor already set "Rainbow"
         if (config.current_show[0] == '\0') {
-            strcpy(config.current_show, "Rainbow");
+            strcpy(config.current_show.data(), "Rainbow");
         }
 
-        prefs.getString("show_params", config.params_json, sizeof(config.params_json));
+        prefs.getString("show_params", config.params_json.data(), config.params_json.size());
 
         // If no params stored, default constructor already set "{}"
         if (config.params_json[0] == '\0') {
-            strcpy(config.params_json, "{}");
+            strcpy(config.params_json.data(), "{}");
         }
 
         prefs.end();
@@ -113,8 +113,8 @@ namespace Config {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, false); // Read-write mode
 
-        prefs.putString("show_name", config.current_show);
-        prefs.putString("show_params", config.params_json);
+        prefs.putString("show_name", config.current_show.data());
+        prefs.putString("show_params", config.params_json.data());
 
         prefs.end();
 #endif
@@ -131,19 +131,19 @@ namespace Config {
         config.led_pin = prefs.getUChar("led_pin", PIN_NEOPIXEL);
         config.cycle_time = prefs.getUShort("cycle_time", 10);
         config.gamma_mode = static_cast<GammaMode>(prefs.getUChar("gamma_mode", GAMMA_DEFAULT));
-        prefs.getString("device_name", config.device_name, sizeof(config.device_name));
+        prefs.getString("device_name", config.device_name.data(), config.device_name.size());
 
         prefs.end();
 
         // Always generate device ID from MAC
         String deviceId = getDeviceId();
-        strncpy(config.device_id, deviceId.c_str(), sizeof(config.device_id) - 1);
-        config.device_id[sizeof(config.device_id) - 1] = '\0';
+        strncpy(config.device_id.data(), deviceId.c_str(), config.device_id.size() - 1);
+        config.device_id[config.device_id.size() - 1] = '\0';
 
         // If no custom name is set, use device ID as name
         if (config.device_name[0] == '\0') {
-            strncpy(config.device_name, config.device_id, sizeof(config.device_name) - 1);
-            config.device_name[sizeof(config.device_name) - 1] = '\0';
+            strncpy(config.device_name.data(), config.device_id.data(), config.device_name.size() - 1);
+            config.device_name[config.device_name.size() - 1] = '\0';
         }
 #endif
 
@@ -159,7 +159,7 @@ namespace Config {
         prefs.putUChar("led_pin", config.led_pin);
         prefs.putUShort("cycle_time", config.cycle_time);
         prefs.putUChar("gamma_mode", static_cast<uint8_t>(config.gamma_mode));
-        prefs.putString("device_name", config.device_name);
+        prefs.putString("device_name", config.device_name.data());
         // Note: device_id is derived from MAC, not stored
 
         prefs.end();
@@ -177,13 +177,13 @@ namespace Config {
     String ConfigManager::getDeviceId() {
 #ifdef ARDUINO
         uint64_t mac = ESP.getEfuseMac();
-        uint8_t mac_bytes[6];
-        memcpy(mac_bytes, &mac, 6);
+        std::array<uint8_t, 6> mac_bytes;
+        memcpy(mac_bytes.data(), &mac, 6);
 
-        char id[16];
-        snprintf(id, sizeof(id), "%02X%02X%02X",
+        std::array<char, 16> id;
+        snprintf(id.data(), id.size(), "%02X%02X%02X",
                  mac_bytes[3], mac_bytes[4], mac_bytes[5]);
-        return String(id);
+        return String(id.data());
 #else
         return String("ledz-000000");
 #endif
@@ -254,29 +254,29 @@ namespace Config {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, true); // Read-only mode
 
-        char key[20];
+        std::array<char, 20> key;
         for (uint8_t i = 0; i < PresetsConfig::MAX_PRESETS; i++) {
-            snprintf(key, sizeof(key), "preset_%u_valid", i);
-            presetsConfig.presets[i].valid = prefs.getBool(key, false);
+            snprintf(key.data(), key.size(), "preset_%u_valid", i);
+            presetsConfig.presets[i].valid = prefs.getBool(key.data(), false);
 
             if (presetsConfig.presets[i].valid) {
-                snprintf(key, sizeof(key), "preset_%u_name", i);
-                prefs.getString(key, presetsConfig.presets[i].name, sizeof(presetsConfig.presets[i].name));
+                snprintf(key.data(), key.size(), "preset_%u_name", i);
+                prefs.getString(key.data(), presetsConfig.presets[i].name.data(), presetsConfig.presets[i].name.size());
 
-                snprintf(key, sizeof(key), "preset_%u_show", i);
-                prefs.getString(key, presetsConfig.presets[i].show_name, sizeof(presetsConfig.presets[i].show_name));
+                snprintf(key.data(), key.size(), "preset_%u_show", i);
+                prefs.getString(key.data(), presetsConfig.presets[i].show_name.data(), presetsConfig.presets[i].show_name.size());
 
-                snprintf(key, sizeof(key), "preset_%u_params", i);
-                prefs.getString(key, presetsConfig.presets[i].params_json, sizeof(presetsConfig.presets[i].params_json));
+                snprintf(key.data(), key.size(), "preset_%u_params", i);
+                prefs.getString(key.data(), presetsConfig.presets[i].params_json.data(), presetsConfig.presets[i].params_json.size());
 
-                snprintf(key, sizeof(key), "preset_%u_rev", i);
-                presetsConfig.presets[i].layout_reverse = prefs.getBool(key, false);
+                snprintf(key.data(), key.size(), "preset_%u_rev", i);
+                presetsConfig.presets[i].layout_reverse = prefs.getBool(key.data(), false);
 
-                snprintf(key, sizeof(key), "preset_%u_mir", i);
-                presetsConfig.presets[i].layout_mirror = prefs.getBool(key, false);
+                snprintf(key.data(), key.size(), "preset_%u_mir", i);
+                presetsConfig.presets[i].layout_mirror = prefs.getBool(key.data(), false);
 
-                snprintf(key, sizeof(key), "preset_%u_dead", i);
-                presetsConfig.presets[i].layout_dead_leds = prefs.getShort(key, 0);
+                snprintf(key.data(), key.size(), "preset_%u_dead", i);
+                presetsConfig.presets[i].layout_dead_leds = prefs.getShort(key.data(), 0);
             }
         }
 
@@ -294,32 +294,32 @@ namespace Config {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, false); // Read-write mode
 
-        char key[20];
+        std::array<char, 20> key;
 
-        snprintf(key, sizeof(key), "preset_%u_valid", index);
-        prefs.putBool(key, preset.valid);
+        snprintf(key.data(), key.size(), "preset_%u_valid", index);
+        prefs.putBool(key.data(), preset.valid);
 
-        snprintf(key, sizeof(key), "preset_%u_name", index);
-        prefs.putString(key, preset.name);
+        snprintf(key.data(), key.size(), "preset_%u_name", index);
+        prefs.putString(key.data(), preset.name.data());
 
-        snprintf(key, sizeof(key), "preset_%u_show", index);
-        prefs.putString(key, preset.show_name);
+        snprintf(key.data(), key.size(), "preset_%u_show", index);
+        prefs.putString(key.data(), preset.show_name.data());
 
-        snprintf(key, sizeof(key), "preset_%u_params", index);
-        prefs.putString(key, preset.params_json);
+        snprintf(key.data(), key.size(), "preset_%u_params", index);
+        prefs.putString(key.data(), preset.params_json.data());
 
-        snprintf(key, sizeof(key), "preset_%u_rev", index);
-        prefs.putBool(key, preset.layout_reverse);
+        snprintf(key.data(), key.size(), "preset_%u_rev", index);
+        prefs.putBool(key.data(), preset.layout_reverse);
 
-        snprintf(key, sizeof(key), "preset_%u_mir", index);
-        prefs.putBool(key, preset.layout_mirror);
+        snprintf(key.data(), key.size(), "preset_%u_mir", index);
+        prefs.putBool(key.data(), preset.layout_mirror);
 
-        snprintf(key, sizeof(key), "preset_%u_dead", index);
-        prefs.putShort(key, preset.layout_dead_leds);
+        snprintf(key.data(), key.size(), "preset_%u_dead", index);
+        prefs.putShort(key.data(), preset.layout_dead_leds);
 
         prefs.end();
 
-        ESP_LOGD(TAG, "Saved preset %u '%s'", index, preset.name);
+        ESP_LOGD(TAG, "Saved preset %u '%s'", index, preset.name.data());
         return true;
 #else
         return false;
@@ -334,11 +334,11 @@ namespace Config {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, false); // Read-write mode
 
-        char key[20];
+        std::array<char, 20> key;
 
         // Just mark as invalid - NVS keys remain but won't be loaded
-        snprintf(key, sizeof(key), "preset_%u_valid", index);
-        prefs.putBool(key, false);
+        snprintf(key.data(), key.size(), "preset_%u_valid", index);
+        prefs.putBool(key.data(), false);
 
         prefs.end();
 
@@ -353,15 +353,15 @@ namespace Config {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, true); // Read-only mode
 
-        char key[20];
-        char storedName[32];
+        std::array<char, 20> key;
+        std::array<char, 32> storedName;
 
         for (uint8_t i = 0; i < PresetsConfig::MAX_PRESETS; i++) {
-            snprintf(key, sizeof(key), "preset_%u_valid", i);
-            if (prefs.getBool(key, false)) {
-                snprintf(key, sizeof(key), "preset_%u_name", i);
-                prefs.getString(key, storedName, sizeof(storedName));
-                if (strcmp(storedName, name) == 0) {
+            snprintf(key.data(), key.size(), "preset_%u_valid", i);
+            if (prefs.getBool(key.data(), false)) {
+                snprintf(key.data(), key.size(), "preset_%u_name", i);
+                prefs.getString(key.data(), storedName.data(), storedName.size());
+                if (strcmp(storedName.data(), name) == 0) {
                     prefs.end();
                     return i;
                 }
@@ -377,11 +377,11 @@ namespace Config {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, true); // Read-only mode
 
-        char key[20];
+        std::array<char, 20> key;
 
         for (uint8_t i = 0; i < PresetsConfig::MAX_PRESETS; i++) {
-            snprintf(key, sizeof(key), "preset_%u_valid", i);
-            if (!prefs.getBool(key, false)) {
+            snprintf(key.data(), key.size(), "preset_%u_valid", i);
+            if (!prefs.getBool(key.data(), false)) {
                 prefs.end();
                 return i;
             }
@@ -407,58 +407,58 @@ namespace Config {
         bool migrated = false;
         const bool legacyKeyPresent = prefs.isKey("tz_offset");
         if (prefs.isKey("tz")) {
-            prefs.getString("tz", timersConfig.timezone, sizeof(timersConfig.timezone));
+            prefs.getString("tz", timersConfig.timezone.data(), timersConfig.timezone.size());
         } else {
             const int8_t legacyOffsetHours = prefs.getChar("tz_offset", 0);
-            LocalTime::legacyOffsetToPosix(legacyOffsetHours, timersConfig.timezone,
-                                           sizeof(timersConfig.timezone));
+            LocalTime::legacyOffsetToPosix(legacyOffsetHours, timersConfig.timezone.data(),
+                                           timersConfig.timezone.size());
             migrated = true;
             ESP_LOGI(TAG, "Migrating timezone: legacy offset %d hours -> \"%s\"",
-                          legacyOffsetHours, timersConfig.timezone);
+                          legacyOffsetHours, timersConfig.timezone.data());
         }
 
-        char key[20];
+        std::array<char, 20> key;
         for (uint8_t i = 0; i < TimersConfig::MAX_TIMERS; i++) {
             // "timer_%u_en" replaced "timer_%u_enabled" when the slot count
             // went past ten: "timer_10_enabled" is 16 characters, one over
             // the NVS key limit. Slots written by earlier firmware still
             // carry the long key, which is read as a fallback and removed
             // on the next save.
-            snprintf(key, sizeof(key), "timer_%u_en", i);
-            if (prefs.isKey(key)) {
-                timersConfig.timers[i].enabled = prefs.getBool(key, false);
+            snprintf(key.data(), key.size(), "timer_%u_en", i);
+            if (prefs.isKey(key.data())) {
+                timersConfig.timers[i].enabled = prefs.getBool(key.data(), false);
             } else {
-                snprintf(key, sizeof(key), "timer_%u_enabled", i);
-                timersConfig.timers[i].enabled = prefs.getBool(key, false);
+                snprintf(key.data(), key.size(), "timer_%u_enabled", i);
+                timersConfig.timers[i].enabled = prefs.getBool(key.data(), false);
             }
 
             if (timersConfig.timers[i].enabled) {
-                snprintf(key, sizeof(key), "timer_%u_type", i);
-                timersConfig.timers[i].type = static_cast<TimerType>(prefs.getUChar(key, 0));
+                snprintf(key.data(), key.size(), "timer_%u_type", i);
+                timersConfig.timers[i].type = static_cast<TimerType>(prefs.getUChar(key.data(), 0));
 
-                snprintf(key, sizeof(key), "timer_%u_action", i);
-                timersConfig.timers[i].action = static_cast<TimerAction>(prefs.getUChar(key, 0));
+                snprintf(key.data(), key.size(), "timer_%u_action", i);
+                timersConfig.timers[i].action = static_cast<TimerAction>(prefs.getUChar(key.data(), 0));
 
-                snprintf(key, sizeof(key), "timer_%u_preset", i);
-                timersConfig.timers[i].preset_index = prefs.getUChar(key, 0);
+                snprintf(key.data(), key.size(), "timer_%u_preset", i);
+                timersConfig.timers[i].preset_index = prefs.getUChar(key.data(), 0);
 
-                snprintf(key, sizeof(key), "timer_%u_target", i);
-                timersConfig.timers[i].target_time = prefs.getULong(key, 0);
+                snprintf(key.data(), key.size(), "timer_%u_target", i);
+                timersConfig.timers[i].target_time = prefs.getULong(key.data(), 0);
 
-                snprintf(key, sizeof(key), "timer_%u_dur", i);
-                timersConfig.timers[i].duration_seconds = prefs.getULong(key, 0);
+                snprintf(key.data(), key.size(), "timer_%u_dur", i);
+                timersConfig.timers[i].duration_seconds = prefs.getULong(key.data(), 0);
 
-                snprintf(key, sizeof(key), "timer_%u_lfd", i);
-                timersConfig.timers[i].last_fired_yday = prefs.getUShort(key, SCHEDULE_NEVER_FIRED);
+                snprintf(key.data(), key.size(), "timer_%u_lfd", i);
+                timersConfig.timers[i].last_fired_yday = prefs.getUShort(key.data(), SCHEDULE_NEVER_FIRED);
 
                 // Both keys are absent for schedules written by earlier
                 // firmware; the defaults reproduce the old behaviour
                 // exactly: armed, every day.
-                snprintf(key, sizeof(key), "timer_%u_paused", i);
-                timersConfig.timers[i].paused = prefs.getBool(key, false);
+                snprintf(key.data(), key.size(), "timer_%u_paused", i);
+                timersConfig.timers[i].paused = prefs.getBool(key.data(), false);
 
-                snprintf(key, sizeof(key), "timer_%u_days", i);
-                timersConfig.timers[i].days_mask = prefs.getUChar(key, SCHEDULE_EVERY_DAY);
+                snprintf(key.data(), key.size(), "timer_%u_days", i);
+                timersConfig.timers[i].days_mask = prefs.getUChar(key.data(), SCHEDULE_EVERY_DAY);
 
                 // Firmware before the POSIX-timezone change used
                 // duration_seconds as a "last triggered epoch minute"
@@ -496,44 +496,44 @@ namespace Config {
 #ifdef ARDUINO
         prefs.begin(NAMESPACE, false); // Read-write mode
 
-        prefs.putString("tz", config.timezone);
+        prefs.putString("tz", config.timezone.data());
 
-        char key[20];
+        std::array<char, 20> key;
         for (uint8_t i = 0; i < TimersConfig::MAX_TIMERS; i++) {
-            snprintf(key, sizeof(key), "timer_%u_en", i);
-            prefs.putBool(key, config.timers[i].enabled);
+            snprintf(key.data(), key.size(), "timer_%u_en", i);
+            prefs.putBool(key.data(), config.timers[i].enabled);
 
             // Drop the pre-rename key so a later boot cannot read a stale
             // value from it (see loadTimersConfig).
-            snprintf(key, sizeof(key), "timer_%u_enabled", i);
-            if (prefs.isKey(key)) {
-                prefs.remove(key);
+            snprintf(key.data(), key.size(), "timer_%u_enabled", i);
+            if (prefs.isKey(key.data())) {
+                prefs.remove(key.data());
             }
 
             if (config.timers[i].enabled) {
-                snprintf(key, sizeof(key), "timer_%u_type", i);
-                prefs.putUChar(key, static_cast<uint8_t>(config.timers[i].type));
+                snprintf(key.data(), key.size(), "timer_%u_type", i);
+                prefs.putUChar(key.data(), static_cast<uint8_t>(config.timers[i].type));
 
-                snprintf(key, sizeof(key), "timer_%u_action", i);
-                prefs.putUChar(key, static_cast<uint8_t>(config.timers[i].action));
+                snprintf(key.data(), key.size(), "timer_%u_action", i);
+                prefs.putUChar(key.data(), static_cast<uint8_t>(config.timers[i].action));
 
-                snprintf(key, sizeof(key), "timer_%u_preset", i);
-                prefs.putUChar(key, config.timers[i].preset_index);
+                snprintf(key.data(), key.size(), "timer_%u_preset", i);
+                prefs.putUChar(key.data(), config.timers[i].preset_index);
 
-                snprintf(key, sizeof(key), "timer_%u_target", i);
-                prefs.putULong(key, config.timers[i].target_time);
+                snprintf(key.data(), key.size(), "timer_%u_target", i);
+                prefs.putULong(key.data(), config.timers[i].target_time);
 
-                snprintf(key, sizeof(key), "timer_%u_dur", i);
-                prefs.putULong(key, config.timers[i].duration_seconds);
+                snprintf(key.data(), key.size(), "timer_%u_dur", i);
+                prefs.putULong(key.data(), config.timers[i].duration_seconds);
 
-                snprintf(key, sizeof(key), "timer_%u_lfd", i);
-                prefs.putUShort(key, config.timers[i].last_fired_yday);
+                snprintf(key.data(), key.size(), "timer_%u_lfd", i);
+                prefs.putUShort(key.data(), config.timers[i].last_fired_yday);
 
-                snprintf(key, sizeof(key), "timer_%u_paused", i);
-                prefs.putBool(key, config.timers[i].paused);
+                snprintf(key.data(), key.size(), "timer_%u_paused", i);
+                prefs.putBool(key.data(), config.timers[i].paused);
 
-                snprintf(key, sizeof(key), "timer_%u_days", i);
-                prefs.putUChar(key, config.timers[i].days_mask);
+                snprintf(key.data(), key.size(), "timer_%u_days", i);
+                prefs.putUChar(key.data(), config.timers[i].days_mask);
             }
         }
 

@@ -17,11 +17,13 @@
 #include "OTAConfig.h"
 #include "support/SemVer.h"
 
+#include <array>
 #include <atomic>
 #include <cstdio>
 #include <cstring>
 #include <memory>
 #include <new>
+#include <vector>
 
 constexpr static const char* TAG = "ota";
 
@@ -169,9 +171,9 @@ struct HttpClient {
                     return -1;
                 }
                 if (esp_log_level_get(TAG) >= ESP_LOG_DEBUG) {
-                    char next[256] = {0};
-                    if (esp_http_client_get_url(handle, next, sizeof(next)) == ESP_OK) {
-                        ESP_LOGD(TAG, "HTTP %d redirect -> %s", code, next);
+                    std::array<char, 256> next{};
+                    if (esp_http_client_get_url(handle, next.data(), next.size()) == ESP_OK) {
+                        ESP_LOGD(TAG, "HTTP %d redirect -> %s", code, next.data());
                     }
                 }
                 ++hops;
@@ -185,8 +187,8 @@ struct HttpClient {
     // so the TLS buffers can be released before the caller continues.
     void drain() {
         if (!handle) return;
-        char buf[256];
-        while (esp_http_client_read(handle, buf, sizeof(buf)) > 0) { /* discard */ }
+        std::array<char, 256> buf;
+        while (esp_http_client_read(handle, buf.data(), buf.size()) > 0) { /* discard */ }
     }
 };
 
@@ -236,8 +238,8 @@ struct InProgressGuard {
 // ---------------------------------------------------------------------------
 
 struct OtaCheckJob {
-    char owner[64];
-    char repo[64];
+    std::array<char, 64> owner{};
+    std::array<char, 64> repo{};
 };
 
 struct OtaUpdateJob {
@@ -398,13 +400,13 @@ RawDnsResult rawDnsQuery(uint32_t serverIp4, const char *name, uint32_t timeoutM
     tv.tv_usec = (timeoutMs % 1000) * 1000;
     setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
-    uint8_t query[128];
+    std::array<uint8_t, 128> query{};
     query[0] = 0x4c; query[1] = 0x5a;  // transaction id ("LZ")
     query[2] = 0x01; query[3] = 0x00;  // standard query, recursion desired
     query[4] = 0x00; query[5] = 0x01;  // qdcount = 1
-    memset(query + 6, 0, 6);           // ancount / nscount / arcount = 0
+    memset(query.data() + 6, 0, 6);    // ancount / nscount / arcount = 0
     size_t n = 12;
-    size_t qn = encodeQName(name, query + n, sizeof(query) - n - 4);
+    size_t qn = encodeQName(name, query.data() + n, query.size() - n - 4);
     if (qn == 0) {
         close(fd);
         r.outcome = RawDnsResult::Outcome::Malformed;
@@ -418,7 +420,7 @@ RawDnsResult rawDnsQuery(uint32_t serverIp4, const char *name, uint32_t timeoutM
     dst.sin_family = AF_INET;
     dst.sin_port = htons(53);
     dst.sin_addr.s_addr = serverIp4;
-    if (sendto(fd, query, n, 0, reinterpret_cast<struct sockaddr *>(&dst), sizeof(dst)) < 0) {
+    if (sendto(fd, query.data(), n, 0, reinterpret_cast<struct sockaddr *>(&dst), sizeof(dst)) < 0) {
         r.outcome = RawDnsResult::Outcome::SendFailed;
         r.err = errno;
         close(fd);
@@ -426,8 +428,8 @@ RawDnsResult rawDnsQuery(uint32_t serverIp4, const char *name, uint32_t timeoutM
         return r;
     }
 
-    uint8_t reply[256];
-    int got = recvfrom(fd, reply, sizeof(reply), 0, nullptr, nullptr);
+    std::array<uint8_t, 256> reply;
+    int got = recvfrom(fd, reply.data(), reply.size(), 0, nullptr, nullptr);
     close(fd);
     r.elapsedMs = millis() - start;
     if (got < 0) {
@@ -457,16 +459,17 @@ bool probeGetAddrInfo(const char *host, int family, const char *familyName) {
     uint32_t elapsed = millis() - start;
 
     if (gai == 0 && res) {
-        char ipstr[INET6_ADDRSTRLEN] = "?";
+        std::array<char, INET6_ADDRSTRLEN> ipstr{};
+        ipstr[0] = '?';
         if (res->ai_family == AF_INET6) {
             auto *sa = reinterpret_cast<struct sockaddr_in6 *>(res->ai_addr);
-            inet_ntop(AF_INET6, &sa->sin6_addr, ipstr, sizeof(ipstr));
+            inet_ntop(AF_INET6, &sa->sin6_addr, ipstr.data(), ipstr.size());
         } else {
             auto *sa = reinterpret_cast<struct sockaddr_in *>(res->ai_addr);
-            inet_ntop(AF_INET, &sa->sin_addr, ipstr, sizeof(ipstr));
+            inet_ntop(AF_INET, &sa->sin_addr, ipstr.data(), ipstr.size());
         }
         ESP_LOGD(TAG, "OTA diag: getaddrinfo(%s, %s) -> %s in %lu ms",
-                host, familyName, ipstr, (unsigned long)elapsed);
+                host, familyName, ipstr.data(), (unsigned long)elapsed);
         freeaddrinfo(res);
         return true;
     }
@@ -595,17 +598,17 @@ void explainNetworkFailure(const char *host) {
     // the query still failing rules out "no server configured" outright.
     uint32_t server0 = 0;
     {
-        char servers[64] = {0};
+        std::array<char, 64> servers{};
         size_t off = 0;
         for (uint8_t i = 0; i < 3; ++i) {
             IPAddress s = WiFi.dnsIP(i);
             if (i == 0) server0 = static_cast<uint32_t>(s);
-            off += snprintf(servers + off, sizeof(servers) - off, "%s%s",
+            off += snprintf(servers.data() + off, servers.size() - off, "%s%s",
                             i ? "," : "", s.toString().c_str());
-            if (off >= sizeof(servers)) break;
+            if (off >= servers.size()) break;
         }
         ESP_LOGD(TAG, "OTA diag: resolvers=[%s] reset_reason=%d sntp_sync=%d",
-                servers, (int)esp_reset_reason(), (int)sntp_get_sync_status());
+                servers.data(), (int)esp_reset_reason(), (int)sntp_get_sync_status());
     }
 
     // Can we get a UDP socket at all? lwIP allocates one per DNS query, and
@@ -739,11 +742,11 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
         time_t sys_time = time(nullptr);
         struct tm timeinfo;
         gmtime_r(&sys_time, &timeinfo);
-        char buf[32];
-        strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &timeinfo);
+        std::array<char, 32> buf;
+        strftime(buf.data(), buf.size(), "%Y-%m-%d %H:%M:%S", &timeinfo);
         ESP_LOGD(TAG, "OTA diag: rssi=%d ch=%d ip=%s sys_time=%s (%ld)",
                 (int)WiFi.RSSI(), (int)WiFi.channel(), WiFi.localIP().toString().c_str(),
-                buf, (long)sys_time);
+                buf.data(), (long)sys_time);
     }
 
     ESP_LOGD(TAG, "OTA diag: dns=%s gw=%s",
@@ -931,26 +934,21 @@ bool doPerformUpdate(const String &downloadUrl, size_t expectedSize,
     // Heap, not stack: a 4 KB automatic buffer here would sit in this frame for
     // the whole download, and the TLS session it shares the task stack with
     // needs that headroom more than we do.
-    std::unique_ptr<uint8_t[]> buffer(new (std::nothrow) uint8_t[DOWNLOAD_CHUNK_SIZE]);
-    if (!buffer) {
-        ESP_LOGE(TAG, "download buffer allocation failed (heap=%u)", ESP.getFreeHeap());
-        Update.abort();
-        return false;
-    }
+    std::vector<uint8_t> buffer(DOWNLOAD_CHUNK_SIZE);
     size_t totalRead = 0;
     unsigned long lastDataReceived = millis();
 
     while (totalRead < expectedSize) {
-        if (int n = esp_http_client_read(client.handle, reinterpret_cast<char *>(buffer.get()), DOWNLOAD_CHUNK_SIZE);
+        if (int n = esp_http_client_read(client.handle, reinterpret_cast<char *>(buffer.data()), DOWNLOAD_CHUNK_SIZE);
             n > 0) {
-            size_t written = Update.write(buffer.get(), n);
+            size_t written = Update.write(buffer.data(), n);
             if (written != static_cast<size_t>(n)) {
                 ESP_LOGE(TAG, "Flash write failed: %d vs %d (%s)", written, n, Update.errorString());
                 Update.abort();
                 return false;
             }
 #if OTA_ENABLE_SHA256_VERIFICATION
-            verify.update(buffer.get(), n);
+            verify.update(buffer.data(), n);
 #endif
             totalRead += written;
             lastDataReceived = millis();
@@ -1003,14 +1001,12 @@ bool doPerformUpdate(const String &downloadUrl, size_t expectedSize,
 
 void otaCheckTask(void *arg) {
     auto *job = static_cast<OtaCheckJob *>(arg);
-    char owner[sizeof(job->owner)];
-    char repo[sizeof(job->repo)];
-    snprintf(owner, sizeof(owner), "%s", job->owner);
-    snprintf(repo, sizeof(repo), "%s", job->repo);
+    std::array<char, 64> owner = job->owner;
+    std::array<char, 64> repo = job->repo;
     delete job;
 
     FirmwareInfo info;
-    doCheckForUpdate(owner, repo, info);
+    doCheckForUpdate(owner.data(), repo.data(), info);
 
     // Logged at I, not D: CORE_DEBUG_LEVEL is 0 in the release build, so a D
     // line would be compiled out — and this is the one number that tells us
@@ -1108,8 +1104,8 @@ bool OTAUpdater::startBackgroundCheck(const char *owner, const char *repo) {
     }
 
     auto *job = new OtaCheckJob{};
-    snprintf(job->owner, sizeof(job->owner), "%s", owner);
-    snprintf(job->repo, sizeof(job->repo), "%s", repo);
+    snprintf(job->owner.data(), job->owner.size(), "%s", owner);
+    snprintf(job->repo.data(), job->repo.size(), "%s", repo);
 
     if (BaseType_t rc = xTaskCreatePinnedToCore(
         otaCheckTask, "ota_check", OTA_CHECK_TASK_STACK, job, 1, nullptr, 1);

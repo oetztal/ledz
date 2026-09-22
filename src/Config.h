@@ -3,6 +3,7 @@
 
 // The config structs below are used by native unit tests, which do not get
 // size_t / the fixed-width integer types from Arduino.h.
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -17,8 +18,8 @@ namespace Config {
      * WiFi configuration structure
      */
     struct WiFiConfig {
-        char ssid[64];
-        char password[64];
+        std::array<char, 64> ssid;
+        std::array<char, 64> password;
         bool configured;
         uint8_t connection_failures; // Track consecutive connection failures
 
@@ -32,12 +33,12 @@ namespace Config {
      * LED show configuration structure
      */
     struct ShowConfig {
-        char current_show[32]; // e.g., "Rainbow", "Mandelbrot"
-        char params_json[256]; // JSON string for show parameters
+        std::array<char, 32> current_show; // e.g., "Rainbow", "Mandelbrot"
+        std::array<char, 256> params_json; // JSON string for show parameters
 
         ShowConfig() {
-            strcpy(current_show, "Rainbow");
-            strcpy(params_json, "{}");
+            strcpy(current_show.data(), "Rainbow");
+            strcpy(params_json.data(), "{}");
         }
     };
 
@@ -59,8 +60,8 @@ namespace Config {
         uint8_t led_pin; // GPIO pin for LED strip (default: PIN_NEOPIXEL=39 for onboard, or 35=MOSI for external)
         uint16_t cycle_time; // Cycle time in ms (e.g., 10, 20, 25, 50)
         GammaMode gamma_mode; // Gamma correction mode
-        char device_id[16]; // e.g., "AABBCC"
-        char device_name[32]; // Custom device name
+        std::array<char, 16> device_id; // e.g., "AABBCC"
+        std::array<char, 32> device_name; // Custom device name
 
         DeviceConfig() : brightness(128), num_pixels(300),
 #ifdef PIN_NEOPIXEL
@@ -92,9 +93,9 @@ namespace Config {
      * Show preset structure
      */
     struct Preset {
-        char name[32];
-        char show_name[32];
-        char params_json[256];
+        std::array<char, 32> name;
+        std::array<char, 32> show_name;
+        std::array<char, 256> params_json;
         bool layout_reverse;
         bool layout_mirror;
         int16_t layout_dead_leds;
@@ -104,7 +105,7 @@ namespace Config {
                    layout_dead_leds(0), valid(false) {
             name[0] = '\0';
             show_name[0] = '\0';
-            strcpy(params_json, "{}");
+            strcpy(params_json.data(), "{}");
         }
     };
 
@@ -113,7 +114,7 @@ namespace Config {
      */
     struct PresetsConfig {
         static constexpr uint8_t MAX_PRESETS = 8;
-        Preset presets[MAX_PRESETS];
+        std::array<Preset, MAX_PRESETS> presets;
     };
 
     /**
@@ -179,12 +180,16 @@ namespace Config {
         // characters, so with two-digit indices every field suffix must be
         // at most 6 characters ("timer_11_paused" is exactly 15).
         static constexpr uint8_t MAX_TIMERS = 12;
-        TimerEntry timers[MAX_TIMERS];
+        std::array<TimerEntry, MAX_TIMERS> timers;
         // POSIX TZ string, e.g. "CET-1CEST,M3.5.0,M10.5.0/3". Note the
         // inverted sign: the offset counts west of UTC, so that is UTC+1.
         // 64 bytes is sized off the longest realistic entry, Chatham's
         // 44-character string.
-        char timezone[64] = "UTC0";
+        std::array<char, 64> timezone;
+
+        TimersConfig() {
+            strcpy(timezone.data(), "UTC0");
+        }
     };
 
     /**

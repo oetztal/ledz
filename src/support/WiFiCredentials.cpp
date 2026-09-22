@@ -1,5 +1,6 @@
 #include "WiFiCredentials.h"
 
+#include <array>
 #include <cstdio>
 #include <cstring>
 
@@ -7,8 +8,8 @@ namespace Support {
     namespace {
         // Copy into a fixed buffer, always NUL-terminated and never overrunning.
         template<size_t N>
-        void copyBounded(char (&dest)[N], const char *src) {
-            snprintf(dest, N, "%s", src);
+        void copyBounded(std::array<char, N> &dest, const char *src) {
+            snprintf(dest.data(), dest.size(), "%s", src);
         }
     }
 

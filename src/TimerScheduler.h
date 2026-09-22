@@ -141,7 +141,7 @@ public:
      * Get the configured timezone
      * @return POSIX TZ string
      */
-    [[nodiscard]] const char *getTimezone() const { return timersConfig.timezone; }
+    [[nodiscard]] const char *getTimezone() const { return timersConfig.timezone.data(); }
 };
 
 #endif //LEDZ_TIMER_SCHEDULER_H

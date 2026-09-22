@@ -25,7 +25,7 @@ void TimerScheduler::begin() {
     tzDirty = true;
 #ifdef ARDUINO
     ESP_LOGI(TAG, "Loaded %d timers, timezone: \"%s\"",
-                  Config::TimersConfig::MAX_TIMERS, timersConfig.timezone);
+                  Config::TimersConfig::MAX_TIMERS, timersConfig.timezone.data());
 
     for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
         if (timersConfig.timers[i].enabled) {
@@ -39,7 +39,7 @@ void TimerScheduler::begin() {
 }
 
 uint32_t TimerScheduler::getSecondsSinceMidnight(uint32_t epochTime) const {
-    return LocalTime::secondsSinceMidnight(epochTime, timersConfig.timezone);
+    return LocalTime::secondsSinceMidnight(epochTime, timersConfig.timezone.data());
 }
 
 void TimerScheduler::checkTimers(uint32_t currentEpoch) {
@@ -52,10 +52,10 @@ void TimerScheduler::checkTimers(uint32_t currentEpoch) {
         // A syntactically valid string can still be nonsense, and newlib
         // reports no parse error — it just falls back to UTC. Logging what
         // libc actually made of it is the only diagnostic there is.
-        const LocalTime::Info info = LocalTime::describe(currentEpoch, timersConfig.timezone);
+        const LocalTime::Info info = LocalTime::describe(currentEpoch, timersConfig.timezone.data());
 #ifdef ARDUINO
         ESP_LOGI(TAG, "Applied timezone \"%s\": %s, UTC%+d:%02d%s",
-                      timersConfig.timezone, info.abbrev,
+                      timersConfig.timezone.data(), info.abbrev.data(),
                       info.offset_minutes / 60, abs(info.offset_minutes % 60),
                       info.is_dst ? " (DST)" : "");
 #else
@@ -64,8 +64,8 @@ void TimerScheduler::checkTimers(uint32_t currentEpoch) {
     }
 
     uint32_t currentSecondsSinceMidnight = getSecondsSinceMidnight(currentEpoch);
-    const uint16_t today = LocalTime::localDayOfYear(currentEpoch, timersConfig.timezone);
-    const uint8_t wday = LocalTime::localWeekday(currentEpoch, timersConfig.timezone);
+    const uint16_t today = LocalTime::localDayOfYear(currentEpoch, timersConfig.timezone.data());
+    const uint8_t wday = LocalTime::localWeekday(currentEpoch, timersConfig.timezone.data());
     bool configChanged = false;
 
     for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
@@ -150,7 +150,7 @@ void TimerScheduler::executeTimer(uint8_t index) {
                     presetsConfig.presets[timer.preset_index].valid) {
                     showController.queuePresetLoad(presetsConfig.presets[timer.preset_index]);
                     ESP_LOGI(TAG, "Loaded preset %d (%s)",
-                                  timer.preset_index, presetsConfig.presets[timer.preset_index].name);
+                                  timer.preset_index, presetsConfig.presets[timer.preset_index].name.data());
                 } else {
                     ESP_LOGW(TAG, "Preset %d is invalid, cancelling timer",
                                   timer.preset_index);
@@ -301,7 +301,7 @@ uint32_t TimerScheduler::getRemainingSeconds(uint8_t index, uint32_t currentEpoc
                 }
 
                 const uint32_t currentSecondsSinceMidnight = getSecondsSinceMidnight(currentEpoch);
-                uint8_t wday = LocalTime::localWeekday(currentEpoch, timersConfig.timezone);
+                uint8_t wday = LocalTime::localWeekday(currentEpoch, timersConfig.timezone.data());
                 uint32_t remaining;
                 if (currentSecondsSinceMidnight < timer.target_time) {
                     remaining = timer.target_time - currentSecondsSinceMidnight;
@@ -330,7 +330,7 @@ bool TimerScheduler::setTimezone(const char *tz) {
         return false;
     }
 
-    snprintf(timersConfig.timezone, sizeof(timersConfig.timezone), "%s", tz);
+    snprintf(timersConfig.timezone.data(), timersConfig.timezone.size(), "%s", tz);
     config.saveTimersConfig(timersConfig);
 
     // Deliberately no setenv/tzset here: this runs on the request handler's
@@ -338,7 +338,7 @@ bool TimerScheduler::setTimezone(const char *tz) {
     tzDirty = true;
 
 #ifdef ARDUINO
-    ESP_LOGI(TAG, "Set timezone to \"%s\"", timersConfig.timezone);
+    ESP_LOGI(TAG, "Set timezone to \"%s\"", timersConfig.timezone.data());
 #endif
 
     return true;

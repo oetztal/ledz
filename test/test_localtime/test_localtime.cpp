@@ -236,18 +236,18 @@ void test_describe_reports_dst_state_and_abbreviation() {
     const LocalTime::Info winter = LocalTime::describe(utcEpoch(2026, 1, 15, 12, 0, 0), BERLIN);
     TEST_ASSERT_EQUAL_INT(60, winter.offset_minutes);
     TEST_ASSERT_FALSE(winter.is_dst);
-    TEST_ASSERT_EQUAL_STRING("CET", winter.abbrev);
+    TEST_ASSERT_EQUAL_STRING("CET", winter.abbrev.data());
 
     const LocalTime::Info summer = LocalTime::describe(utcEpoch(2026, 7, 15, 12, 0, 0), BERLIN);
     TEST_ASSERT_EQUAL_INT(120, summer.offset_minutes);
     TEST_ASSERT_TRUE(summer.is_dst);
-    TEST_ASSERT_EQUAL_STRING("CEST", summer.abbrev);
+    TEST_ASSERT_EQUAL_STRING("CEST", summer.abbrev.data());
 }
 
 void test_describe_truncates_a_long_abbreviation() {
     const LocalTime::Info info = LocalTime::describe(utcEpoch(2026, 7, 15, 12, 0, 0), "<+0545>-5:45");
     TEST_ASSERT_EQUAL_INT(345, info.offset_minutes);
-    TEST_ASSERT_TRUE(strlen(info.abbrev) < sizeof(info.abbrev));
+    TEST_ASSERT_TRUE(strlen(info.abbrev.data()) < info.abbrev.size());
 }
 
 // --- isSyntacticallyValidTz ----------------------------------------------

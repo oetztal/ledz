@@ -17,7 +17,7 @@ namespace Strip {
         }
 #endif
         strip = std::make_unique<Adafruit_NeoPixel>(length, pin, NEO_GRB + NEO_KHZ800);
-        colors = std::unique_ptr<Color[]>(new Color[length]);
+        colors.assign(length, 0);
         strip->begin();
         // Pin Adafruit's internal brightness at 255 so it does not
         // mutate our pixel data with its integer-based scaler.

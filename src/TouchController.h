@@ -8,6 +8,9 @@
 
 #include "Config.h"
 
+#include <array>
+#include <cstddef>
+
 // Forward declarations
 class ShowController;
 
@@ -19,11 +22,11 @@ private:
 
     // Touch pin GPIO numbers for ESP32-S3
     // Using GPIO 5, 6, 7 which are touch-capable on QT Py ESP32-S3
-    static constexpr uint8_t TOUCH_PINS[Config::TouchConfig::MAX_TOUCH_PINS] = {9, 5, 7};
+    static constexpr std::array<uint8_t, Config::TouchConfig::MAX_TOUCH_PINS> TOUCH_PINS = {9, 5, 7};
 
     // Debounce tracking
-    bool wasTouched[Config::TouchConfig::MAX_TOUCH_PINS];
-    uint32_t lastTouchTime[Config::TouchConfig::MAX_TOUCH_PINS];
+    std::array<bool, Config::TouchConfig::MAX_TOUCH_PINS> wasTouched;
+    std::array<uint32_t, Config::TouchConfig::MAX_TOUCH_PINS> lastTouchTime;
     static constexpr uint32_t DEBOUNCE_MS = 500; // Minimum time between triggers
     
     struct ShowVariantGroup {
@@ -32,8 +35,8 @@ private:
         size_t numVariants;
     };
     
-    static const ShowVariantGroup SHOW_VARIANTS[];
-    static const size_t NUM_SHOW_VARIANTS;
+    static constexpr size_t NUM_SHOW_VARIANTS = 11;
+    static const std::array<ShowVariantGroup, NUM_SHOW_VARIANTS> SHOW_VARIANTS;
     
     int currentShowIdx = 0;
     int currentVariantIdx = 0;

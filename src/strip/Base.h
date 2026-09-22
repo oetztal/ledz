@@ -2,6 +2,7 @@
 #define LEDZ_WS2812_H
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 #ifdef ARDUINO
 #include "Adafruit_NeoPixel.h"
@@ -16,7 +17,7 @@ namespace Strip {
     class Base : public Strip {
 #ifdef ARDUINO
         std::unique_ptr<Adafruit_NeoPixel> strip;
-        std::unique_ptr<Color[]> colors;
+        std::vector<Color> colors;
         Config::GammaMode gammaMode;
         Brightness brightness;
 

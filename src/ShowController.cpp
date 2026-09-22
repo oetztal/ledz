@@ -42,7 +42,7 @@ void ShowController::begin() {
     ESP_LOGI(TAG, "preparing show");
 #endif
     // Create initial show
-    if (const char *initialShowName = showConfig.current_show;
+    if (const char *initialShowName = showConfig.current_show.data();
         initialShowName[0] != '\0' && factory.hasShow(initialShowName)) {
         currentShowName = initialShowName;
     } else {
@@ -50,7 +50,7 @@ void ShowController::begin() {
     }
 
     // Load parameters if available
-    const char *params = (showConfig.params_json[0] != '\0') ? showConfig.params_json : "{}";
+    const char *params = (showConfig.params_json[0] != '\0') ? showConfig.params_json.data() : "{}";
 #ifdef ARDUINO
     ESP_LOGI(TAG, "Creating initial show %s with params %s", currentShowName.c_str(), params);
 #endif
@@ -139,10 +139,10 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
 
                 // Save to configuration
                 Config::ShowConfig showConfig = config.loadShowConfig();
-                strncpy(showConfig.current_show, currentShowName.c_str(), sizeof(showConfig.current_show) - 1);
-                showConfig.current_show[sizeof(showConfig.current_show) - 1] = '\0';
-                strncpy(showConfig.params_json, cmd.params_json, sizeof(showConfig.params_json) - 1);
-                showConfig.params_json[sizeof(showConfig.params_json) - 1] = '\0';
+                strncpy(showConfig.current_show.data(), currentShowName.c_str(), showConfig.current_show.size() - 1);
+                showConfig.current_show[showConfig.current_show.size() - 1] = '\0';
+                strncpy(showConfig.params_json.data(), cmd.params_json, showConfig.params_json.size() - 1);
+                showConfig.params_json[showConfig.params_json.size() - 1] = '\0';
                 config.saveShowConfig(showConfig);
             } else {
 #ifdef ARDUINO
@@ -185,7 +185,7 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
 
                 // Restart current show to pick up new layout dimensions
                 Config::ShowConfig showConfig = config.loadShowConfig();
-                std::unique_ptr<Show::Show> newShow = factory.createShow(currentShowName, showConfig.params_json);
+                std::unique_ptr<Show::Show> newShow = factory.createShow(currentShowName, showConfig.params_json.data());
                 if (newShow != nullptr) {
                     currentShow = std::move(newShow);
                     ESP_LOGI(TAG, "Restarted show '%s' with updated layout", currentShowName.c_str());
@@ -231,8 +231,10 @@ void ShowController::applyCommand(const ShowCommand &cmd) {
 
                 // Save show config
                 Config::ShowConfig showConfig = config.loadShowConfig();
-                strncpy(showConfig.current_show, currentShowName.c_str(), sizeof(showConfig.current_show) - 1);
-                strncpy(showConfig.params_json, cmd.params_json, sizeof(showConfig.params_json) - 1);
+                strncpy(showConfig.current_show.data(), currentShowName.c_str(), showConfig.current_show.size() - 1);
+                showConfig.current_show[showConfig.current_show.size() - 1] = '\0';
+                strncpy(showConfig.params_json.data(), cmd.params_json, showConfig.params_json.size() - 1);
+                showConfig.params_json[showConfig.params_json.size() - 1] = '\0';
                 config.saveShowConfig(showConfig);
             } else {
                 ESP_LOGE(TAG, "Failed to create preset show: %s", cmd.show_name);
@@ -295,15 +297,15 @@ bool ShowController::queuePresetLoad(const Config::Preset &preset) {
     cmd.type = ShowCommandType::LOAD_PRESET;
 
     // ShowCommand uses pointers; Preset stores C strings.
-    cmd.show_name = strdup(preset.show_name);
-    cmd.params_json = strdup(preset.params_json);
+    cmd.show_name = strdup(preset.show_name.data());
+    cmd.params_json = strdup(preset.params_json.data());
 
     cmd.layout_reverse = preset.layout_reverse;
     cmd.layout_mirror = preset.layout_mirror;
     cmd.layout_dead_leds = preset.layout_dead_leds;
 
     if (xQueueSend(commandQueue, &cmd, 0) == pdTRUE) {
-        ESP_LOGI(TAG, "Queued preset load '%s'", preset.name);
+        ESP_LOGI(TAG, "Queued preset load '%s'", preset.name.data());
         return true;
     }
 

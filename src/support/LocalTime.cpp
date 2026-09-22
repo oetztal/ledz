@@ -88,7 +88,7 @@ namespace LocalTime {
         info.is_dst = local.tm_isdst > 0;
 
         // %Z resolves to the designator tzset() parsed out of the TZ string.
-        if (strftime(info.abbrev, sizeof(info.abbrev), "%Z", &local) == 0) {
+        if (strftime(info.abbrev.data(), info.abbrev.size(), "%Z", &local) == 0) {
             info.abbrev[0] = '\0';
         }
 

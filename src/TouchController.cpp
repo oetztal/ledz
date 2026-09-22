@@ -18,7 +18,7 @@ static const char* const TAG = "touch";
 // Keep this in lockstep with Solid.variants[] in scripts/show_variants.json —
 // the touch controller, the gallery, and ShowFactory all read from the same
 // canonical JSON entry.
-static const char* const SOLID_VARIANTS[] = {
+static const std::array<const char*, 13> SOLID_VARIANTS = {
     ShowVariants::kSolidVariants[0].params_json,
     ShowVariants::kSolidVariants[1].params_json,
     ShowVariants::kSolidVariants[2].params_json,
@@ -38,57 +38,55 @@ static const char* const SOLID_VARIANTS[] = {
 // scripts/show_variants.json (the gallery) because they are curated for the
 // one-button-press cycling experience on hardware, not for the gallery
 // preview. Renamed TOUCH_ONLY_* to make the boundary explicit.
-const char* const TOUCH_ONLY_COLORRANGES_VARIANTS[] = {
+static const std::array<const char*, 3> TOUCH_ONLY_COLORRANGES_VARIANTS = {
     "{\"colors\":[[0,0,255],[255,255,0]]}",
     "{\"colors\":[[255,0,0],[255,255,255],[0,255,0]]}",
     R"({"colors":[[170,21,27],[241,191,0],[170,21,27]],"ranges":[25,75]})"
 };
-const char* const TOUCH_ONLY_TWOCOLORBLEND_VARIANTS[] = {
+static const std::array<const char*, 3> TOUCH_ONLY_TWOCOLORBLEND_VARIANTS = {
     R"({"colors":[[0,0,255],[255,0,0]],"gradient":true})",
     R"({"colors":[[0,255,0],[255,0,0]],"gradient":true})",
     R"({"colors":[[0,255,0],[0,0,255]],"gradient":true})",
 };
-const char* const TOUCH_ONLY_COLORRUN_VARIANTS[] = {"{}"};
-const char* const TOUCH_ONLY_JUMP_VARIANTS[] = {"{}"};
-const char* const TOUCH_ONLY_RAINBOW_VARIANTS[] = {
+static const std::array<const char*, 1> TOUCH_ONLY_COLORRUN_VARIANTS = {"{}"};
+static const std::array<const char*, 1> TOUCH_ONLY_JUMP_VARIANTS = {"{}"};
+static const std::array<const char*, 3> TOUCH_ONLY_RAINBOW_VARIANTS = {
     "{}",
     R"({"time_step":0.3,"pixel_step":1.0})",
     R"({"time_step":0.05,"pixel_step":0})"
 };
-const char* const TOUCH_ONLY_WAVE_VARIANTS[] = {"{}"};
-const char* const TOUCH_ONLY_FIRE_VARIANTS[] = {
+static const std::array<const char*, 1> TOUCH_ONLY_WAVE_VARIANTS = {"{}"};
+static const std::array<const char*, 2> TOUCH_ONLY_FIRE_VARIANTS = {
     R"({})",
     R"({"cooling":0.05})"
 };
-const char* const TOUCH_ONLY_STARLIGHT_VARIANTS[] = {
+static const std::array<const char*, 2> TOUCH_ONLY_STARLIGHT_VARIANTS = {
     R"({"probability":0.1,"length":0,"fade":250})",
     R"({"probability":0.02,"length":5000,"fade":1000})"
 };
-const char* const TOUCH_ONLY_THEATERCHASE_VARIANTS[] = {
+static const std::array<const char*, 3> TOUCH_ONLY_THEATERCHASE_VARIANTS = {
     "{\"num_steps_per_cycle\":21}",
     "{\"num_steps_per_cycle\":42}",
     "{\"num_steps_per_cycle\":84}"
 };
-const char* const TOUCH_ONLY_MORSECODE_VARIANTS[] = {
+static const std::array<const char*, 2> TOUCH_ONLY_MORSECODE_VARIANTS = {
     R"({"message":"foo bar baz"})",
     R"({"message":"gutes neues"})"
 };
 
-const TouchController::ShowVariantGroup TouchController::SHOW_VARIANTS[] = {
-    {"Solid", SOLID_VARIANTS, sizeof(SOLID_VARIANTS) / sizeof(SOLID_VARIANTS[0])},
-    {"Solid", TOUCH_ONLY_COLORRANGES_VARIANTS, 3},
-    {"Solid", TOUCH_ONLY_TWOCOLORBLEND_VARIANTS, 3},
-    {"ColorRun", TOUCH_ONLY_COLORRUN_VARIANTS, 1},
-    {"Jump", TOUCH_ONLY_JUMP_VARIANTS, 1},
-    {"Rainbow", TOUCH_ONLY_RAINBOW_VARIANTS, 3},
-    {"Wave", TOUCH_ONLY_WAVE_VARIANTS, 1},
-    {"Fire", TOUCH_ONLY_FIRE_VARIANTS, 2},
-    {"Starlight", TOUCH_ONLY_STARLIGHT_VARIANTS, 2},
-    {"TheaterChase", TOUCH_ONLY_THEATERCHASE_VARIANTS, 3},
-    {"MorseCode", TOUCH_ONLY_MORSECODE_VARIANTS, 2}
-};
-
-const size_t TouchController::NUM_SHOW_VARIANTS = sizeof(TouchController::SHOW_VARIANTS) / sizeof(TouchController::SHOW_VARIANTS[0]);
+const std::array<TouchController::ShowVariantGroup, TouchController::NUM_SHOW_VARIANTS> TouchController::SHOW_VARIANTS = {{
+    {"Solid", SOLID_VARIANTS.data(), SOLID_VARIANTS.size()},
+    {"Solid", TOUCH_ONLY_COLORRANGES_VARIANTS.data(), TOUCH_ONLY_COLORRANGES_VARIANTS.size()},
+    {"Solid", TOUCH_ONLY_TWOCOLORBLEND_VARIANTS.data(), TOUCH_ONLY_TWOCOLORBLEND_VARIANTS.size()},
+    {"ColorRun", TOUCH_ONLY_COLORRUN_VARIANTS.data(), TOUCH_ONLY_COLORRUN_VARIANTS.size()},
+    {"Jump", TOUCH_ONLY_JUMP_VARIANTS.data(), TOUCH_ONLY_JUMP_VARIANTS.size()},
+    {"Rainbow", TOUCH_ONLY_RAINBOW_VARIANTS.data(), TOUCH_ONLY_RAINBOW_VARIANTS.size()},
+    {"Wave", TOUCH_ONLY_WAVE_VARIANTS.data(), TOUCH_ONLY_WAVE_VARIANTS.size()},
+    {"Fire", TOUCH_ONLY_FIRE_VARIANTS.data(), TOUCH_ONLY_FIRE_VARIANTS.size()},
+    {"Starlight", TOUCH_ONLY_STARLIGHT_VARIANTS.data(), TOUCH_ONLY_STARLIGHT_VARIANTS.size()},
+    {"TheaterChase", TOUCH_ONLY_THEATERCHASE_VARIANTS.data(), TOUCH_ONLY_THEATERCHASE_VARIANTS.size()},
+    {"MorseCode", TOUCH_ONLY_MORSECODE_VARIANTS.data(), TOUCH_ONLY_MORSECODE_VARIANTS.size()}
+}};
 
 TouchController::TouchController(Config::ConfigManager &config, ShowController &showController)
     : config(config), showController(showController), currentShowIdx(0), currentVariantIdx(0) {

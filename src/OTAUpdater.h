@@ -120,9 +120,6 @@ public:
 
     // ---- Worker-task entry points (exposed for xTaskCreatePinnedToCore) ----
 
-    struct CheckJob { char owner[64]; char repo[64]; };
-    struct UpdateJob { String url; size_t expected_size; bool force; };
-
     static void otaCheckTaskEntry(void *arg);
     static void otaWorkerTaskEntry(void *arg);
 

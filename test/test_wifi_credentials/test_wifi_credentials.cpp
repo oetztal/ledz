@@ -9,10 +9,10 @@ using Support::mergeWiFiCredentials;
 namespace {
     Config::WiFiConfig storedConfig(const char *ssid, const char *password) {
         Config::WiFiConfig config;
-        strncpy(config.ssid, ssid, sizeof(config.ssid) - 1);
-        config.ssid[sizeof(config.ssid) - 1] = '\0';
-        strncpy(config.password, password, sizeof(config.password) - 1);
-        config.password[sizeof(config.password) - 1] = '\0';
+        strncpy(config.ssid.data(), ssid, config.ssid.size() - 1);
+        config.ssid[config.ssid.size() - 1] = '\0';
+        strncpy(config.password.data(), password, config.password.size() - 1);
+        config.password[config.password.size() - 1] = '\0';
         config.configured = true;
         return config;
     }
@@ -29,8 +29,8 @@ void test_absent_password_is_preserved() {
 
     const Config::WiFiConfig merged = mergeWiFiCredentials(existing, update);
 
-    TEST_ASSERT_EQUAL_STRING("GuestNet", merged.ssid);
-    TEST_ASSERT_EQUAL_STRING("secret", merged.password);
+    TEST_ASSERT_EQUAL_STRING("GuestNet", merged.ssid.data());
+    TEST_ASSERT_EQUAL_STRING("secret", merged.password.data());
 }
 
 void test_empty_password_clears() {
@@ -42,8 +42,8 @@ void test_empty_password_clears() {
 
     const Config::WiFiConfig merged = mergeWiFiCredentials(existing, update);
 
-    TEST_ASSERT_EQUAL_STRING("CafeWiFi", merged.ssid);
-    TEST_ASSERT_EQUAL_STRING("", merged.password);
+    TEST_ASSERT_EQUAL_STRING("CafeWiFi", merged.ssid.data());
+    TEST_ASSERT_EQUAL_STRING("", merged.password.data());
 }
 
 void test_non_empty_password_replaces() {
@@ -55,8 +55,8 @@ void test_non_empty_password_replaces() {
 
     const Config::WiFiConfig merged = mergeWiFiCredentials(existing, update);
 
-    TEST_ASSERT_EQUAL_STRING("HomeNet", merged.ssid);
-    TEST_ASSERT_EQUAL_STRING("newsecret", merged.password);
+    TEST_ASSERT_EQUAL_STRING("HomeNet", merged.ssid.data());
+    TEST_ASSERT_EQUAL_STRING("newsecret", merged.password.data());
 }
 
 void test_ssid_replaced_password_untouched_when_only_ssid_changes() {
@@ -67,8 +67,8 @@ void test_ssid_replaced_password_untouched_when_only_ssid_changes() {
 
     const Config::WiFiConfig merged = mergeWiFiCredentials(existing, update);
 
-    TEST_ASSERT_EQUAL_STRING("HomeNet-5G", merged.ssid);
-    TEST_ASSERT_EQUAL_STRING("secret", merged.password);
+    TEST_ASSERT_EQUAL_STRING("HomeNet-5G", merged.ssid.data());
+    TEST_ASSERT_EQUAL_STRING("secret", merged.password.data());
 }
 
 void test_configured_flag_is_set() {
@@ -116,10 +116,10 @@ void test_oversized_inputs_are_truncated_and_terminated() {
 
     const Config::WiFiConfig merged = mergeWiFiCredentials(existing, update);
 
-    TEST_ASSERT_EQUAL_size_t(sizeof(merged.ssid) - 1, strlen(merged.ssid));
-    TEST_ASSERT_EQUAL_size_t(sizeof(merged.password) - 1, strlen(merged.password));
-    TEST_ASSERT_EQUAL_CHAR('\0', merged.ssid[sizeof(merged.ssid) - 1]);
-    TEST_ASSERT_EQUAL_CHAR('\0', merged.password[sizeof(merged.password) - 1]);
+    TEST_ASSERT_EQUAL_size_t(merged.ssid.size() - 1, strlen(merged.ssid.data()));
+    TEST_ASSERT_EQUAL_size_t(merged.password.size() - 1, strlen(merged.password.data()));
+    TEST_ASSERT_EQUAL_CHAR('\0', merged.ssid[merged.ssid.size() - 1]);
+    TEST_ASSERT_EQUAL_CHAR('\0', merged.password[merged.password.size() - 1]);
 }
 
 // Defensive: the handler rejects a missing SSID with 400 before calling the
@@ -131,8 +131,8 @@ void test_null_ssid_preserves_stored_ssid() {
 
     const Config::WiFiConfig merged = mergeWiFiCredentials(existing, update);
 
-    TEST_ASSERT_EQUAL_STRING("HomeNet", merged.ssid);
-    TEST_ASSERT_EQUAL_STRING("secret", merged.password);
+    TEST_ASSERT_EQUAL_STRING("HomeNet", merged.ssid.data());
+    TEST_ASSERT_EQUAL_STRING("secret", merged.password.data());
 }
 
 int main(int, char **) {

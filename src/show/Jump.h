@@ -1,5 +1,6 @@
 #ifndef LEDZ_JUMP_H
 #define LEDZ_JUMP_H
+#include <array>
 #include <queue>
 #include <vector>
 
@@ -30,7 +31,7 @@ namespace Show {
         };
 
     private:
-        Ball balls[5] = {
+        std::array<Ball, 5> balls = {
             Ball(1.0, 0xff0000),
             Ball(0.5, 0x00ff00),
             Ball(0.75, 0xffff00),
