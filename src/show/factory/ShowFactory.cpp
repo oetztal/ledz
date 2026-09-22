@@ -16,7 +16,7 @@
 #include "ColorRangesFactory.h"
 
 
-static const char* TAG = "show";
+static const char* const TAG = "show";
 
 namespace Show::Factory {
 

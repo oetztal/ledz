@@ -6,7 +6,7 @@
 #include <esp_system.h>
 #endif
 
-static const char* TAG = "cfg";
+static const char* const TAG = "cfg";
 
 namespace Config {
     ConfigManager::ConfigManager() {

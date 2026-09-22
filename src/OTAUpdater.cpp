@@ -52,11 +52,19 @@ extern "C" esp_err_t esp_crt_bundle_attach(void *conf);
 
 // File-scope state so both the anonymous-namespace helpers and the
 // OTAUpdater::* member functions (defined further down) can see it.
-static std::atomic<bool> updateInProgress{false};
-static CheckState checkState = CheckState::Idle;
-static FirmwareInfo checkResult{};
-static Progress progress{};
-static Config::ConfigManager *s_config = nullptr;
+struct OtaState {
+    std::atomic<bool> updateInProgress{false};
+    CheckState checkState = CheckState::Idle;
+    FirmwareInfo checkResult{};
+    Progress progress{};
+    Config::ConfigManager *config = nullptr;
+};
+
+// Function-local static so the shared OTA state is not a global variable.
+OtaState &otaState() {
+    static OtaState state;
+    return state;
+}
 
 static SemaphoreHandle_t checkResultMutex() {
     static SemaphoreHandle_t m = xSemaphoreCreateMutex();
@@ -214,11 +222,11 @@ struct InProgressGuard {
     bool armed;
     InProgressGuard() : armed(false) {
         bool expected = false;
-        if (updateInProgress.compare_exchange_strong(expected, true)) {
+        if (otaState().updateInProgress.compare_exchange_strong(expected, true)) {
             armed = true;
         }
     }
-    ~InProgressGuard() { if (armed) updateInProgress.store(false); }
+    ~InProgressGuard() { if (armed) otaState().updateInProgress.store(false); }
     bool ok() const { return armed; }
 };
 
@@ -665,8 +673,8 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
     {
         SemaphoreHandle_t m = checkResultMutex();
         if (xSemaphoreTake(m, portMAX_DELAY)) {
-            checkState = CheckState::InProgress;
-            checkResult = FirmwareInfo{};
+            otaState().checkState = CheckState::InProgress;
+            otaState().checkResult = FirmwareInfo{};
             xSemaphoreGive(m);
         }
     }
@@ -683,7 +691,7 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
                 (int)wifi, (int)WiFi.getMode(), ESP.getFreeHeap());
         SemaphoreHandle_t m = checkResultMutex();
         if (xSemaphoreTake(m, portMAX_DELAY)) {
-            checkState = CheckState::Failed;
+            otaState().checkState = CheckState::Failed;
             xSemaphoreGive(m);
         }
         return false;
@@ -723,7 +731,7 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
                     (long)sys_time);
             SemaphoreHandle_t m = checkResultMutex();
             if (xSemaphoreTake(m, portMAX_DELAY)) {
-                checkState = CheckState::Failed;
+                otaState().checkState = CheckState::Failed;
                 xSemaphoreGive(m);
             }
             return false;
@@ -756,7 +764,7 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
     if (!client) {
         SemaphoreHandle_t m = checkResultMutex();
         if (xSemaphoreTake(m, portMAX_DELAY)) {
-            checkState = CheckState::Failed;
+            otaState().checkState = CheckState::Failed;
             xSemaphoreGive(m);
         }
         ESP_LOGE(TAG, "HTTP init failed");
@@ -778,7 +786,7 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
         client.drain();
         SemaphoreHandle_t m = checkResultMutex();
         if (xSemaphoreTake(m, portMAX_DELAY)) {
-            checkState = CheckState::Failed;
+            otaState().checkState = CheckState::Failed;
             xSemaphoreGive(m);
         }
 #ifdef ARDUINO
@@ -799,7 +807,7 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
             ESP_LOGW(TAG, "JSON parse error: %s (heap=%u)", err.c_str(), ESP.getFreeHeap());
             SemaphoreHandle_t m = checkResultMutex();
             if (xSemaphoreTake(m, portMAX_DELAY)) {
-                checkState = CheckState::Failed;
+                otaState().checkState = CheckState::Failed;
                 xSemaphoreGive(m);
             }
             return false;
@@ -837,7 +845,7 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
                 out.version.c_str(), out.downloadUrl.c_str(), out.size);
         SemaphoreHandle_t m = checkResultMutex();
         if (xSemaphoreTake(m, portMAX_DELAY)) {
-            checkState = CheckState::Failed;
+            otaState().checkState = CheckState::Failed;
             xSemaphoreGive(m);
         }
         return false;
@@ -847,8 +855,8 @@ bool doCheckForUpdate(const char *owner, const char *repo, FirmwareInfo &out) {
 
     SemaphoreHandle_t m = checkResultMutex();
     if (xSemaphoreTake(m, portMAX_DELAY)) {
-        checkResult = out;
-        checkState = CheckState::Done;
+        otaState().checkResult = out;
+        otaState().checkState = CheckState::Done;
         xSemaphoreGive(m);
     }
 
@@ -1030,10 +1038,10 @@ void otaWorkerTask(void *arg) {
     {
         SemaphoreHandle_t m = progressMutex();
         if (xSemaphoreTake(m, portMAX_DELAY)) {
-            progress = Progress{};
-            progress.state = UpdateState::Downloading;
-            progress.expected_bytes = expected;
-            progress.started_at_ms = millis();
+            otaState().progress = Progress{};
+            otaState().progress.state = UpdateState::Downloading;
+            otaState().progress.expected_bytes = expected;
+            otaState().progress.started_at_ms = millis();
             xSemaphoreGive(m);
         }
     }
@@ -1047,17 +1055,17 @@ void otaWorkerTask(void *arg) {
     if (ok) {
         SemaphoreHandle_t m = progressMutex();
         if (xSemaphoreTake(m, portMAX_DELAY)) {
-            progress.state = UpdateState::Pending;
-            progress.percent = 100;
+            otaState().progress.state = UpdateState::Pending;
+            otaState().progress.percent = 100;
             xSemaphoreGive(m);
         }
         ESP_LOGI(TAG, "OTA update successful - scheduling restart in 2000ms");
-        if (s_config) s_config->requestRestart(2000);
+        if (otaState().config) otaState().config->requestRestart(2000);
     } else {
         SemaphoreHandle_t m = progressMutex();
         if (xSemaphoreTake(m, portMAX_DELAY)) {
-            progress.state = UpdateState::Failed;
-            progress.error_message = "flash failed";
+            otaState().progress.state = UpdateState::Failed;
+            otaState().progress.error_message = "flash failed";
             xSemaphoreGive(m);
         }
         ESP_LOGE(TAG, "OTA update failed");
@@ -1069,7 +1077,7 @@ void otaWorkerTask(void *arg) {
         vTaskResume(showHandle);
     }
 
-    updateInProgress.store(false);
+    otaState().updateInProgress.store(false);
 
     UBaseType_t hwm = uxTaskGetStackHighWaterMark(nullptr);
     ESP_LOGI(TAG, "ota_update stack headroom left: %u bytes of %u", hwm, OTA_UPDATE_TASK_STACK);
@@ -1084,14 +1092,14 @@ void otaWorkerTask(void *arg) {
 
 bool OTAUpdater::startBackgroundCheck(const char *owner, const char *repo) {
     bool expected = false;
-    if (updateInProgress.load()) {
+    if (otaState().updateInProgress.load()) {
         ESP_LOGW(TAG, "startBackgroundCheck refused: updateInProgress already true");
         return false;
     }
     {
         SemaphoreHandle_t m = checkResultMutex();
         if (xSemaphoreTake(m, portMAX_DELAY)) {
-            if (checkState == CheckState::InProgress) {
+            if (otaState().checkState == CheckState::InProgress) {
                 xSemaphoreGive(m);
                 ESP_LOGW(TAG, "startBackgroundCheck refused: check already in progress");
                 return false;
@@ -1117,7 +1125,7 @@ bool OTAUpdater::startBackgroundCheck(const char *owner, const char *repo) {
 
 bool OTAUpdater::startBackgroundUpdateFromLatestCheck(bool force) {
     bool expected = false;
-    if (!updateInProgress.compare_exchange_strong(expected, true)) {
+    if (!otaState().updateInProgress.compare_exchange_strong(expected, true)) {
         ESP_LOGW(TAG, "startBackgroundUpdate refused: updateInProgress already true");
         return false;
     }
@@ -1126,27 +1134,27 @@ bool OTAUpdater::startBackgroundUpdateFromLatestCheck(bool force) {
     {
         SemaphoreHandle_t m = checkResultMutex();
         if (xSemaphoreTake(m, portMAX_DELAY)) {
-            if (checkState != CheckState::Done) {
+            if (otaState().checkState != CheckState::Done) {
                 xSemaphoreGive(m);
-                updateInProgress.store(false);
+                otaState().updateInProgress.store(false);
                 ESP_LOGW(TAG, "startBackgroundUpdate refused: no successful check");
                 return false;
             }
-            info = checkResult;
+            info = otaState().checkResult;
             xSemaphoreGive(m);
         } else {
-            updateInProgress.store(false);
+            otaState().updateInProgress.store(false);
             return false;
         }
     }
 
     if (!info.isValid || info.size == 0 || info.downloadUrl.isEmpty()) {
-        updateInProgress.store(false);
+        otaState().updateInProgress.store(false);
         ESP_LOGW(TAG, "startBackgroundUpdate refused: info incomplete");
         return false;
     }
     if (!info.downloadUrl.startsWith("https://github.com/")) {
-        updateInProgress.store(false);
+        otaState().updateInProgress.store(false);
         ESP_LOGW(TAG, "startBackgroundUpdate refused: url not from github.com (%s)", info.downloadUrl.c_str());
         return false;
     }
@@ -1155,7 +1163,7 @@ bool OTAUpdater::startBackgroundUpdateFromLatestCheck(bool force) {
         const std::string latest(info.version.c_str(), info.version.length());
         const std::string current(FIRMWARE_VERSION);
         if (!ota::isNewerVersion(latest, current)) {
-            updateInProgress.store(false);
+            otaState().updateInProgress.store(false);
             ESP_LOGW(TAG, "startBackgroundUpdate refused: %s is not newer than %s (force=false)",
                     info.version.c_str(), FIRMWARE_VERSION);
             return false;
@@ -1170,7 +1178,7 @@ bool OTAUpdater::startBackgroundUpdateFromLatestCheck(bool force) {
         otaWorkerTask, "ota_update", OTA_UPDATE_TASK_STACK, job, 1, nullptr, 1);
     if (rc != pdPASS) {
         delete job;
-        updateInProgress.store(false);
+        otaState().updateInProgress.store(false);
         ESP_LOGE(TAG, "xTaskCreate for ota_update failed");
         return false;
     }
@@ -1181,7 +1189,7 @@ CheckState OTAUpdater::getCheckState() {
     SemaphoreHandle_t m = checkResultMutex();
     CheckState s = CheckState::Idle;
     if (xSemaphoreTake(m, portMAX_DELAY)) {
-        s = checkState;
+        s = otaState().checkState;
         xSemaphoreGive(m);
     }
     return s;
@@ -1191,7 +1199,7 @@ FirmwareInfo OTAUpdater::getCheckResult() {
     SemaphoreHandle_t m = checkResultMutex();
     FirmwareInfo r;
     if (xSemaphoreTake(m, portMAX_DELAY)) {
-        r = checkResult;
+        r = otaState().checkResult;
         xSemaphoreGive(m);
     }
     return r;
@@ -1201,27 +1209,27 @@ Progress OTAUpdater::getProgress() {
     SemaphoreHandle_t m = progressMutex();
     Progress p;
     if (xSemaphoreTake(m, portMAX_DELAY)) {
-        p = progress;
+        p = otaState().progress;
         xSemaphoreGive(m);
     }
     return p;
 }
 
 bool OTAUpdater::isUpdateInProgress() {
-    return updateInProgress.load();
+    return otaState().updateInProgress.load();
 }
 
 void OTAUpdater::setConfig(Config::ConfigManager *cfg) {
-    s_config = cfg;
+    otaState().config = cfg;
 }
 
 void OTAUpdater::publishProgress(int percent, size_t bytes) {
     SemaphoreHandle_t m = progressMutex();
     if (xSemaphoreTake(m, portMAX_DELAY)) {
-        progress.percent = static_cast<uint8_t>(percent > 100 ? 100 : percent);
-        progress.bytes_written = bytes;
-        if (progress.state == UpdateState::Downloading && percent >= 100) {
-            progress.state = UpdateState::Flashing;
+        otaState().progress.percent = static_cast<uint8_t>(percent > 100 ? 100 : percent);
+        otaState().progress.bytes_written = bytes;
+        if (otaState().progress.state == UpdateState::Downloading && percent >= 100) {
+            otaState().progress.state = UpdateState::Flashing;
         }
         xSemaphoreGive(m);
     }

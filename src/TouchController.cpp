@@ -11,7 +11,7 @@
 #include <Arduino.h>
 #endif
 
-static const char* TAG = "touch";
+static const char* const TAG = "touch";
 
 
 // Solid variants come from scripts/show_variants.json via the generated header.
@@ -38,38 +38,38 @@ static const char* const SOLID_VARIANTS[] = {
 // scripts/show_variants.json (the gallery) because they are curated for the
 // one-button-press cycling experience on hardware, not for the gallery
 // preview. Renamed TOUCH_ONLY_* to make the boundary explicit.
-const char* TOUCH_ONLY_COLORRANGES_VARIANTS[] = {
+const char* const TOUCH_ONLY_COLORRANGES_VARIANTS[] = {
     "{\"colors\":[[0,0,255],[255,255,0]]}",
     "{\"colors\":[[255,0,0],[255,255,255],[0,255,0]]}",
     R"({"colors":[[170,21,27],[241,191,0],[170,21,27]],"ranges":[25,75]})"
 };
-const char* TOUCH_ONLY_TWOCOLORBLEND_VARIANTS[] = {
+const char* const TOUCH_ONLY_TWOCOLORBLEND_VARIANTS[] = {
     R"({"colors":[[0,0,255],[255,0,0]],"gradient":true})",
     R"({"colors":[[0,255,0],[255,0,0]],"gradient":true})",
     R"({"colors":[[0,255,0],[0,0,255]],"gradient":true})",
 };
-const char* TOUCH_ONLY_COLORRUN_VARIANTS[] = {"{}"};
-const char* TOUCH_ONLY_JUMP_VARIANTS[] = {"{}"};
-const char* TOUCH_ONLY_RAINBOW_VARIANTS[] = {
+const char* const TOUCH_ONLY_COLORRUN_VARIANTS[] = {"{}"};
+const char* const TOUCH_ONLY_JUMP_VARIANTS[] = {"{}"};
+const char* const TOUCH_ONLY_RAINBOW_VARIANTS[] = {
     "{}",
     R"({"time_step":0.3,"pixel_step":1.0})",
     R"({"time_step":0.05,"pixel_step":0})"
 };
-const char* TOUCH_ONLY_WAVE_VARIANTS[] = {"{}"};
-const char* TOUCH_ONLY_FIRE_VARIANTS[] = {
+const char* const TOUCH_ONLY_WAVE_VARIANTS[] = {"{}"};
+const char* const TOUCH_ONLY_FIRE_VARIANTS[] = {
     R"({})",
     R"({"cooling":0.05})"
 };
-const char* TOUCH_ONLY_STARLIGHT_VARIANTS[] = {
+const char* const TOUCH_ONLY_STARLIGHT_VARIANTS[] = {
     R"({"probability":0.1,"length":0,"fade":250})",
     R"({"probability":0.02,"length":5000,"fade":1000})"
 };
-const char* TOUCH_ONLY_THEATERCHASE_VARIANTS[] = {
+const char* const TOUCH_ONLY_THEATERCHASE_VARIANTS[] = {
     "{\"num_steps_per_cycle\":21}",
     "{\"num_steps_per_cycle\":42}",
     "{\"num_steps_per_cycle\":84}"
 };
-const char* TOUCH_ONLY_MORSECODE_VARIANTS[] = {
+const char* const TOUCH_ONLY_MORSECODE_VARIANTS[] = {
     R"({"message":"foo bar baz"})",
     R"({"message":"gutes neues"})"
 };

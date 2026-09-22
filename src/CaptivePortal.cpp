@@ -5,7 +5,7 @@
 #include <Arduino.h>
 #endif
 
-static const char* TAG = "net";
+static const char* const TAG = "net";
 
 CaptivePortal::CaptivePortal() {
 }

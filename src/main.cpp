@@ -10,18 +10,31 @@
 #include "task/LedShow.h"
 #include "OTAUpdater.h"
 
-static const char* TAG = "main";
+static const char* const TAG = "main";
 
+namespace {
 
-TaskHandle_t networkTaskHandle = nullptr;
+struct App {
+    Config::ConfigManager config;
+    Show::Factory::ShowFactory showFactory;
+    ShowController showController{showFactory, config};
+    Task::LedShow ledShow{showController};
+    Network network{config, showController};
+};
 
-Config::ConfigManager config;
-Show::Factory::ShowFactory showFactory;
-ShowController showController(showFactory, config);
-Task::LedShow ledShow(showController);
-Network network(config, showController);
+App& app() {
+    static App instance;
+    return instance;
+}
+
+} // namespace
 
 void setup() {
+    auto& config = app().config;
+    auto& showController = app().showController;
+    auto& ledShow = app().ledShow;
+    auto& network = app().network;
+
     delay(1000);
     Serial.println("");
     // config.reset();
@@ -75,7 +88,7 @@ void setup() {
 
 void loop() {
 #ifdef ARDUINO
-    config.checkRestart();
+    app().config.checkRestart();
     vTaskDelay(250 / portTICK_PERIOD_MS);
 #endif
 }

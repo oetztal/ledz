@@ -19,7 +19,7 @@
 #include <set>
 #endif
 
-static const char* TAG = "net";
+static const char* const TAG = "net";
 
 Network::Network(Config::ConfigManager &config, ShowController &showController)
     : config(config), showController(showController), mode(NetworkMode::NONE), webServer(nullptr)

@@ -6,7 +6,7 @@
 #include <Arduino.h>
 #endif
 
-static const char *TAG = "show";
+static const char *const TAG = "show";
 
 namespace Show {
     ColorRanges::ColorRanges(const std::vector<Strip::Color> &colors,

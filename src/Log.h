@@ -11,7 +11,7 @@
 //
 // Usage:
 //
-//   static const char* TAG = "net";
+//   static const char* const TAG = "net";
 //   ESP_LOGI(TAG, "Connected to %s", ssid);
 //
 

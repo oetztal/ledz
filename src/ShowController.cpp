@@ -11,7 +11,7 @@
 static constexpr size_t SHOW_COMMAND_QUEUE_SIZE = 5;
 #endif
 
-static const char* TAG = "ctrl";
+static const char* const TAG = "ctrl";
 
 ShowController::ShowController(Show::Factory::ShowFactory &factory, Config::ConfigManager &config)
     : factory(factory), config(config), brightness(128),

@@ -2,7 +2,7 @@
 #include "../Log.h"
 #include "../support/Gamma.h"
 
-static const char* TAG = "strip";
+static const char* const TAG = "strip";
 
 namespace Strip {
     Base::Base(Pin pin, unsigned short length) {

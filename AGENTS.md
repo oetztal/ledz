@@ -76,7 +76,7 @@ To add show params to the UI: add the HTML params section, a case in `updatePara
 
 ### Logging
 
-Use `ESP_LOGx(TAG, fmt, ...)` from `src/Log.h`; never `Serial.printf` outside `src/Log.cpp`. Each logging `.cpp` declares `static const char* TAG = "<shorttag>";` (1–6 lowercase chars: `main`, `net`, `http`, `cfg`, `ctrl`, `show`, `timer`, `touch`, `led`, `strip`, `ota`). Levels: `E` broken, `W` recovering, `I` lifecycle/state changes, `D` per-iteration detail, `V` unused. Log show creation, network/AP transitions, config changes, OTA transitions, factory reset.
+Use `ESP_LOGx(TAG, fmt, ...)` from `src/Log.h`; never `Serial.printf` outside `src/Log.cpp`. Each logging `.cpp` declares `static const char* const TAG = "<shorttag>";` (1–6 lowercase chars: `main`, `net`, `http`, `cfg`, `ctrl`, `show`, `timer`, `touch`, `led`, `strip`, `ota`). Levels: `E` broken, `W` recovering, `I` lifecycle/state changes, `D` per-iteration detail, `V` unused. Log show creation, network/AP transitions, config changes, OTA transitions, factory reset.
 
 ### Platform guards
 

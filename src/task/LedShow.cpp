@@ -3,7 +3,7 @@
 
 #include "Timer.h"
 
-static const char* TAG = "led";
+static const char* const TAG = "led";
 
 namespace Task {
     void LedShow::startTask() {

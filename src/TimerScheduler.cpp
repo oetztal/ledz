@@ -10,7 +10,7 @@
 #include <Arduino.h>
 #endif
 
-static const char* TAG = "timer";
+static const char* const TAG = "timer";
 
 TimerScheduler::TimerScheduler(Config::ConfigManager &config, ShowController &showController)
     : config(config), showController(showController) {

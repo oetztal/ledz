@@ -10,7 +10,7 @@
 
 #include "../support/Color.h"
 
-static const char* TAG = "show";
+static const char* const TAG = "show";
 
 namespace Show {
     std::tuple<float, float> Mandelbrot::func(float zre, float zim, float cre, float cim) {
