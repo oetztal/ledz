@@ -84,16 +84,17 @@ def build_js_payload(shows):
 
     * ``SHOW_VARIANTS_BY_SHOW``: keys are show names; values are objects whose
       keys are the synthetic ``"default"`` plus every variant name, and whose
-      values are the corresponding ``params`` objects (after
-      ``normalize_for_arduinojson``).
+      values are ``{ "label": <label>, "params": <params> }`` objects — the
+      manifest label (``"Default"`` for the synthetic default entry) alongside
+      the corresponding ``params`` object (after ``normalize_for_arduinojson``).
     * ``FLAG_PRESETS``: keys are the three flag names; values are the
-      corresponding ``Solid.variants[]`` entries' ``params`` objects.
+      corresponding ``Solid.variants[]`` entries' plain ``params`` objects.
     """
     by_show = {}
     for show in shows:
-        entries = {"default": json.loads(show["default_json"])}
+        entries = {"default": {"label": "Default", "params": json.loads(show["default_json"])}}
         for v in show["variants"]:
-            entries[v["name"]] = json.loads(v["params_json"])
+            entries[v["name"]] = {"label": v["label"], "params": json.loads(v["params_json"])}
         by_show[show["name"]] = entries
 
     flag_presets = {}

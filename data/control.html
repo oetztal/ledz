@@ -75,21 +75,7 @@
                 <div class="show-description" id="showDescription"></div>
 
                 <!-- Parameter controls (shown based on selected show) -->
-                <div id="mandelbrotParams" class="params-section">
-                    <div class="param-row">
-                        <label class="param-label" for="mandelbrotPreset">Preset</label>
-                        <select id="mandelbrotPreset" onchange="loadMandelbrotPreset(this.value)">
-                            <option value="">-- select a preset --</option>
-                            <option value="default">&#128312; Default (factory)</option>
-                            <option value="deep-zoom">&#128269; Deep Zoom (cardioid cusp)</option>
-                            <option value="wide-overview">&#127760; Wide overview</option>
-                            <option value="mid-zoom">&#128269; Mid Zoom (period-2 bulb)</option>
-                            <option value="mid-zoom-2">&#128269; Mid Zoom (above period-2 bulb)</option>
-                            <option value="intermediate-zoom">&#128269; Intermediate Zoom (period-2 bulb)</option>
-                            <option value="spiral">&#128396; Spiral (period-2 bulb)</option>
-                        </select>
-                        <small style="display:block; margin-top:4px; color:#666;">Picked to keep the dark Mandelbrot-set interior small. Click "Apply Parameters" to use.</small>
-                    </div>
+                <div id="mandelbrotParams" class="params-section" data-variants-for="Mandelbrot">
                     <div class="param-row">
                         <label class="param-label" for="mandelbrotCre0">Cre0 (Real min)</label>
                         <input type="number" id="mandelbrotCre0" step="0.01" value="-1.05">
@@ -117,7 +103,7 @@
                     <button class="apply-button" onclick="applyMandelbrotParams()">Apply Parameters</button>
                 </div>
 
-                <div id="rainbowParams" class="params-section">
+                <div id="rainbowParams" class="params-section" data-variants-for="Rainbow">
                     <div class="param-row">
                         <label class="param-label" for="rainbowTimeStep">Time Step</label>
                         <input type="range" id="rainbowTimeStep" min="0" max="2" step="0.01" value="1.0" oninput="document.getElementById('rainbowTimeStepValue').textContent = this.value;">
@@ -133,7 +119,7 @@
                     <button class="apply-button" onclick="applyRainbowParams()">Apply Parameters</button>
                 </div>
 
-                <div id="chaosParams" class="params-section">
+                <div id="chaosParams" class="params-section" data-variants-for="Chaos">
                     <div class="param-row">
                         <label class="param-label" for="chaosRmin">Rmin (Start)</label>
                         <input type="number" id="chaosRmin" step="0.01" value="2.95">
@@ -191,7 +177,7 @@
                     <button class="apply-button" onclick="applyColorRangesParams()">Apply Pattern</button>
                 </div>
 
-                <div id="fireParams" class="params-section">
+                <div id="fireParams" class="params-section" data-variants-for="Fire">
                     <div class="param-row">
                         <label class="param-label" for="cooling">Cooling</label>
                         <input type="number" id="cooling" step="0.1" min="0.0" max="1.0" value="0.1">
@@ -215,7 +201,7 @@
                     <button class="apply-button" onclick="applyFireParams()">Apply Parameters</button>
                 </div>
 
-                <div id="starlightParams" class="params-section">
+                <div id="starlightParams" class="params-section" data-variants-for="Starlight">
                     <div class="param-row">
                         <label class="param-label" for="starlightProbability">Spawn Probability (0.0-1.0)</label>
                         <input type="number" id="starlightProbability" step="0.01" min="0" max="1" value="0.01">
@@ -239,17 +225,7 @@
                     <button class="apply-button" onclick="applyStarlightParams()">Apply Parameters</button>
                 </div>
 
-                <div id="waveParams" class="params-section">
-                    <div class="param-row">
-                        <label class="param-label" for="wavePreset">Preset</label>
-                        <select id="wavePreset" onchange="loadWavePreset(this.value)">
-                            <option value="" selected>-- select a preset --</option>
-                            <option value="default">Default bounce (no change)</option>
-                            <option value="tight">⚡ Tight fast</option>
-                            <option value="calm">🌊 Calm broad</option>
-                        </select>
-                        <small style="display:block; margin-top:4px; color:#666;">Sets decay rate and bounce frequency. Click "Apply Parameters" to use.</small>
-                    </div>
+                <div id="waveParams" class="params-section" data-variants-for="Wave">
                     <div class="param-row">
                         <label class="param-label" for="waveMode">Mode</label>
                         <select id="waveMode">
@@ -271,7 +247,7 @@
                     <button class="apply-button" onclick="applyWaveParams()">Apply Parameters</button>
                 </div>
 
-                <div id="morseCodeParams" class="params-section">
+                <div id="morseCodeParams" class="params-section" data-variants-for="MorseCode">
                     <div class="param-row">
                         <label class="param-label" for="morseMessage">Message</label>
                         <input type="text" id="morseMessage" value="HELLO WORLD" style="width:100%; padding:8px;">
@@ -310,7 +286,7 @@
                     <button class="apply-button" onclick="applyMorseCodeParams()">Apply Parameters</button>
                 </div>
 
-                <div id="theaterChaseParams" class="params-section">
+                <div id="theaterChaseParams" class="params-section" data-variants-for="TheaterChase">
                     <div class="param-row">
                         <label class="param-label" for="theaterStepsPerCycle">Steps per Color Cycle</label>
                         <input type="number" id="theaterStepsPerCycle" step="7" min="7" max="140" value="21">
@@ -319,7 +295,7 @@
                     <button class="apply-button" onclick="applyTheaterChaseParams()">Apply Parameters</button>
                 </div>
 
-                <div id="stroboscopeParams" class="params-section">
+                <div id="stroboscopeParams" class="params-section" data-variants-for="Stroboscope">
                     <div class="param-row">
                         <label class="param-label" for="stroboscopeColor">Flash Color</label>
                         <input type="color" id="stroboscopeColor" value="#ffffff">
@@ -424,31 +400,54 @@
 
 // Preset dictionaries and flag button values are inlined into the page by
 // scripts/compress_web.py from src/generated/show_variants.js (generated by
-// scripts/gen_show_variants.py from scripts/show_variants.json). The two
-// consts below reference the inlined payload.
-        const mandelbrotPresets = SHOW_VARIANTS_BY_SHOW.Mandelbrot;
-        const wavePresets = SHOW_VARIANTS_BY_SHOW.Wave;
+// scripts/gen_show_variants.py from scripts/show_variants.json). The generic
+// preset selector reads SHOW_VARIANTS_BY_SHOW; the flag buttons read FLAG_PRESETS.
 
-        function loadMandelbrotPreset(value) {
-            if (!value) return;
-            const p = mandelbrotPresets[value];
-            if (!p) return;
-            document.getElementById('mandelbrotCre0').value = p.Cre0;
-            document.getElementById('mandelbrotCim0').value = p.Cim0;
-            document.getElementById('mandelbrotCim1').value = p.Cim1;
-            document.getElementById('mandelbrotScale').value = p.scale;
-            document.getElementById('mandelbrotMaxIter').value = p.max_iterations;
-            document.getElementById('mandelbrotColorScale').value = p.color_scale;
+        function initPresetSelectors() {
+            document.querySelectorAll('[data-variants-for]').forEach(section => {
+                const showName = section.getAttribute('data-variants-for');
+                const variants = SHOW_VARIANTS_BY_SHOW[showName];
+                if (!variants) return;
+                const variantKeys = Object.keys(variants).filter(k => k !== 'default');
+                if (variantKeys.length === 0) return;
+
+                const select = document.createElement('select');
+                select.className = 'preset-selector';
+                select.style.marginBottom = '15px';
+
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = '-- select a preset --';
+                select.appendChild(placeholder);
+
+                ['default', ...variantKeys].forEach(key => {
+                    const entry = variants[key] || {};
+                    const opt = document.createElement('option');
+                    opt.value = key;
+                    opt.textContent = entry.label || key;
+                    select.appendChild(opt);
+                });
+
+                select.addEventListener('change', () => applyPreset(showName, select.value));
+                section.insertBefore(select, section.firstChild);
+            });
         }
 
-        function loadWavePreset(value) {
-            if (!value) return;
-            const p = wavePresets[value];
-            if (!p) return;
-            document.getElementById('waveDecay').value = p.decay_rate;
-            document.getElementById('waveBrightnessFreq').value = p.brightness_frequency;
-            document.getElementById('waveMode').value = 'bounce';
-            updateWaveBrightnessFreqHint();
+        async function applyPreset(showName, key) {
+            if (!key) return;
+            const variants = SHOW_VARIANTS_BY_SHOW[showName];
+            if (!variants || !variants[key]) return;
+            try {
+                await fetch('/api/show', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: showName, params: variants[key].params })
+                });
+                pendingParameterConfig = false;
+                lastPopulatedShow = null;
+            } catch (error) {
+                console.error('Failed to apply preset:', error);
+            }
         }
 
         // Apply Mandelbrot parameters
@@ -943,7 +942,6 @@
                     break;
 
                 case 'Wave':
-                    document.getElementById('wavePreset').value = '';
                     if (params.mode !== undefined) {
                         document.getElementById('waveMode').value = params.mode;
                         updateWaveBrightnessFreqHint();
@@ -967,7 +965,6 @@
                     break;
 
                 case 'Mandelbrot':
-                    document.getElementById('mandelbrotPreset').value = '';
                     if (params.Cre0 !== undefined) document.getElementById('mandelbrotCre0').value = params.Cre0;
                     if (params.Cim0 !== undefined) document.getElementById('mandelbrotCim0').value = params.Cim0;
                     if (params.Cim1 !== undefined) document.getElementById('mandelbrotCim1').value = params.Cim1;
@@ -996,6 +993,7 @@
         }
 
         async function updateStatus() {
+            document.querySelectorAll('.preset-selector').forEach(sel => { sel.value = ''; });
             try {
                 const response = await fetch('/api/status');
                 currentStatus = await response.json();
@@ -1288,6 +1286,7 @@
         async function init() {
             await loadShows();
             await updateStatus();
+            initPresetSelectors();
             // Ensure parameter visibility is set for initial show (updateStatus skips this
             // if dropdown value already matches current show)
             updateParameterVisibility(document.getElementById('showSelect').value);
