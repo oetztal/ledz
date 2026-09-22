@@ -225,6 +225,51 @@ label.checkbox-row,
     margin-bottom: 30px;
 }
 
+/* Floating Off action button on the control page. Lives inside .content
+   (top:24 right:24) so the existing overflow:hidden on .container keeps
+   the rounded corners clean. */
+.off-button {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    z-index: 5;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: #d9534f;
+    color: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.off-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22);
+}
+
+.off-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+
+.off-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .off-button {
+        transition: none;
+    }
+}
+
 .status-item {
     text-align: center;
 }
@@ -462,6 +507,82 @@ input[type="color"] {
 /* Schedule card states */
 .timer-card.paused {
     opacity: 0.55;
+}
+
+/* Next-timer banner on the control page. Mirrors the timezone band's
+   gradient/padding so it reads as part of the same visual family as
+   the timers page. The base .section rule gives it padding/border
+   defaults, which we override to match the gradient band. */
+#timerBanner {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+    border-bottom: none;
+    margin-bottom: 20px;
+}
+
+#timerBanner[hidden] {
+    display: none;
+}
+
+.timer-banner-header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.timer-banner-badge {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+.timer-banner-time {
+    font-size: 22px;
+    font-weight: 600;
+    font-family: monospace;
+    letter-spacing: 1.5px;
+}
+
+.timer-banner-manage {
+    margin-left: auto;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    opacity: 0.9;
+}
+
+.timer-banner-manage:hover {
+    text-decoration: underline;
+    opacity: 1;
+}
+
+.timer-banner-action {
+    font-size: 13px;
+    opacity: 0.9;
+    margin-bottom: 6px;
+}
+
+.timer-banner-days {
+    margin-top: 6px;
+}
+
+.timer-banner-days .day-dots span {
+    border-color: rgba(255, 255, 255, 0.85);
+}
+
+.timer-banner-days .day-dots span[data-on] {
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.timer-banner-days .day-letters {
+    color: rgba(255, 255, 255, 0.85);
 }
 
 .timer-card.paused .day-dots span {

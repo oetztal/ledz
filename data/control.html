@@ -6,6 +6,10 @@
     <title>ledz LED controller</title>
     <link rel="stylesheet" href="/common.css">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <style>
+        /* Positioning context for the floating Off button */
+        .content { position: relative; }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -24,6 +28,16 @@
         </div>
 
         <div class="content">
+            <button id="offButton" type="button" class="off-button"
+                    aria-label="Turn off LEDs" title="Turn off LEDs">
+                <svg viewBox="0 0 24 24" width="22" height="22"
+                     fill="none" stroke="currentColor" stroke-width="2.2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 3v9"/>
+                    <path d="M18.4 5.6a9 9 0 1 1-12.8 0"/>
+                </svg>
+            </button>
+
             <div class="status-bar">
                 <div class="status-item">
                     <div class="status-label">Current Show</div>
@@ -33,13 +47,16 @@
                     <div class="status-label">Brightness</div>
                     <div class="status-value" id="currentBrightness">-</div>
                 </div>
-                <div class="status-item">
-                    <button id="offButton" type="button" class="btn btn-danger">Off</button>
+            </div>
+
+            <div class="section" id="timerBanner" hidden>
+                <div class="timer-banner-header">
+                    <span class="timer-banner-badge" id="timerBannerBadge">TIMER</span>
+                    <span class="timer-banner-time" id="timerBannerTime">--:--</span>
+                    <a href="/timers" id="timerBannerManage" class="timer-banner-manage">Manage &rarr;</a>
                 </div>
-                <div class="status-item" id="timerStatusItem" style="display: none;">
-                    <div class="status-label">Timers</div>
-                    <div class="status-value" id="timerStatus">-</div>
-                </div>
+                <div class="timer-banner-action" id="timerBannerAction">-</div>
+                <div class="timer-banner-days" id="timerBannerDays"></div>
             </div>
 
             <div class="control-group">
@@ -1294,22 +1311,39 @@
         let cachedTimers = [];
         let timersFetchedAt = 0;
 
-        function formatTime(seconds) {
-            if (seconds <= 0) return '0s';
-            if (seconds < 60) {
-                return `${seconds}s`;
-            } else if (seconds < 3600) {
-                const mins = Math.floor(seconds / 60);
-                const secs = seconds % 60;
-                return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+        // Banner helpers: weekday mask (bit n = tm_wday n, Sunday = 0).
+        // The UI is Monday-first; this table is where the two orders meet.
+        const DISPLAY_WDAYS = [1, 2, 3, 4, 5, 6, 0];
+        const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+        const EVERY_DAY = 0x7F;
+
+        function isDaySelected(mask, wday) {
+            return ((mask >> wday) & 1) === 1;
+        }
+
+        // Same algorithm as data/timers.html:225-230
+        function renderDayDots(mask) {
+            const dots = DISPLAY_WDAYS.map(wday =>
+                `<span${isDaySelected(mask, wday) ? ' data-on' : ''}></span>`).join('');
+            const letters = DAY_LETTERS.map(letter => `<span>${letter}</span>`).join('');
+            return `<div class="day-dots" aria-hidden="true">${dots}</div><div class="day-letters" aria-hidden="true">${letters}</div>`;
+        }
+
+        // Seconds -> H:MM:SS or M:SS, matching timers.html's banner style
+        function formatCountdown(seconds) {
+            if (seconds <= 0) return '0:00';
+            const hours = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            if (hours > 0) {
+                return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             } else {
-                const hours = Math.floor(seconds / 3600);
-                const mins = Math.floor((seconds % 3600) / 60);
-                return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
             }
         }
 
-        function formatTimeOfDay(secondsSinceMidnight) {
+        // Seconds since midnight -> HH:MM (no seconds for schedules)
+        function formatScheduleTime(secondsSinceMidnight) {
             const hours = Math.floor(secondsSinceMidnight / 3600);
             const mins = Math.floor((secondsSinceMidnight % 3600) / 60);
             return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
@@ -1328,40 +1362,68 @@
         }
 
         function updateTimerDisplay() {
-            const timerStatusItem = document.getElementById('timerStatusItem');
-            const timerStatus = document.getElementById('timerStatus');
+            const banner = document.getElementById('timerBanner');
+            const badge = document.getElementById('timerBannerBadge');
+            const timeEl = document.getElementById('timerBannerTime');
+            const actionEl = document.getElementById('timerBannerAction');
+            const daysEl = document.getElementById('timerBannerDays');
             const elapsedSeconds = Math.floor((Date.now() - timersFetchedAt) / 1000);
 
-            // Filter out expired timers
+            // Drop expired countdowns; schedules always count as active.
             const activeTimers = cachedTimers.filter(t => {
                 if (t.type_name === 'alarm_daily') return true;
                 return t.remaining_seconds - elapsedSeconds > 0;
             });
 
             if (activeTimers.length === 0) {
-                timerStatusItem.style.display = 'none';
+                banner.hidden = true;
                 if (cachedTimers.length > 0) {
-                    // A timer may have expired, refresh from backend
+                    // A timer may have expired; refresh from backend
                     cachedTimers = [];
                     fetchTimers();
                 }
-            } else {
-                timerStatusItem.style.display = 'block';
-                const timer = activeTimers[0];
-                const actionText = timer.action === 0 ? 'Preset' : 'Off';
-                let timeInfo = '';
-                switch (timer.type_name) {
-                    case 'countdown':
-                        const remaining = Math.max(0, timer.remaining_seconds - elapsedSeconds);
-                        timeInfo = formatTime(remaining);
-                        break;
-                    case 'alarm_daily':
-                        timeInfo = formatTimeOfDay(timer.target_time);
-                        break;
-                }
-                const countSuffix = activeTimers.length > 1 ? ` (+${activeTimers.length - 1})` : '';
-                timerStatus.textContent = `${actionText} ${timeInfo}${countSuffix}`;
+                return;
             }
+
+            // Same sort key as the timers page: countdowns first by remaining
+            // seconds, then schedules by target time; slot index breaks ties.
+            activeTimers.sort((a, b) => {
+                const aCountdown = a.type_name === 'countdown';
+                const bCountdown = b.type_name === 'countdown';
+                if (aCountdown !== bCountdown) return aCountdown ? -1 : 1;
+                const aKey = aCountdown ? a.remaining_seconds : a.target_time;
+                const bKey = bCountdown ? b.remaining_seconds : b.target_time;
+                return (aKey - bKey) || (a.index - b.index);
+            });
+
+            const timer = activeTimers[0];
+
+            // Action description. TURN_OFF is action 1; LOAD_PRESET (action 0)
+            // renders the preset name when known, otherwise the index.
+            let actionText;
+            if (timer.action === 0) {
+                const preset = presets.find(p => p.index === timer.preset_index);
+                actionText = preset ? `Load "${preset.name}"` : `Load preset #${timer.preset_index}`;
+            } else {
+                actionText = 'Turn off';
+            }
+
+            let timeDisplay;
+            if (timer.type_name === 'countdown') {
+                const remaining = Math.max(0, timer.remaining_seconds - elapsedSeconds);
+                timeDisplay = formatCountdown(remaining);
+                badge.textContent = 'TIMER';
+            } else {
+                timeDisplay = formatScheduleTime(timer.target_time);
+                badge.textContent = timer.paused ? 'PAUSED' : 'SCHEDULE';
+            }
+
+            timeEl.textContent = timeDisplay;
+            actionEl.textContent = actionText;
+            daysEl.innerHTML = timer.type_name === 'alarm_daily'
+                ? renderDayDots(timer.days_mask ?? EVERY_DAY)
+                : '';
+            banner.hidden = false;
         }
 
         fetchTimers();
