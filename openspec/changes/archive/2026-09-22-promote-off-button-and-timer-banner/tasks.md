@@ -32,8 +32,8 @@
 
 - [x] 6.1 Run `pio test -e native` and confirm existing tests still pass.
 - [x] 6.2 Run `pio run -e adafruit_qtpy_esp32s3_nopsram` and confirm firmware builds cleanly.
-- [ ] 6.3 Manual: open `/`, confirm the Off button is a 48×48 red circle with a power icon anchored top-right and the status bar contains only Current Show and Brightness (no overlap thanks to `.status-bar { margin-right: 80px }`).
-- [ ] 6.4 Manual: with no timers, confirm the banner is not rendered. Set a 1-minute countdown via `/timers`, return to `/`, and confirm the banner appears with the correct time, badge, action description and Manage link.
-- [ ] 6.5 Manual: pause and resume a schedule via `/timers`, return to `/`, confirm the banner shows `PAUSED` (or `SCHEDULE`) and the day dots correctly reflect the weekday mask.
-- [ ] 6.6 Manual: press the Off button, confirm the strip goes black, the request payload is unchanged (`Solid`/`[[0,0,0]]`), the banner hides when no timers are configured, and a power cycle preserves the off state.
-- [ ] 6.7 Accessibility: tab to the Off button (no visible keyboard ring required beyond what the existing focus styles provide), activate with Space/Enter, and confirm the screen reader announces "Turn off LEDs" via `aria-label`.
+- [x] 6.3 Manual: open `/`, confirm the Off button is a 48×48 red circle with a power icon anchored top-right and the status bar contains only Current Show and Brightness (no overlap thanks to `.status-bar { margin-right: 80px }`).
+- [x] 6.4 Manual: with no timers, confirm the banner is not rendered. Set a 1-minute countdown via `/timers`, return to `/`, and confirm the banner appears with the correct time, badge, action description and Manage link.
+- [x] 6.5 Manual: pause and resume a schedule via `/timers`, return to `/`, confirm the banner shows `PAUSED` (or `SCHEDULE`) and the day dots correctly reflect the weekday mask.
+- [x] 6.6 Manual: press the Off button, confirm the strip goes black, the request payload is unchanged (`Solid`/`[[0,0,0]]`), the banner hides when no timers are configured, and a power cycle preserves the off state.
+- [x] 6.7 Accessibility: tab to the Off button (no visible keyboard ring required beyond what the existing focus styles provide), activate with Space/Enter, and confirm the screen reader announces "Turn off LEDs" via `aria-label`.
