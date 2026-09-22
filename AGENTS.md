@@ -100,6 +100,19 @@ A `.clang-format` config matches the existing style (4-space indent, K&R-ish bra
 
 **Pinned to clang-format 19.1.7** — newer majors (23+) reformat macro line-continuations differently, so locally install via `pip install clang-format==19.1.7` (or `brew install llvm@19`); the CI workflow installs the same wheel. OpenSpec validation is pinned via `OPENSPEC_VERSION` in `scripts/validate-openspec.sh`.
 
+## Static Analysis (SonarCloud)
+
+SonarCloud scans every push and same-repo PR; the project key is `oetztal_ledz`. When asked to check/review/triage Sonar issues, query the public Web API (no token needed) rather than the JavaScript web UI. Results reflect the last analyzed commit, which can lag `HEAD`.
+
+```bash
+# Quality gate
+curl -s "https://sonarcloud.io/api/qualitygates/project_status?projectKey=oetztal_ledz" | jq '.projectStatus'
+# Open issues (ps max 500); add severities=, types=, rules=, inNewCodePeriod=true to filter
+curl -s "https://sonarcloud.io/api/issues/search?componentKeys=oetztal_ledz&resolved=false&ps=500"
+```
+
+See README's "Static Analysis (SonarCloud)" section for the full query parameters and metrics endpoint.
+
 ## File Locations
 
 - Core: `src/` (main.cpp, Config, Network, ShowController, ShowFactory, WebServerManager)

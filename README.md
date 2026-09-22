@@ -224,6 +224,45 @@ CFamily sensor silently ignores `sonar.cfamily.coverage.reportPaths` from
 6.79.0 onwards, and `sonar.gcov.reportsPath` is deprecated; the Generic
 Coverage XML sensor reads the file via `sonar.coverageReportPaths`.
 
+### Static Analysis (SonarCloud)
+
+SonarCloud analyzes every push and same-repo pull request (the `SonarQube Scan`
+step in `.github/workflows/test.yml`). The project key is `oetztal_ledz`.
+
+The web UI at <https://sonarcloud.io/project/issues?id=oetztal_ledz> is a
+JavaScript app, so automated checks (and agents) should query the public Web
+API instead. Reads need no token for a public project, and the issues reflect
+the most recently analyzed commit — which can lag `HEAD` by a commit or two.
+
+Quality gate status:
+
+```bash
+curl -s "https://sonarcloud.io/api/qualitygates/project_status?projectKey=oetztal_ledz" \
+  | jq -r '.projectStatus.status,
+           (.projectStatus.conditions[]
+            | "\(.metricKey): \(.status) (actual \(.actualValue), threshold \(.errorThreshold))")'
+```
+
+Open issues (paginated; `ps` accepts up to 500, default 100):
+
+```bash
+curl -s "https://sonarcloud.io/api/issues/search?componentKeys=oetztal_ledz&resolved=false&ps=500" \
+  | jq -r '.total,
+           (.issues[]
+            | "\(.component | sub("oetztal_ledz:"; "")):\(.line) \(.severity) \(.rule) \(.message)")'
+```
+
+Useful `issues/search` query parameters: `resolved=false`, `severities`
+(comma-separated, e.g. `CRITICAL,MAJOR`), `types` (e.g. `BUG,VULNERABILITY`),
+`rules` (e.g. `cpp:S5025`), `inNewCodePeriod=true` (only issues on new code),
+plus `p`/`ps` for paging.
+
+Aggregate metrics:
+
+```bash
+curl -s "https://sonarcloud.io/api/measures/component?component=oetztal_ledz&metricKeys=bugs,vulnerabilities,code_smells,coverage,sqale_rating,alert_status"
+```
+
 ### Web Assets
 
 Web files in `data/` are automatically minified and gzip-compressed into C++ header files during the build process. No manual steps required.
