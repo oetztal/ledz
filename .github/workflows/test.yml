@@ -53,7 +53,7 @@ jobs:
           extra_args: --all-files --show-diff-on-failure
 
       - name: Install build-wrapper
-        uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v7
+        uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v8
 
       - name: Cache PlatformIO
         uses: actions/cache@v6
