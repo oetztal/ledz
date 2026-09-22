@@ -18,7 +18,7 @@ namespace Show {
          * Constructor with configurable parameters
          * @param num_steps_per_cycle Steps per complete color rotation (default: 21, should be multiple of 7)
          */
-        TheaterChase(unsigned int num_steps_per_cycle = 21);
+        TheaterChase(unsigned int num_steps_per_cycle);
 
         /**
          * Execute the show - update theater chase animation

@@ -58,7 +58,7 @@ void test_create_fire() {
     auto spread = 1.0;
     auto ignition = 1.0;
 
-    auto show = new Show::Fire(cooling, spread, ignition);
+    auto show = new Show::Fire(cooling, spread, ignition, 0.5f, {1.0f}, 5, 5);
 
     TEST_ASSERT_NOT_NULL(show);
 }
@@ -99,7 +99,7 @@ void test_spark_amount() {
 
 // Rainbow show tests
 void test_rainbow_default_constructor_runs() {
-    auto show = new Show::Rainbow();
+    auto show = new Show::Rainbow(1.0f, 1.0f);
     MockStrip strip(10);
     show->execute(strip, 0);
     TEST_ASSERT_NOT_NULL(show);
@@ -107,7 +107,7 @@ void test_rainbow_default_constructor_runs() {
 }
 
 void test_rainbow_default_execute_runs_without_crash() {
-    Show::Rainbow show;
+    Show::Rainbow show(1.0f, 1.0f);
     MockStrip strip(30);
     for (Show::Iteration t = 0; t < 5; t++) {
         show.execute(strip, t);
@@ -150,13 +150,13 @@ void test_rainbow_explicit_constructor_does_not_crash() {
 
 // Wave show tests
 void test_wave_default_constructor_runs() {
-    auto show = new Show::Wave();
+    auto show = new Show::Wave(2.0f, 0.1f, Show::WaveMode::Bounce);
     TEST_ASSERT_NOT_NULL(show);
     delete show;
 }
 
 void test_wave_default_execute_runs_without_crash() {
-    Show::Wave show;
+    Show::Wave show(2.0f, 0.1f, Show::WaveMode::Bounce);
     MockStrip strip(30);
     for (Show::Iteration t = 0; t < 5; t++) {
         show.execute(strip, t);
@@ -165,7 +165,7 @@ void test_wave_default_execute_runs_without_crash() {
 }
 
 void test_wave_explicit_constructor_does_not_crash() {
-    auto show = new Show::Wave(3.5f, 0.5f);
+    auto show = new Show::Wave(3.5f, 0.5f, Show::WaveMode::Bounce);
     MockStrip strip(60);
     show->execute(strip, 0);
     show->execute(strip, 42);
@@ -178,7 +178,7 @@ void test_wave_symmetric_lighting_around_mid_source() {
     // first half-bounce when t * 0.5 * 2π = π/2, i.e. time = 0.5s. Each
     // execute() call advances time by 0.05, so call execute() ten times to
     // land the source at pixel 9-10 on a 20-pixel strip.
-    Show::Wave show(1.0f, 0.5f);
+    Show::Wave show(1.0f, 0.5f, Show::WaveMode::Bounce);
     MockStrip strip(20);
     for (Show::Iteration t = 0; t < 10; t++) {
         show.execute(strip, t);

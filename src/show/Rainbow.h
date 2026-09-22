@@ -10,7 +10,7 @@ namespace Show {
         float pixel_step;
 
     public:
-        Rainbow(float time_step = 1.0f, float pixel_step = 1.0f);
+        Rainbow(float time_step, float pixel_step);
 
         void execute(Strip::Strip &strip, Iteration iteration) override;
     };

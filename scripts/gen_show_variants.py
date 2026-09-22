@@ -29,6 +29,7 @@ except Exception:
 
 VARIANTS_FILE = PROJECT_DIR / "scripts" / "show_variants.json"
 OUTPUT_FILE = PROJECT_DIR / "src" / "generated" / "show_variants.h"
+JS_OUTPUT_FILE = PROJECT_DIR / "src" / "generated" / "show_variants.js"
 
 
 def cpp_string_literal(s: str) -> str:
@@ -71,6 +72,46 @@ def normalize_for_arduinojson(value):
     if isinstance(value, dict):
         return {k: normalize_for_arduinojson(v) for k, v in value.items()}
     return value
+
+
+FLAG_NAMES = ("ukraine", "italy", "france")
+
+
+def build_js_payload(shows):
+    """Emit the JS payload consumed by the web UI.
+
+    Two top-level ``const`` declarations:
+
+    * ``SHOW_VARIANTS_BY_SHOW``: keys are show names; values are objects whose
+      keys are the synthetic ``"default"`` plus every variant name, and whose
+      values are the corresponding ``params`` objects (after
+      ``normalize_for_arduinojson``).
+    * ``FLAG_PRESETS``: keys are the three flag names; values are the
+      corresponding ``Solid.variants[]`` entries' ``params`` objects.
+    """
+    by_show = {}
+    for show in shows:
+        entries = {"default": json.loads(show["default_json"])}
+        for v in show["variants"]:
+            entries[v["name"]] = json.loads(v["params_json"])
+        by_show[show["name"]] = entries
+
+    flag_presets = {}
+    for show in shows:
+        if show["name"] != "Solid":
+            continue
+        for v in show["variants"]:
+            if v["name"] in FLAG_NAMES:
+                flag_presets[v["name"]] = json.loads(v["params_json"])
+        break
+
+    js_indent_separators = (",", ": ")
+    return (
+        "const SHOW_VARIANTS_BY_SHOW = "
+        f"{json.dumps(by_show, separators=js_indent_separators, ensure_ascii=False)};\n"
+        "const FLAG_PRESETS = "
+        f"{json.dumps(flag_presets, separators=js_indent_separators, ensure_ascii=False)};\n"
+    )
 
 
 def main() -> int:
@@ -229,6 +270,10 @@ def main() -> int:
 
     OUTPUT_FILE.write_text("\n".join(lines), encoding="utf-8")
     print(f"gen_show_variants: wrote {OUTPUT_FILE} ({len(shows)} shows)")
+
+    js_payload = build_js_payload(shows)
+    JS_OUTPUT_FILE.write_text(js_payload, encoding="utf-8")
+    print(f"gen_show_variants: wrote {JS_OUTPUT_FILE}")
     return 0
 
 

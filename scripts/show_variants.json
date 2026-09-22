@@ -237,6 +237,30 @@
           ],
           "gradient": false
         }
+      },
+      {
+        "name": "france",
+        "label": "French flag",
+        "params": {
+          "colors": [
+            [
+              0,
+              85,
+              164
+            ],
+            [
+              255,
+              255,
+              255
+            ],
+            [
+              239,
+              65,
+              53
+            ]
+          ],
+          "gradient": false
+        }
       }
     ]
   },

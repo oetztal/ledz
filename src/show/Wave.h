@@ -39,9 +39,9 @@ namespace Show {
          * @param mode Phase mode: Bounce or Traveling. Currently a no-op; both
          *             modes render identically. Kept for future expansion.
          */
-        Wave(float decay_rate = 2.0f,
-             float brightness_frequency = 0.1f,
-             WaveMode mode = WaveMode::Bounce);
+        Wave(float decay_rate,
+             float brightness_frequency,
+             WaveMode mode);
 
         /**
          * Execute the show - update wave animation
