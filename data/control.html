@@ -241,6 +241,16 @@
 
                 <div id="waveParams" class="params-section">
                     <div class="param-row">
+                        <label class="param-label" for="wavePreset">Preset</label>
+                        <select id="wavePreset" onchange="loadWavePreset(this.value)">
+                            <option value="" selected>-- select a preset --</option>
+                            <option value="default">Default bounce (no change)</option>
+                            <option value="tight">⚡ Tight fast</option>
+                            <option value="calm">🌊 Calm broad</option>
+                        </select>
+                        <small style="display:block; margin-top:4px; color:#666;">Sets decay rate and bounce frequency. Click "Apply Parameters" to use.</small>
+                    </div>
+                    <div class="param-row">
                         <label class="param-label" for="waveMode">Mode</label>
                         <select id="waveMode">
                             <option value="bounce" selected>Bounce</option>
@@ -410,15 +420,22 @@
             }
         }
 
-        // Mandelbrot presets - locations tuned to minimize black (inside-set) pixels
+// Mandelbrot presets - locations tuned to minimize black (inside-set) pixels
         const mandelbrotPresets = {
             default:   { Cre0: -1.05, Cim0: -0.3616, Cim1: -0.3156, scale: 5, max_iterations: 50,  color_scale: 10 },
             'deep-zoom': { Cre0: 0.25604447200014124, Cim0: -0.0007223570865966194, Cim1: -0.0007195137145147745, scale: 5, max_iterations: 200, color_scale: 10 },
-            'wide-overview': { Cre0: -3.028449302036049, Cim0: -2.5330279833053484, Cim1: 2.5352358984008734, scale: 5, max_iterations: 40, color_scale: 10 },
+            'wide-overview': { Cre0: -3.028449302036049, Cim0: -2.533027983305348, Cim1: 2.5352358984008734, scale: 5, max_iterations: 40, color_scale: 10 },
             'mid-zoom': { Cre0: -0.549968185623812, Cim0: 0.6273713969274161, Cim1: 0.6333550137946945, scale: 5, max_iterations: 100, color_scale: 10 },
             'mid-zoom-2': { Cre0: -0.4844641513949024, Cim0: 0.6243075234718344, Cim1: 0.6267793437010146, scale: 5, max_iterations: 100, color_scale: 10 },
             'intermediate-zoom': { Cre0: -0.4176640723972577, Cim0: 0.5780971139366687, Cim1: 0.5781394701627564, scale: 5, max_iterations: 1000, color_scale: 10 },
             'spiral': { Cre0: -0.4154272772697746, Cim0: 0.5806524876727829, Cim1: 0.5812713680048681, scale: 5, max_iterations: 1000, color_scale: 10 }
+        };
+
+        // Wave presets - mirrors the three variants in scripts/show_variants.json
+        const wavePresets = {
+            default: { decay_rate: 2.0, brightness_frequency: 0.1 },
+            tight:   { decay_rate: 4.0, brightness_frequency: 0.4 },
+            calm:    { decay_rate: 1.0, brightness_frequency: 0.05 },
         };
 
         function loadMandelbrotPreset(value) {
@@ -431,6 +448,16 @@
             document.getElementById('mandelbrotScale').value = p.scale;
             document.getElementById('mandelbrotMaxIter').value = p.max_iterations;
             document.getElementById('mandelbrotColorScale').value = p.color_scale;
+        }
+
+        function loadWavePreset(value) {
+            if (!value) return;
+            const p = wavePresets[value];
+            if (!p) return;
+            document.getElementById('waveDecay').value = p.decay_rate;
+            document.getElementById('waveBrightnessFreq').value = p.brightness_frequency;
+            document.getElementById('waveMode').value = 'bounce';
+            updateWaveBrightnessFreqHint();
         }
 
         // Apply Mandelbrot parameters
@@ -935,6 +962,7 @@
                     break;
 
                 case 'Wave':
+                    document.getElementById('wavePreset').value = '';
                     if (params.mode !== undefined) {
                         document.getElementById('waveMode').value = params.mode;
                         updateWaveBrightnessFreqHint();
