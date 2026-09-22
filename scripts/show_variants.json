@@ -389,7 +389,15 @@
         "name": "spacefreeze",
         "label": "Frozen in space",
         "params": {
-          "time_step": 1,
+          "time_step": 0.5,
+          "pixel_step": 0
+        }
+      },
+      {
+        "name": "slow_spacefreeze",
+        "label": "Frozen in space (slow)",
+        "params": {
+          "time_step": 0.02,
           "pixel_step": 0
         }
       }

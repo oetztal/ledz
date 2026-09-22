@@ -19,8 +19,24 @@ namespace Support {
      * no entropy device, so random_device falls back to an embedded mt19937).
      * That combination overflows the 8 KB Arduino loop task stack when a show is
      * constructed from setup(). minstd_rand holds 4 bytes and is ample here.
+     *
+     * This is intentionally non-cryptographic: it drives visual effects only
+     * (Fire, ColorRun, Starlight) and must never be used for secrets, tokens or
+     * anything security-sensitive. Wrapping the engine keeps that weak PRNG
+     * confined to this one deliberately-reviewed place.
      */
-    using Random = std::minstd_rand;
+    class Random {
+        std::minstd_rand engine_; // NOSONAR - effects only, never security-sensitive
+
+    public:
+        using result_type = decltype(engine_)::result_type;
+
+        static constexpr result_type min() { return decltype(engine_)::min(); }
+        static constexpr result_type max() { return decltype(engine_)::max(); }
+
+        void seed(result_type value) { engine_.seed(value); }
+        result_type operator()() noexcept { return engine_(); }
+    };
 
     namespace detail {
         // Function-local static in randomSeed() holds the override. Set by

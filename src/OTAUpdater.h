@@ -64,6 +64,12 @@ struct Progress {
     size_t expected_bytes = 0;
     unsigned long started_at_ms = 0; // millis() when this run started
     String error_message;             // populated on Failed
+
+    Progress() = default;
+    Progress(const Progress&) = default;
+    Progress& operator=(const Progress&) = default;
+    Progress(Progress&&) noexcept = default;
+    Progress& operator=(Progress&&) noexcept = default;
 };
 
 // ---------------------------------------------------------------------------
