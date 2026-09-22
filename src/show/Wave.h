@@ -28,8 +28,8 @@ namespace Show {
         float brightness_frequency; // Frequency of brightness oscillation at source
         WaveMode mode; // Phase behaviour (currently unused; kept for future expansion)
 
-        float time; // Time counter for wave position
-        float color_time; // Time counter for color cycling
+        float time = 0.0f; // Time counter for wave position
+        float color_time = 0.0f; // Time counter for color cycling
 
     public:
         /**

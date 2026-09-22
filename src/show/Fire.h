@@ -39,7 +39,7 @@ namespace Show {
     class Fire : public Show {
         std::unique_ptr<FireState> state;
         Support::Random gen;
-        std::uniform_real_distribution<float> randomFloat;
+        std::uniform_real_distribution<float> randomFloat{0.0f, 1.0f};
 
         float cooling;
         float spread;

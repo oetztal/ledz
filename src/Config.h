@@ -14,32 +14,34 @@
 #endif
 
 namespace Config {
+    // Compile-time initial value for a fixed-size char buffer. Lets the
+    // string-defaulted members below be initialised in-class rather than in a
+    // constructor body.
+    template<size_t N>
+    constexpr std::array<char, N> fixedString(const char *s) {
+        std::array<char, N> out{};
+        for (size_t i = 0; i + 1 < N && s[i] != '\0'; ++i) {
+            out[i] = s[i];
+        }
+        return out;
+    }
+
     /**
      * WiFi configuration structure
      */
     struct WiFiConfig {
-        std::array<char, 64> ssid;
-        std::array<char, 64> password;
-        bool configured;
-        uint8_t connection_failures; // Track consecutive connection failures
-
-        WiFiConfig() : configured(false), connection_failures(0) {
-            ssid[0] = '\0';
-            password[0] = '\0';
-        }
+        std::array<char, 64> ssid{};
+        std::array<char, 64> password{};
+        bool configured = false;
+        uint8_t connection_failures = 0; // Track consecutive connection failures
     };
 
     /**
      * LED show configuration structure
      */
     struct ShowConfig {
-        std::array<char, 32> current_show; // e.g., "Rainbow", "Mandelbrot"
-        std::array<char, 256> params_json; // JSON string for show parameters
-
-        ShowConfig() {
-            strcpy(current_show.data(), "Rainbow");
-            strcpy(params_json.data(), "{}");
-        }
+        std::array<char, 32> current_show = fixedString<32>("Rainbow"); // e.g., "Rainbow", "Mandelbrot"
+        std::array<char, 256> params_json = fixedString<256>("{}");     // JSON string for show parameters
     };
 
     /**
@@ -55,58 +57,39 @@ namespace Config {
      * Device configuration structure
      */
     struct DeviceConfig {
-        uint8_t brightness; // 0-255
-        uint16_t num_pixels;
-        uint8_t led_pin; // GPIO pin for LED strip (default: PIN_NEOPIXEL=39 for onboard, or 35=MOSI for external)
-        uint16_t cycle_time; // Cycle time in ms (e.g., 10, 20, 25, 50)
-        GammaMode gamma_mode; // Gamma correction mode
-        std::array<char, 16> device_id; // e.g., "AABBCC"
-        std::array<char, 32> device_name; // Custom device name
-
-        DeviceConfig() : brightness(128), num_pixels(300),
+        uint8_t brightness = 128; // 0-255
+        uint16_t num_pixels = 300;
 #ifdef PIN_NEOPIXEL
-            led_pin(PIN_NEOPIXEL),
+        uint8_t led_pin = PIN_NEOPIXEL; // GPIO pin for LED strip
 #else
-            led_pin(39),
+        uint8_t led_pin = 39;
 #endif
-            cycle_time(10),
-            gamma_mode(GAMMA_DEFAULT)
-        {
-            device_id[0] = '\0';
-            device_name[0] = '\0';
-        }
+        uint16_t cycle_time = 10; // Cycle time in ms (e.g., 10, 20, 25, 50)
+        GammaMode gamma_mode = GAMMA_DEFAULT; // Gamma correction mode
+        std::array<char, 16> device_id{}; // e.g., "AABBCC"
+        std::array<char, 32> device_name{}; // Custom device name
     };
 
     /**
      * LED strip layout configuration structure
      */
     struct LayoutConfig {
-        bool reverse; // Reverse LED order
-        bool mirror; // Mirror LED pattern
-        int16_t dead_leds; // Number of dead LEDs at the end
-
-        LayoutConfig() : reverse(false), mirror(false), dead_leds(0) {
-        }
+        bool reverse = false; // Reverse LED order
+        bool mirror = false; // Mirror LED pattern
+        int16_t dead_leds = 0; // Number of dead LEDs at the end
     };
 
     /**
      * Show preset structure
      */
     struct Preset {
-        std::array<char, 32> name;
-        std::array<char, 32> show_name;
-        std::array<char, 256> params_json;
-        bool layout_reverse;
-        bool layout_mirror;
-        int16_t layout_dead_leds;
-        bool valid;
-
-        Preset() : layout_reverse(false), layout_mirror(false),
-                   layout_dead_leds(0), valid(false) {
-            name[0] = '\0';
-            show_name[0] = '\0';
-            strcpy(params_json.data(), "{}");
-        }
+        std::array<char, 32> name{};
+        std::array<char, 32> show_name{};
+        std::array<char, 256> params_json = fixedString<256>("{}");
+        bool layout_reverse = false;
+        bool layout_mirror = false;
+        int16_t layout_dead_leds = 0;
+        bool valid = false;
     };
 
     /**
@@ -185,11 +168,7 @@ namespace Config {
         // inverted sign: the offset counts west of UTC, so that is UTC+1.
         // 64 bytes is sized off the longest realistic entry, Chatham's
         // 44-character string.
-        std::array<char, 64> timezone;
-
-        TimersConfig() {
-            strcpy(timezone.data(), "UTC0");
-        }
+        std::array<char, 64> timezone = fixedString<64>("UTC0");
     };
 
     /**
@@ -198,11 +177,8 @@ namespace Config {
      */
     struct TouchConfig {
         static constexpr uint8_t MAX_TOUCH_PINS = 3;
-        bool enabled;                              // Touch control enabled
-        uint16_t threshold;                        // Touch detection threshold (lower = more sensitive)
-
-        TouchConfig() : enabled(true), threshold(45000) {
-        }
+        bool enabled = true;                              // Touch control enabled
+        uint16_t threshold = 45000;                        // Touch detection threshold (lower = more sensitive)
     };
 
 // ConfigManager is backed by ESP32 Preferences (NVS) and has no native

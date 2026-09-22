@@ -14,11 +14,7 @@ static constexpr size_t SHOW_COMMAND_QUEUE_SIZE = 5;
 static const char* const TAG = "ctrl";
 
 ShowController::ShowController(Show::Factory::ShowFactory &factory, Config::ConfigManager &config)
-    : factory(factory), config(config), brightness(128),
-      layout(), baseStrip()
-#ifdef ARDUINO
-      , commandQueue(nullptr)
-#endif
+    : factory(factory), config(config)
 {
 }
 

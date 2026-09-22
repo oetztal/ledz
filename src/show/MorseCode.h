@@ -21,7 +21,7 @@ namespace Show {
         unsigned int word_space; // Space between words
 
         std::vector<Strip::Color> pattern; // Precomputed color pattern
-        unsigned int index; // Current frame index
+        unsigned int index = 0; // Current frame index
 
         // Morse code encoding
         void buildPattern();

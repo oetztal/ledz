@@ -27,9 +27,9 @@ namespace Show {
             [[nodiscard]] Strip::Color getColor() const;
         };
 
-        std::uniform_int_distribution<> randomPercent;
-        std::uniform_int_distribution<> randomPhase;
-        std::uniform_int_distribution<> randomSpeed;
+        std::uniform_int_distribution<> randomPercent{0, 99};
+        std::uniform_int_distribution<> randomPhase{0, 7};
+        std::uniform_int_distribution<> randomSpeed{20, 60};
 
     public:
         ColorRun();
@@ -41,8 +41,9 @@ namespace Show {
         void execute(Strip::Strip &strip, Iteration iteration) override;
 
     private:
-        std::vector<Strip::Color> phases;
-        std::vector<State> states;
+        std::vector<Strip::Color> phases = {
+            0x000000, 0x0000FF, 0x00FF00, 0x00FFFF, 0xFF0000, 0xFF00FF, 0xFFFF00, 0xFFFFFF};
+        std::vector<State> states = {State{0, 0.5, 0xFF0000}};
         Support::Random gen;
     };
 } // Show

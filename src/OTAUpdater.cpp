@@ -222,8 +222,8 @@ struct EspHttpReader {
 // ---------------------------------------------------------------------------
 
 struct InProgressGuard {
-    bool armed;
-    InProgressGuard() : armed(false) {
+    bool armed = false;
+    InProgressGuard() {
         bool expected = false;
         if (otaState().updateInProgress.compare_exchange_strong(expected, true)) {
             armed = true;

@@ -13,7 +13,7 @@ namespace Show {
         uint8_t r, g, b; // Color to flash
         unsigned int on_cycles; // Number of cycles to stay on
         unsigned int off_cycles; // Number of cycles to stay off
-        unsigned int current_cycle; // Current cycle counter
+        unsigned int current_cycle = 0; // Current cycle counter
 
     public:
         /**

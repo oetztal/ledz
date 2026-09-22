@@ -1315,9 +1315,6 @@ WebServerManager *WebServerManager::activeInstance = nullptr;
 
 WebServerManager::WebServerManager(Config::ConfigManager &config, Network &network, ShowController &show_controller)
     : config(config), network(network), showController(show_controller)
-#ifdef ARDUINO
-      , server(80)
-#endif
 {
 }
 

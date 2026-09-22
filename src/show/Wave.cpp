@@ -10,8 +10,7 @@ namespace Show {
     Wave::Wave(float decay_rate, float brightness_frequency, WaveMode mode)
         : decay_rate(decay_rate),
           brightness_frequency(brightness_frequency),
-          mode(mode),
-          time(0.0f), color_time(0.0f) {
+          mode(mode) {
     }
 
     void Wave::execute(Strip::Strip &strip, Iteration iteration) {

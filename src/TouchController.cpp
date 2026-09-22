@@ -89,7 +89,7 @@ const std::array<TouchController::ShowVariantGroup, TouchController::NUM_SHOW_VA
 }};
 
 TouchController::TouchController(Config::ConfigManager &config, ShowController &showController)
-    : config(config), showController(showController), currentShowIdx(0), currentVariantIdx(0) {
+    : config(config), showController(showController) {
     // Initialize debounce tracking
     for (uint8_t i = 0; i < Config::TouchConfig::MAX_TOUCH_PINS; i++) {
         wasTouched[i] = false;

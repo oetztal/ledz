@@ -37,7 +37,7 @@ public:
 
 protected:
 #ifdef ARDUINO
-    AsyncWebServer server;
+    AsyncWebServer server{80};
     AccessLogger logging;
 #endif
 

@@ -7,15 +7,7 @@
 #endif
 
 namespace Show {
-    ColorRun::ColorRun() : randomPercent(0, 99), randomSpeed(20, 60) {
-        this->phases = {0x000000, 0x0000FF, 0x00FF00, 0x00FFFF, 0xFF0000, 0xFF00FF, 0xFFFF00, 0xFFFFFF};
-        this->states = std::vector<State>();
-
-        auto state = State{0, 0.5, 0xFF0000};
-        states.push_back(state);
-
-        this->randomPhase = std::uniform_int_distribution<>(0, phases.size() - 1);
-
+    ColorRun::ColorRun() {
         gen.seed(Support::randomSeed());
     }
 

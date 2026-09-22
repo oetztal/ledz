@@ -10,8 +10,8 @@ namespace Show {
     // Maximum heat transfer per frame - limits how fast heat propagates upward
     constexpr float MAX_SPREAD_PER_FRAME = 0.25f;
     FireState::FireState(std::function<float()> randomFloat, Strip::PixelIndex length) :
-        randomFloat(std::move(randomFloat)),
         _length(length),
+        randomFloat(std::move(randomFloat)),
         temperature(std::vector<float>(length, 0.0f)),
         prev_temperature(std::vector<float>(length, 0.0f)) {}
 
@@ -94,8 +94,7 @@ namespace Show {
         spread(spread), ignition(ignition), spark_amount(spark_amount),
         weights(std::move(weights)),
         start_offset(start_offset),
-        spark_range(spark_range),
-        randomFloat(0.0f, 1.0f) {
+        spark_range(spark_range) {
         gen.seed(Support::randomSeed());
     }
 

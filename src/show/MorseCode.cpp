@@ -147,7 +147,7 @@ namespace Show {
                          unsigned int word_space)
         : message(message), speed(speed), dot_length(dot_length),
           dash_length(dash_length), symbol_space(symbol_space),
-          letter_space(letter_space), word_space(word_space), index(0) {
+          letter_space(letter_space), word_space(word_space) {
         // Convert message to uppercase
         std::transform(this->message.begin(), this->message.end(),
                        this->message.begin(), ::toupper);

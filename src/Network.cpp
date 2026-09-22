@@ -22,10 +22,11 @@
 static const char* const TAG = "net";
 
 Network::Network(Config::ConfigManager &config, ShowController &showController)
-    : config(config), showController(showController), mode(NetworkMode::NONE), webServer(nullptr)
+    :
 #ifdef ARDUINO
-      , ntpClient(wifiUdp)
+      ntpClient(wifiUdp),
 #endif
+      config(config), showController(showController)
 {
 }
 

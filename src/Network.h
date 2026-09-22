@@ -33,7 +33,7 @@ enum class NetworkMode {
 
 class Network {
 private:
-    NetworkMode mode;
+    NetworkMode mode = NetworkMode::NONE;
 
 #ifdef ARDUINO
     WiFiUDP wifiUdp;
@@ -42,7 +42,7 @@ private:
 
     Config::ConfigManager &config;
     ShowController &showController;
-    std::unique_ptr<WebServerManager> webServer;
+    std::unique_ptr<WebServerManager> webServer = nullptr;
     std::unique_ptr<TimerScheduler> timerScheduler;
     std::unique_ptr<TouchController> touchController;
     CaptivePortal captivePortal;

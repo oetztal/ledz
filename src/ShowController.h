@@ -65,7 +65,7 @@ struct ShowStats {
 class ShowController {
 private:
 #ifdef ARDUINO
-    QueueHandle_t commandQueue;
+    QueueHandle_t commandQueue = nullptr;
 #endif
 
     Show::Factory::ShowFactory &factory;
@@ -73,7 +73,7 @@ private:
 
     std::unique_ptr<Show::Show> currentShow;
     std::string currentShowName;
-    std::atomic<uint8_t> brightness;
+    std::atomic<uint8_t> brightness{128};
 
     // base strip and strip layout
     std::unique_ptr<Strip::Strip> baseStrip;
