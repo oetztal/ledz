@@ -96,18 +96,15 @@ void TimerScheduler::checkTimers(uint32_t currentEpoch) {
                 // A wall-clock time that the spring-forward jump skips never
                 // falls inside this window, so the schedule is skipped that day
                 // and resumes the next — see design decision 8.
+                // Schedules stay enabled, so repeat triggers are suppressed by
+                // recording the local day they last fired on. Keying on the
+                // local day rather than an absolute time is what makes the two
+                // 02:30s of a fall-back night count as one.
                 if (currentSecondsSinceMidnight >= timer.target_time &&
-                    currentSecondsSinceMidnight < timer.target_time + 5) {
-                    // Schedules stay enabled, so repeat triggers are
-                    // suppressed by recording the local day they last fired
-                    // on. Keying on the local day rather than an absolute
-                    // time is what makes the two 02:30s of a fall-back night
-                    // count as one.
-                    if (timer.last_fired_yday != today) {
-                        timer.last_fired_yday = today;
-                        shouldTrigger = true;
-                        configChanged = true;
-                    }
+                    currentSecondsSinceMidnight < timer.target_time + 5 && timer.last_fired_yday != today) {
+                    timer.last_fired_yday = today;
+                    shouldTrigger = true;
+                    configChanged = true;
                 }
                 break;
         }
@@ -212,8 +209,8 @@ bool TimerScheduler::setSchedule(uint8_t index, uint32_t secondsSinceMidnight, C
     config.saveTimersConfig(timersConfig);
 
 #ifdef ARDUINO
-    uint8_t hours = static_cast<uint8_t>(secondsSinceMidnight / 3600);
-    uint8_t minutes = static_cast<uint8_t>((secondsSinceMidnight % 3600) / 60);
+    auto hours = static_cast<uint8_t>(secondsSinceMidnight / 3600);
+    auto minutes = static_cast<uint8_t>((secondsSinceMidnight % 3600) / 60);
     ESP_LOGI(TAG, "Set schedule %d for %02d:%02d, days=0x%02X%s", index, hours, minutes, daysMask,
              timer.paused ? " (paused)" : "");
 #endif

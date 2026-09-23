@@ -38,7 +38,6 @@ void setup() {
 
     delay(1000);
     Serial.println("");
-    // config.reset();
     config.begin();
     OTAUpdater::setConfig(&config);
 

@@ -13,6 +13,7 @@
 #include <cctype>
 #include <optional>
 #include <string>
+#include <string_view>
 
 namespace ota {
 
@@ -62,9 +63,9 @@ namespace ota {
         }
 
         // Index of the next '.' at or after `from`, or s.size() when absent.
-        inline size_t findDot(const std::string& s, size_t from) {
+        inline size_t findDot(std::string_view s, size_t from) {
             const auto pos = s.find('.', from);
-            return pos == std::string::npos ? s.size() : pos;
+            return pos == std::string_view::npos ? s.size() : pos;
         }
 
         inline bool parseIntPrefix(const std::string& s, int& out, size_t& consumed) {
@@ -102,21 +103,22 @@ namespace ota {
                 std::string ida = a.substr(i, ai - i);
                 std::string idb = b.substr(j, bj - j);
 
+                // Both ran out at the same boundary — strings are equal up to
+                // here. Advance past the shared trailing separator (if any) and
+                // let the loop condition end the comparison.
+                if (ida.empty() && idb.empty()) {
+                    i = (ai < a.size()) ? ai + 1 : a.size();
+                    j = (bj < b.size()) ? bj + 1 : b.size();
+                    continue;
+                }
+
                 // Per semver.org spec Section 11, item 4: "A larger set of
                 // pre-release fields has higher precedence than a smaller set,
                 // if all of the preceding identifiers are equal." So if one
                 // identifier is empty (the side ran out) and the other is not,
                 // the empty side loses.
-                if (ida.empty() && !idb.empty()) return -1;
-                if (idb.empty() && !ida.empty()) return 1;
-                if (ida.empty() && idb.empty()) {
-                    // Both ran out at the same boundary — strings are equal up
-                    // to here. Loop will terminate next iteration.
-                    i = (ai < a.size()) ? ai + 1 : a.size();
-                    j = (bj < b.size()) ? bj + 1 : b.size();
-                    if (i >= a.size() && j >= b.size()) break;
-                    continue;
-                }
+                if (ida.empty()) return -1;
+                if (idb.empty()) return 1;
 
                 bool aNum = isDigit(ida[0]);
 
@@ -137,7 +139,6 @@ namespace ota {
 
                 i = (ai < a.size()) ? ai + 1 : a.size();
                 j = (bj < b.size()) ? bj + 1 : b.size();
-                if (i >= a.size() && j >= b.size()) break;
             }
 
             return 0;
