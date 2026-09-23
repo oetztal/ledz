@@ -20,13 +20,13 @@ namespace Task {
     }
 
 #ifdef ARDUINO
-    void LedShow::taskWrapper(void* pvParameters) {
+    [[noreturn]] void LedShow::taskWrapper(void* pvParameters) {
         ESP_LOGI(TAG, "taskWrapper()");
         auto* instance = static_cast<LedShow*>(pvParameters);
         instance->task();
     }
 
-    void LedShow::task() {
+    [[noreturn]] void LedShow::task() {
         unsigned int iteration = 0;
         unsigned long total_execution_time = 0;
         unsigned long total_show_time = 0;

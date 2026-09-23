@@ -10,10 +10,10 @@
 
 #include "../support/Color.h"
 
-static const char* const TAG = "show";
+[[maybe_unused]] static const char* const TAG = "show";
 
 namespace Show {
-    std::tuple<float, float> Mandelbrot::func(float zre, float zim, float cre, float cim) {
+    std::tuple<float, float> Mandelbrot::func(float zre, float zim, float cre, float cim) const {
         // z_n+1 = z_n^2 + c
         return std::make_tuple<float, float>(zre * zre - zim * zim + cre, 2 * zre * zim + cim);
     }
@@ -23,24 +23,25 @@ namespace Show {
         : c_re_min(cReMin), c_im_min(cImMin), c_im_max(cImMax), scale(scale), max_iterations(max_iterations),
           color_scale(colorScale) {}
 
-    void Mandelbrot::log_result(unsigned long long j, float cre) {
+    void Mandelbrot::log_result(unsigned long long j, float cre) const {
         std::stringstream ss;
         ss << j << "(" << cre << ") [" << c_im_min << ", " << c_im_max << "], " << max_iterations;
         ESP_LOGD(TAG, "%s", ss.str().c_str());
     }
 
     void Mandelbrot::execute(Strip::Strip& strip, Iteration iteration) {
-        float cDelta = std::abs(c_im_max - c_im_min) / strip.length();
+        float cDelta = std::abs(c_im_max - c_im_min) / static_cast<float>(strip.length());
 
         auto j = iteration % (strip.length() * scale);
-        float cre = c_re_min + (cDelta / scale) * static_cast<float>(j);
+        float cre = c_re_min + (cDelta / static_cast<float>(scale)) * static_cast<float>(j);
 
         unsigned int line_max_iterations = 0;
 
         for (unsigned int i = 0; i < strip.length(); i++) {
             float cim = c_im_min + cDelta * static_cast<float>(i);
 
-            float zre = 0.0, zim = 0.0;
+            float zre = 0.0;
+            float zim = 0.0;
 
             unsigned int iterations = max_iterations;
             for (int k = 0; k < max_iterations; k++) {
@@ -65,7 +66,5 @@ namespace Show {
 
             line_max_iterations = std::max(line_max_iterations, iterations);
         }
-
-        // log_result(j, cre);
     }
 }

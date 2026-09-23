@@ -4,11 +4,11 @@
 #include <memory>
 
 namespace Strip {
-    typedef int16_t Pin;
-    typedef int16_t PixelIndex;
-    typedef uint32_t Color;
-    typedef uint8_t ColorComponent;
-    typedef uint8_t Brightness;
+    using Pin = int16_t;
+    using PixelIndex = int16_t;
+    using Color = uint32_t;
+    using ColorComponent = uint8_t;
+    using Brightness = uint8_t;
 
     class Strip {
     public:

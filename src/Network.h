@@ -52,7 +52,7 @@ private:
      * Generate mDNS hostname from device ID
      * Creates hostname like "ledz-aabbcc" from device ID
      */
-    String generateHostname();
+    String generateHostname() const;
 
     /**
      * Start Access Point mode for configuration
@@ -66,7 +66,7 @@ private:
      */
     void startSTA(const char* ssid, const char* password);
 
-    void configureUsingAPMode();
+    [[noreturn]] void configureUsingAPMode();
 
 public:
     /**
@@ -89,7 +89,7 @@ public:
     /**
      * Static trampoline function for FreeRTOS
      */
-    static void taskWrapper(void* pvParameters);
+    [[noreturn]] static void taskWrapper(void* pvParameters);
 
     /**
      * Get current network mode

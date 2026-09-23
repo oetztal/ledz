@@ -91,7 +91,7 @@ namespace Strip {
 
     void Layout::turnOffEdgeLeds() {
         // Turn off LEDs at both edges (negative dead, mirrored)
-        PixelIndex half_dead = static_cast<PixelIndex>(abs(dead_leds / 2));
+        auto half_dead = static_cast<PixelIndex>(abs(dead_leds / 2));
         Color black = Support::Color::from_rgb(0, 0, 0);
         for (PixelIndex i = 0; i < half_dead; i++) {
             strip.setPixelColor(i, black);

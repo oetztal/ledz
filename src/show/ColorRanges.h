@@ -30,8 +30,8 @@ namespace Show {
          * @param gradient If true, colors act as waypoints with smooth interpolation between them.
          *                 If false (default), colors fill sections with sharp boundaries.
          */
-        ColorRanges(const std::vector<Strip::Color>& colors, const std::vector<float>& ranges = {},
-                    bool gradient = false);
+        explicit ColorRanges(const std::vector<Strip::Color>& colors, const std::vector<float>& ranges = {},
+                             bool gradient = false);
 
         /**
          * Execute the show - creates color ranges and smoothly blends to them

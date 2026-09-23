@@ -23,7 +23,7 @@ namespace Show {
         : probability(probability), length_ms(length_ms), fade_ms(fade_ms),
           star_color(Support::Color::from_rgb(r, g, b)) {}
 
-    float Starlight::calculateBrightness(unsigned long elapsed_ms) {
+    float Starlight::calculateBrightness(unsigned long elapsed_ms) const {
         // Phase 1: Fade-in (0 to fade_ms)
         if (elapsed_ms < fade_ms) {
             return (float)elapsed_ms / (float)fade_ms;
@@ -59,7 +59,7 @@ namespace Show {
         if (float spawn_chance = randomChance(); spawn_chance < probability) {
             // Pick a random LED that's not already an active star
 #ifdef ARDUINO
-            uint16_t led = static_cast<uint16_t>(random(num_leds));
+            auto led = static_cast<uint16_t>(random(num_leds));
 #else
             uint16_t led = static_cast<uint16_t>(rand() % num_leds);
 #endif

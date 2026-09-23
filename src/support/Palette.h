@@ -18,7 +18,7 @@ namespace Support {
         ColorPoint(float pos, Strip::Color col, InterpolationType interp = InterpolationType::Linear, float pwr = 1.0f)
             : position(pos), color(col), interpolation(interp), power(pwr) {}
 
-        bool operator<(const ColorPoint& other) const { return position < other.position; }
+        friend bool operator<(const ColorPoint& lhs, const ColorPoint& rhs) { return lhs.position < rhs.position; }
     };
 
     class Palette {

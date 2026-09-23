@@ -9,7 +9,7 @@
 static const char* const TAG = "cfg";
 
 namespace Config {
-    ConfigManager::ConfigManager() {}
+    ConfigManager::ConfigManager() = default;
 
     void ConfigManager::requestRestart(uint32_t delayMs) {
         restartAt = millis() + delayMs;
@@ -17,7 +17,7 @@ namespace Config {
         ESP_LOGW(TAG, "Restart requested in %u ms", delayMs);
     }
 
-    void ConfigManager::checkRestart() {
+    void ConfigManager::checkRestart() const {
         if (restartRequested && millis() >= restartAt) {
             ESP_LOGI(TAG, "Performing scheduled restart...");
 #ifdef ARDUINO
@@ -173,7 +173,7 @@ namespace Config {
 #endif
     }
 
-    String ConfigManager::getDeviceId() {
+    String ConfigManager::getDeviceId() const {
 #ifdef ARDUINO
         uint64_t mac = ESP.getEfuseMac();
         std::array<uint8_t, 6> mac_bytes;

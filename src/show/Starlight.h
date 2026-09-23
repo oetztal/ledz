@@ -24,7 +24,7 @@ namespace Show {
          * @param elapsed_ms Time since star started (milliseconds)
          * @return Brightness factor (0.0 to 1.0)
          */
-        float calculateBrightness(unsigned long elapsed_ms);
+        float calculateBrightness(unsigned long elapsed_ms) const;
 
         /**
          * Get total star lifetime (fade-in + hold + fade-out)
@@ -51,7 +51,7 @@ namespace Show {
          */
         void execute(Strip::Strip& strip, Iteration iteration) override;
 
-        const char* name() { return "Starlight"; }
+        const char* name() const { return "Starlight"; }
     };
 } // namespace Show
 

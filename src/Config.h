@@ -223,7 +223,7 @@ namespace Config {
          * Check and perform restart if scheduled and time has passed
          * Called from main loop
          */
-        void checkRestart();
+        void checkRestart() const;
 
         /**
          * Check if WiFi has been configured
@@ -281,7 +281,7 @@ namespace Config {
          * Get unique device ID based on MAC address
          * @return Device ID string (e.g., "AABBCC")
          */
-        String getDeviceId();
+        String getDeviceId() const;
 
         /**
          * Increment WiFi connection failure counter

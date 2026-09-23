@@ -31,7 +31,7 @@ namespace Show {
         auto duration = 2.0f * std::sqrt(amplitude) * factor;
         auto center = duration / 2.0f;
         auto period_length = static_cast<uint>(duration);
-        if (unsigned int current_period = static_cast<unsigned int>(iteration / period_length);
+        if (auto current_period = static_cast<unsigned int>(iteration / period_length);
             period != current_period && !next) {
             period = current_period;
             next = true;
@@ -45,7 +45,6 @@ namespace Show {
 
     void Jump::Ball::swap_color(std::queue<Strip::Color>& colors) {
         colors.push(color);
-        auto old_color = color;
         color = colors.front();
         colors.pop();
     }

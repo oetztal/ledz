@@ -208,16 +208,6 @@ namespace {
             }
             return static_cast<unsigned char>(c);
         }
-
-        size_t readBytes(char* buf, size_t len) {
-            if (eof || !handle) return 0;
-            int n = esp_http_client_read(handle, buf, len);
-            if (n <= 0) {
-                eof = (n == 0);
-                return 0;
-            }
-            return static_cast<size_t>(n);
-        }
     };
 
     // ---------------------------------------------------------------------------
@@ -378,7 +368,8 @@ namespace {
     }
 
     struct RawDnsResult {
-        enum class Outcome { Answered, SocketFailed, SendFailed, NoReply, Malformed } outcome;
+        enum class Outcome { Answered, SocketFailed, SendFailed, NoReply, Malformed };
+        Outcome outcome;
         int err = 0;    // errno for the socket/send/recv failures
         int rcode = -1; // DNS RCODE (0 = NOERROR, 3 = NXDOMAIN, 5 = REFUSED)
         int answerCount = 0;
@@ -459,23 +450,24 @@ namespace {
     // Resolve `host` through the same resolver esp-tls uses, logging the outcome
     // and how long it took. Elapsed time is the tell: instant failure means lwIP
     // never got a query out, ~10 s means it retried and gave up waiting.
-    bool probeGetAddrInfo(const char* host, int family, const char* familyName) {
+    bool probeGetAddrInfo(const char* host, int family, [[maybe_unused]] const char* familyName) {
         struct addrinfo hints{};
         hints.ai_family = family;
         hints.ai_socktype = SOCK_STREAM;
         struct addrinfo* res = nullptr;
         uint32_t start = millis();
         int gai = getaddrinfo(host, "443", &hints, &res);
-        uint32_t elapsed = millis() - start;
+        [[maybe_unused]] uint32_t elapsed = millis() - start;
+        (void)elapsed;
 
         if (gai == 0 && res) {
             std::array<char, INET6_ADDRSTRLEN> ipstr{};
             ipstr[0] = '?';
             if (res->ai_family == AF_INET6) {
-                auto* sa = reinterpret_cast<struct sockaddr_in6*>(res->ai_addr);
+                const auto* sa = reinterpret_cast<const struct sockaddr_in6*>(res->ai_addr);
                 inet_ntop(AF_INET6, &sa->sin6_addr, ipstr.data(), ipstr.size());
             } else {
-                auto* sa = reinterpret_cast<struct sockaddr_in*>(res->ai_addr);
+                const auto* sa = reinterpret_cast<const struct sockaddr_in*>(res->ai_addr);
                 inet_ntop(AF_INET, &sa->sin_addr, ipstr.data(), ipstr.size());
             }
             ESP_LOGD(TAG, "OTA diag: getaddrinfo(%s, %s) -> %s in %lu ms", host, familyName, ipstr.data(),
@@ -490,7 +482,7 @@ namespace {
     }
 
     // Returns true if the server actually answered (whatever the RCODE).
-    bool logRawDnsQuery(uint32_t serverIp4, const char* host, const char* serverLabel) {
+    bool logRawDnsQuery(uint32_t serverIp4, const char* host, [[maybe_unused]] const char* serverLabel) {
         RawDnsResult raw = rawDnsQuery(serverIp4, host, 4000);
         switch (raw.outcome) {
             case RawDnsResult::Outcome::Answered:
@@ -520,7 +512,7 @@ namespace {
     // is *reachable*, which includes an outright refusal: ECONNREFUSED means the
     // host answered and merely has the port closed. Only a timeout means nothing
     // came back at all, and EHOSTUNREACH means we have no route.
-    bool logTcpProbe(uint32_t ip4, uint16_t port, const char* label) {
+    bool logTcpProbe(uint32_t ip4, uint16_t port, [[maybe_unused]] const char* label) {
         if (ip4 == 0) return false;
         uint32_t start = millis();
         int fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -553,7 +545,8 @@ namespace {
         struct timeval tv{};
         tv.tv_sec = 5;
         int sel = select(fd + 1, nullptr, &wset, nullptr, &tv);
-        uint32_t elapsed = millis() - start;
+        [[maybe_unused]] uint32_t elapsed = millis() - start;
+        (void)elapsed;
         bool reachable = false;
         if (sel > 0) {
             int soErr = 0;
@@ -719,7 +712,7 @@ namespace {
             // attempt (esp_sntp_restart) and wait again — that's the difference
             // between "the user's network is too locked-down to ever serve NTP"
             // and "the first sync just hadn't completed yet".
-            auto waitForSync = [](uint32_t ms) -> bool {
+            auto waitForSync = [](uint32_t ms) {
                 struct tm out{};
                 return getLocalTime(&out, ms);
             };
@@ -940,7 +933,7 @@ namespace {
         // needs that headroom more than we do.
         std::vector<uint8_t> buffer(DOWNLOAD_CHUNK_SIZE);
         size_t totalRead = 0;
-        unsigned long lastDataReceived = millis();
+        unsigned long lastDataReceived;
 
         while (totalRead < expectedSize) {
             if (int n =
@@ -1025,7 +1018,6 @@ namespace {
         auto* job = static_cast<OtaUpdateJob*>(arg);
         String url = job->url;
         size_t expected = job->expected_size;
-        bool force = job->force;
         delete job;
 
         // 1. Suspend LED show for visual signal + heap relief.
@@ -1088,7 +1080,6 @@ namespace {
 // ---------------------------------------------------------------------------
 
 bool OTAUpdater::startBackgroundCheck(const char* owner, const char* repo) {
-    bool expected = false;
     if (otaState().updateInProgress.load()) {
         ESP_LOGW(TAG, "startBackgroundCheck refused: updateInProgress already true");
         return false;
@@ -1285,7 +1276,9 @@ void OTAUpdater::getMemoryInfo(uint32_t& freeHeap, uint32_t& minFreeHeap, uint32
 }
 
 bool OTAUpdater::hasEnoughMemory() {
-    uint32_t freeHeap, minFree, psramFree;
+    uint32_t freeHeap;
+    uint32_t minFree;
+    uint32_t psramFree;
     getMemoryInfo(freeHeap, minFree, psramFree);
     if (freeHeap < OTA_MIN_FREE_HEAP_BYTES) return false;
     return true;

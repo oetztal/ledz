@@ -5,7 +5,7 @@
 
 namespace Show {
     // International Morse Code dictionary
-    const char* MorseCode::getMorseCode(char c) {
+    const char* MorseCode::getMorseCode(char c) const {
         // Convert to uppercase
         c = static_cast<char>(toupper(c));
 
@@ -85,7 +85,7 @@ namespace Show {
 
         // If no words, use default message
         if (words.empty()) {
-            words.push_back("HELLO");
+            words.emplace_back("HELLO");
         }
 
         // Encode each word with a unique color

@@ -7,7 +7,7 @@
 
 static const char* const TAG = "net";
 
-CaptivePortal::CaptivePortal() {}
+CaptivePortal::CaptivePortal() = default;
 
 void CaptivePortal::begin() {
 #ifdef ARDUINO

@@ -10,7 +10,9 @@ namespace Show {
      */
     class Stroboscope : public Show {
     private:
-        uint8_t r, g, b;                // Color to flash
+        uint8_t r; // Color to flash
+        uint8_t g;
+        uint8_t b;
         unsigned int on_cycles;         // Number of cycles to stay on
         unsigned int off_cycles;        // Number of cycles to stay off
         unsigned int current_cycle = 0; // Current cycle counter
@@ -33,7 +35,7 @@ namespace Show {
          */
         void execute(Strip::Strip& strip, Iteration iteration) override;
 
-        const char* name() { return "Stroboscope"; }
+        const char* name() const { return "Stroboscope"; }
     };
 } // namespace Show
 

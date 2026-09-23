@@ -7,11 +7,11 @@ namespace Task {
         ShowController& controller;
         TaskHandle_t taskHandle = nullptr;
 
-        static void taskWrapper(void* pvParameters);
-        void task();
+        [[noreturn]] static void taskWrapper(void* pvParameters);
+        [[noreturn]] void task();
 
     public:
-        LedShow(ShowController& controller);
+        explicit LedShow(ShowController& controller);
 
         void startTask();
     };

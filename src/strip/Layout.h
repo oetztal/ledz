@@ -29,7 +29,7 @@ namespace Strip {
         void setRangeToBlack(PixelIndex start, PixelIndex end);
 
     public:
-        Layout(Strip& strip, bool reverse = false, bool mirror = false, PixelIndex dead_leds = 0);
+        explicit Layout(Strip& strip, bool reverse = false, bool mirror = false, PixelIndex dead_leds = 0);
 
         void fill(Color color) override;
 

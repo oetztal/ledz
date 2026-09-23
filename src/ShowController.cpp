@@ -92,7 +92,7 @@ bool ShowController::queueShowChange(const std::string& showName, const std::str
 #endif
 }
 
-bool ShowController::queueBrightnessChange(uint8_t brightness) {
+bool ShowController::queueBrightnessChange(uint8_t newBrightness) {
 #ifdef ARDUINO
     if (commandQueue == nullptr) {
         return false;
@@ -100,7 +100,7 @@ bool ShowController::queueBrightnessChange(uint8_t brightness) {
 
     ShowCommand cmd;
     cmd.type = ShowCommandType::SET_BRIGHTNESS;
-    cmd.brightness_value = brightness;
+    cmd.brightness_value = newBrightness;
 
     if (xQueueSend(commandQueue, &cmd, 0) == pdTRUE) {
         return true;
@@ -121,7 +121,7 @@ void ShowController::applyCommand(const ShowCommand& cmd) {
                 newShow != nullptr) {
                 currentShow = std::move(newShow);
                 {
-                    std::lock_guard<std::mutex> lock(stateMutex);
+                    std::scoped_lock lock(stateMutex);
                     currentShowName = cmd.show_name;
                 }
 
@@ -215,7 +215,7 @@ void ShowController::applyCommand(const ShowCommand& cmd) {
                 newShow != nullptr) {
                 currentShow = std::move(newShow);
                 {
-                    std::lock_guard<std::mutex> lock(stateMutex);
+                    std::scoped_lock lock(stateMutex);
                     currentShowName = cmd.show_name;
                 }
 
@@ -389,16 +389,16 @@ bool ShowController::isShowComplete() const {
 }
 
 void ShowController::updateStats(const ShowStats& newStats) {
-    std::lock_guard<std::mutex> lock(stateMutex);
+    std::scoped_lock lock(stateMutex);
     stats = newStats;
 }
 
 ShowStats ShowController::getStats() const {
-    std::lock_guard<std::mutex> lock(stateMutex);
+    std::scoped_lock lock(stateMutex);
     return stats;
 }
 
 std::string ShowController::getCurrentShowName() const {
-    std::lock_guard<std::mutex> lock(stateMutex);
+    std::scoped_lock lock(stateMutex);
     return currentShowName;
 }

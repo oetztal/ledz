@@ -15,7 +15,7 @@ namespace Support {
 
         unsigned long lap();
 
-        unsigned long elapsed();
+        unsigned long elapsed() const;
 
         const unsigned long start_time;
     };

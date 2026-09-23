@@ -18,12 +18,12 @@ namespace Show {
 #ifdef ARDUINO
             // Init-time dump — debug only; silenced in production.
             ESP_LOGD(TAG, "colors (%zu):", colors.size());
-            for (auto c : colors) {
+            for ([[maybe_unused]] auto c : colors) {
                 ESP_LOGD(TAG, "  RGB(%d,%d,%d)", Support::Color::red(c), Support::Color::green(c),
                          Support::Color::blue(c));
             }
             ESP_LOGD(TAG, "ranges (%zu):", ranges.size());
-            for (auto range : ranges) {
+            for ([[maybe_unused]] auto range : ranges) {
                 ESP_LOGD(TAG, "  %.1f%%", range);
             }
             ESP_LOGD(TAG, "gradient=%s", gradient ? "true" : "false");
@@ -61,8 +61,8 @@ namespace Show {
                 // Custom ranges (percentages)
 #ifdef ARDUINO
                 ESP_LOGD(TAG, "Using custom ranges for %zu colors:", colors.size());
-                for (size_t i = 0; i < ranges.size(); i++) {
-                    ESP_LOGD(TAG, "  %.1f%%", ranges[i]);
+                for ([[maybe_unused]] const auto& range : ranges) {
+                    ESP_LOGD(TAG, "  %.1f%%", range);
                 }
 #endif
                 for (float range : ranges) {

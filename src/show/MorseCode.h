@@ -26,7 +26,7 @@ namespace Show {
         // Morse code encoding
         void buildPattern();
 
-        const char* getMorseCode(char c);
+        const char* getMorseCode(char c) const;
 
     public:
         /**
@@ -49,7 +49,7 @@ namespace Show {
          */
         void execute(Strip::Strip& strip, Iteration iteration) override;
 
-        const char* name() { return "MorseCode"; }
+        const char* name() const { return "MorseCode"; }
     };
 } // namespace Show
 

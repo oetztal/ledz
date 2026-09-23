@@ -37,7 +37,6 @@ constexpr static auto CONTENT_TYPE_JSON = "application/json";
 
 // JSON Key constants
 constexpr static auto JSON_KEY_SUCCESS = "success";
-constexpr static auto JSON_KEY_ERROR = "error";
 constexpr static auto JSON_KEY_VALUE = "value";
 constexpr static auto JSON_KEY_NAME = "name";
 constexpr static auto JSON_KEY_INDEX = "index";
@@ -48,7 +47,7 @@ constexpr static auto JSON_KEY_SHOW_PARAMS = "show_params";
 
 // Common JSON Responses
 constexpr static auto JSON_RESPONSE_SUCCESS = "{\"success\":true}";
-constexpr static auto JSON_RESPONSE_ERROR_QUEUE_FULL = "{\"success\":false,\"error\":\"Queue full\"}";
+constexpr static auto JSON_RESPONSE_ERROR_QUEUE_FULL = R"({"success":false,"error":"Queue full"})";
 
 constexpr static auto TAG = "http";
 
@@ -63,7 +62,6 @@ constexpr static auto API_PATH_PRESETS = "/api/presets";
 constexpr static auto API_PATH_PRESETS_LOAD = "/api/presets/load";
 constexpr static auto API_PATH_TIMERS = "/api/timers";
 constexpr static auto API_PATH_RESTART = "/api/restart";
-constexpr static auto API_PATH_RESET = "/api/reset";
 constexpr static auto API_PATH_OTA_CHECK = "/api/ota/check";
 constexpr static auto API_PATH_OTA_UPDATE = "/api/ota/update";
 #endif
@@ -103,7 +101,7 @@ void AccessLogger::run(AsyncWebServerRequest* request, ArMiddlewareNext next) {
     next();
     elapsed = millis() - elapsed;
 
-    if (AsyncWebServerResponse* response = request->getResponse(); response) {
+    if (const AsyncWebServerResponse* response = request->getResponse(); response) {
         snprintf(logBuf.data(), logBuf.size(), "%s %s %s (%u ms) %u", ip.c_str(), url.c_str(), method, elapsed,
                  response->code());
     } else {
@@ -577,75 +575,74 @@ void WebServerManager::setupAPIRoutes() {
         auto* handler = new AsyncCallbackJsonWebHandler(
             AsyncURIMatcher::exact("/api/settings/device"),
             [this](AsyncWebServerRequest* request, const JsonVariant& doc) {
-                // Load current config
-                Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
-                bool changed = false;
+            // Load current config
+            Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
+            bool changed = false;
 
-                // Update num_pixels if provided
-                if (!doc["num_pixels"].isNull()) {
-                    uint16_t num_pixels = doc["num_pixels"];
+            // Update num_pixels if provided
+            if (!doc["num_pixels"].isNull()) {
+                uint16_t num_pixels = doc["num_pixels"];
 
-                    if (num_pixels < 1 || num_pixels > 1000) {
-                        request->send(400, CONTENT_TYPE_JSON,
-                                      R"({"success":false,"error":"Number of pixels must be between 1 and 1000"})");
-                        return;
-                    }
-
-                    deviceConfig.num_pixels = num_pixels;
-                    ESP_LOGI(TAG, "Number of pixels updated: %u", num_pixels);
-                    changed = true;
+                if (num_pixels < 1 || num_pixels > 1000) {
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"Number of pixels must be between 1 and 1000"})");
+                    return;
                 }
 
-                // Update led_pin if provided
-                if (!doc["led_pin"].isNull()) {
-                    uint8_t led_pin = doc["led_pin"];
+                deviceConfig.num_pixels = num_pixels;
+                ESP_LOGI(TAG, "Number of pixels updated: %u", num_pixels);
+                changed = true;
+            }
 
-                    if (led_pin > 48) {
-                        request->send(400, CONTENT_TYPE_JSON,
-                                      R"({"success":false,"error":"LED pin must be between 0 and 48"})");
-                        return;
-                    }
+            // Update led_pin if provided
+            if (!doc["led_pin"].isNull()) {
+                uint8_t led_pin = doc["led_pin"];
 
-                    deviceConfig.led_pin = led_pin;
-                    ESP_LOGI(TAG, "LED pin updated: %u", led_pin);
-                    changed = true;
+                if (led_pin > 48) {
+                    request->send(400, CONTENT_TYPE_JSON,
+                                  R"({"success":false,"error":"LED pin must be between 0 and 48"})");
+                    return;
                 }
 
-                // Update gamma_mode if provided
-                if (!doc["gamma_mode"].isNull()) {
-                    int gamma_mode = doc["gamma_mode"];
+                deviceConfig.led_pin = led_pin;
+                ESP_LOGI(TAG, "LED pin updated: %u", led_pin);
+                changed = true;
+            }
 
-                    if (gamma_mode < 0 || gamma_mode > 2) {
+            // Update gamma_mode if provided
+            if (!doc["gamma_mode"].isNull()) {
+                int gamma_mode = doc["gamma_mode"];
+
+                if (gamma_mode < 0 || gamma_mode > 2) {
                         request->send(400, CONTENT_TYPE_JSON,
-                                      "{\"success\":false,\"error\":\"Gamma mode must be 0 (default), 1 (NeoPixel), or "
-                                      "2 (none)\"}");
+                                      R"({"success":false,"error":"Gamma mode must be 0 (default), 1 (NeoPixel), or 2 (none)"
+                })");
                         return;
-                    }
+            }
 
-                    deviceConfig.gamma_mode = static_cast<Config::GammaMode>(gamma_mode);
-                    ESP_LOGI(TAG, "Gamma mode updated: %d", gamma_mode);
-                    changed = true;
+            deviceConfig.gamma_mode = static_cast<Config::GammaMode>(gamma_mode);
+            ESP_LOGI(TAG, "Gamma mode updated: %d", gamma_mode);
+            changed = true;
                 }
 
                 // Update cycle_time if provided
                 if (!doc["cycle_time"].isNull()) {
-                    uint16_t cycle_time = doc["cycle_time"];
+            uint16_t cycle_time = doc["cycle_time"];
 
-                    if (cycle_time < 1 || cycle_time > 1000) {
-                        request->send(400, CONTENT_TYPE_JSON,
-                                      R"({"success":false,"error":"Cycle time must be between 1 and 1000"})");
-                        return;
-                    }
+            if (cycle_time < 1 || cycle_time > 1000) {
+                request->send(400, CONTENT_TYPE_JSON,
+                              R"({"success":false,"error":"Cycle time must be between 1 and 1000"})");
+                return;
+            }
 
-                    deviceConfig.cycle_time = cycle_time;
-                    ESP_LOGI(TAG, "Cycle time updated: %u ms", cycle_time);
-                    changed = true;
+            deviceConfig.cycle_time = cycle_time;
+            ESP_LOGI(TAG, "Cycle time updated: %u ms", cycle_time);
+            changed = true;
                 }
 
                 if (!changed) {
-                    request->send(400, CONTENT_TYPE_JSON,
-                                  R"({"success":false,"error":"No valid parameters provided"})");
-                    return;
+            request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"No valid parameters provided"})");
+            return;
                 }
 
                 // Save config
@@ -655,258 +652,183 @@ void WebServerManager::setupAPIRoutes() {
                 request->send(200, CONTENT_TYPE_JSON,
                               R"({"success":true,"message":"Device settings updated, restarting..."})");
                 config.requestRestart(1000);
-            });
-        handler->setMethod(HTTP_POST);
-        server.addHandler(handler);
-    }
-
-    // POST /api/settings/factory-reset - Factory reset device
-    server.on("/api/settings/factory-reset", HTTP_POST, [this](AsyncWebServerRequest* request) {
-        ESP_LOGW(TAG, "Factory reset requested");
-
-        // Send success response first
-        request->send(200, CONTENT_TYPE_JSON, R"({"success":true,"message":"Factory reset complete, restarting..."})");
-
-        // Clear all configuration
-        config.reset();
-
-        ESP_LOGW(TAG, "All settings cleared");
-
-        // Request deferred restart
-        config.requestRestart(1000);
     });
+    handler->setMethod(HTTP_POST);
+    server.addHandler(handler);
+}
 
-    // GET /api/about - Device information
-    server.on("/api/about", HTTP_GET, [this](AsyncWebServerRequest* request) {
-        JsonDocument doc;
+// POST /api/settings/factory-reset - Factory reset device
+server.on("/api/settings/factory-reset", HTTP_POST, [this](AsyncWebServerRequest* request) {
+    ESP_LOGW(TAG, "Factory reset requested");
 
-        // Device info
-        Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
-        doc["device_id"] = deviceConfig.device_id.data();
-        doc["num_pixels"] = deviceConfig.num_pixels;
-        doc["led_pin"] = deviceConfig.led_pin;
-        doc["cycle_time"] = deviceConfig.cycle_time;
+    // Send success response first
+    request->send(200, CONTENT_TYPE_JSON, R"({"success":true,"message":"Factory reset complete, restarting..."})");
 
-        // Show statistics
-        ShowStats stats = showController.getStats();
-        JsonObject statsJson = doc["stats"].to<JsonObject>();
-        statsJson["avg_execution_time"] = stats.avg_execution_time;
-        statsJson["avg_show_time"] = stats.avg_show_time;
-        statsJson["avg_cycle_time"] = stats.avg_cycle_time;
-        statsJson["last_execution_time"] = stats.last_execution_time;
-        statsJson["last_show_time"] = stats.last_show_time;
+    // Clear all configuration
+    config.reset();
 
-        // Chip info
-        doc["chip_model"] = ESP.getChipModel();
-        doc["chip_revision"] = ESP.getChipRevision();
-        doc["chip_cores"] = ESP.getChipCores();
-        doc["cpu_freq_mhz"] = ESP.getCpuFreqMHz();
+    ESP_LOGW(TAG, "All settings cleared");
+
+    // Request deferred restart
+    config.requestRestart(1000);
+});
+
+// GET /api/about - Device information
+server.on("/api/about", HTTP_GET, [this](AsyncWebServerRequest* request) {
+    JsonDocument doc;
+
+    // Device info
+    Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
+    doc["device_id"] = deviceConfig.device_id.data();
+    doc["num_pixels"] = deviceConfig.num_pixels;
+    doc["led_pin"] = deviceConfig.led_pin;
+    doc["cycle_time"] = deviceConfig.cycle_time;
+
+    // Show statistics
+    ShowStats stats = showController.getStats();
+    JsonObject statsJson = doc["stats"].to<JsonObject>();
+    statsJson["avg_execution_time"] = stats.avg_execution_time;
+    statsJson["avg_show_time"] = stats.avg_show_time;
+    statsJson["avg_cycle_time"] = stats.avg_cycle_time;
+    statsJson["last_execution_time"] = stats.last_execution_time;
+    statsJson["last_show_time"] = stats.last_show_time;
+
+    // Chip info
+    doc["chip_model"] = ESP.getChipModel();
+    doc["chip_revision"] = ESP.getChipRevision();
+    doc["chip_cores"] = ESP.getChipCores();
+    doc["cpu_freq_mhz"] = ESP.getCpuFreqMHz();
 #ifdef ARDUINO
-        doc["cpu_temp"] = temperatureRead();
+    doc["cpu_temp"] = temperatureRead();
 #endif
 
-        // Memory info
-        doc["free_heap"] = ESP.getFreeHeap();
-        doc["heap_size"] = ESP.getHeapSize();
-        doc["min_free_heap"] = ESP.getMinFreeHeap();
-        doc["psram_size"] = ESP.getPsramSize();
+    // Memory info
+    doc["free_heap"] = ESP.getFreeHeap();
+    doc["heap_size"] = ESP.getHeapSize();
+    doc["min_free_heap"] = ESP.getMinFreeHeap();
+    doc["psram_size"] = ESP.getPsramSize();
 
-        // Flash info
-        doc["flash_size"] = ESP.getFlashChipSize();
-        doc["flash_speed"] = ESP.getFlashChipSpeed();
+    // Flash info
+    doc["flash_size"] = ESP.getFlashChipSize();
+    doc["flash_speed"] = ESP.getFlashChipSpeed();
 
-        // Runtime info
-        doc["uptime_ms"] = millis();
+    // Runtime info
+    doc["uptime_ms"] = millis();
 
-        // Network info
-        if (WiFiClass::status() == WL_CONNECTED) {
-            doc["wifi_ssid"] = WiFi.SSID();
-            doc["wifi_rssi"] = WiFi.RSSI();
-            doc["ip_address"] = WiFi.localIP().toString();
-            doc["mac_address"] = WiFi.macAddress();
-            doc["wifi_tx_power"] = WiFi.getTxPower();
-            doc["wifi_sleep_mode"] = WiFi.getSleep();
-        } else if (WiFiClass::getMode() == WIFI_AP) {
-            doc["ap_ssid"] = WiFi.softAPgetHostname();
-            doc["ap_ip"] = WiFi.softAPIP().toString();
-            doc["ap_clients"] = WiFi.softAPgetStationNum();
-        }
-
-        String response;
-        serializeJson(doc, response);
-        request->send(200, CONTENT_TYPE_JSON, response);
-    });
-
-    // GET /api/timers - List all timers with remaining time
-    server.on(API_PATH_TIMERS, HTTP_GET, [this](AsyncWebServerRequest* request) {
-        TimerScheduler* scheduler = network.getTimerScheduler();
-        if (!scheduler) {
-            request->send(503, CONTENT_TYPE_JSON, R"({"success":false,"error":"Timer scheduler not available"})");
-            return;
-        }
-
-        uint32_t currentEpoch = network.getCurrentEpoch();
-        const Config::TimersConfig& timersConfig = scheduler->getTimersConfig();
-
-        JsonDocument doc;
-        doc["timezone"] = timersConfig.timezone.data();
-        doc["current_epoch"] = currentEpoch;
-
-        // Include local time as seconds since midnight for UI convenience.
-        // Without NTP there is no instant to resolve the zone at, so the
-        // derived fields are reported as unknown rather than describing
-        // epoch 0.
-        // Outlives the document: ArduinoJson stores a const char* by
-        // reference, so tz_abbrev must not point at a dead local.
-        LocalTime::Info tzInfo = {};
-        if (currentEpoch != 0) {
-            doc["local_seconds_since_midnight"] = scheduler->getSecondsSinceMidnight(currentEpoch);
-
-            tzInfo = LocalTime::describe(currentEpoch, timersConfig.timezone.data());
-            doc["tz_abbrev"] = tzInfo.abbrev.data();
-            doc["tz_offset_minutes"] = tzInfo.offset_minutes;
-            doc["is_dst"] = tzInfo.is_dst;
-        } else {
-            doc["local_seconds_since_midnight"] = 0;
-        }
-
-        JsonArray timers = doc["timers"].to<JsonArray>();
-        for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
-            const Config::TimerEntry& timer = timersConfig.timers[i];
-            JsonObject timerObj = timers.add<JsonObject>();
-            timerObj["index"] = i;
-            timerObj["enabled"] = timer.enabled;
-
-            if (timer.enabled) {
-                timerObj["type"] = static_cast<int>(timer.type);
-                timerObj["action"] = static_cast<int>(timer.action);
-                timerObj["preset_index"] = timer.preset_index;
-                timerObj["target_time"] = timer.target_time;
-                timerObj["duration_seconds"] = timer.duration_seconds;
-                timerObj["remaining_seconds"] = scheduler->getRemainingSeconds(i, currentEpoch);
-                timerObj["paused"] = timer.paused;
-                timerObj["days_mask"] = timer.days_mask;
-
-                // Add type name for UI convenience
-                switch (timer.type) {
-                    case Config::TimerType::COUNTDOWN:
-                        timerObj["type_name"] = "countdown";
-                        break;
-                    case Config::TimerType::SCHEDULE:
-                        // Wire name predates the "schedule" wording; kept stable.
-                        timerObj["type_name"] = "alarm_daily";
-                        break;
-                }
-            }
-        }
-
-        String response;
-        serializeJson(doc, response);
-        request->send(200, CONTENT_TYPE_JSON, response);
-    });
-
-    // POST /api/timers/countdown - Set a countdown timer
-    {
-        auto* handler = new AsyncCallbackJsonWebHandler(
-            AsyncURIMatcher::exact("/api/timers/countdown"),
-            [this](AsyncWebServerRequest* request, const JsonVariant& doc) {
-                TimerScheduler* scheduler = network.getTimerScheduler();
-                if (!scheduler) {
-                    request->send(503, CONTENT_TYPE_JSON,
-                                  R"({"success":false,"error":"Timer scheduler not available"})");
-                    return;
-                }
-
-                // Required: duration in seconds
-                if (doc["duration"].isNull()) {
-                    request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Duration required"})");
-                    return;
-                }
-
-                uint32_t duration = doc["duration"];
-                if (duration == 0 || duration > 86400 * 7) { // Max 7 days
-                    request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid duration"})");
-                    return;
-                }
-
-                // Optional: index (defaults to first available slot)
-                int timerIndex = doc[JSON_KEY_INDEX] | -1;
-                if (timerIndex == -1) {
-                    // Find first available slot
-                    const Config::TimersConfig& timersConfig = scheduler->getTimersConfig();
-                    for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
-                        if (!timersConfig.timers[i].enabled) {
-                            timerIndex = i;
-                            break;
-                        }
-                    }
-                    if (timerIndex == -1) {
-                        request->send(400, CONTENT_TYPE_JSON,
-                                      R"({"success":false,"error":"All timer slots are full"})");
-                        return;
-                    }
-                }
-
-                // Optional: action (defaults to TURN_OFF)
-                Config::TimerAction action = Config::TimerAction::TURN_OFF;
-                if (!doc["action"].isNull()) {
-                    int actionInt = doc["action"];
-                    if (actionInt == 0)
-                        action = Config::TimerAction::LOAD_PRESET;
-                    else
-                        action = Config::TimerAction::TURN_OFF;
-                }
-
-                // Optional: preset_index (only used if action is LOAD_PRESET)
-                uint8_t presetIndex = static_cast<uint8_t>(doc["preset_index"] | 0);
-
-                uint32_t currentEpoch = network.getCurrentEpoch();
-                if (scheduler->setCountdown(static_cast<uint8_t>(timerIndex), duration, action, presetIndex,
-                                            currentEpoch)) {
-                    JsonDocument responseDoc;
-                    responseDoc["success"] = true;
-                    responseDoc["index"] = timerIndex;
-                    responseDoc["remaining_seconds"] = duration;
-
-                    String response;
-                    serializeJson(responseDoc, response);
-                    request->send(200, CONTENT_TYPE_JSON, response);
-                } else {
-                    request->send(500, CONTENT_TYPE_JSON, R"({"success":false,"error":"Failed to set timer"})");
-                }
-            });
-        handler->setMethod(HTTP_POST);
-        server.addHandler(handler);
+    // Network info
+    if (WiFiClass::status() == WL_CONNECTED) {
+        doc["wifi_ssid"] = WiFi.SSID();
+        doc["wifi_rssi"] = WiFi.RSSI();
+        doc["ip_address"] = WiFi.localIP().toString();
+        doc["mac_address"] = WiFi.macAddress();
+        doc["wifi_tx_power"] = WiFi.getTxPower();
+        doc["wifi_sleep_mode"] = WiFi.getSleep();
+    } else if (WiFiClass::getMode() == WIFI_AP) {
+        doc["ap_ssid"] = WiFi.softAPgetHostname();
+        doc["ap_ip"] = WiFi.softAPIP().toString();
+        doc["ap_clients"] = WiFi.softAPgetStationNum();
     }
 
-    // POST /api/timers/schedule - Set or update a schedule.
-    // "/api/timers/alarm" is the pre-rename path, kept as an alias so that
-    // existing scripts keep working; type_name stays "alarm_daily" for the
-    // same reason.
-    {
-        auto setScheduleHandler = [this](AsyncWebServerRequest* request, const JsonVariant& doc) {
+    String response;
+    serializeJson(doc, response);
+    request->send(200, CONTENT_TYPE_JSON, response);
+});
+
+// GET /api/timers - List all timers with remaining time
+server.on(API_PATH_TIMERS, HTTP_GET, [this](AsyncWebServerRequest* request) {
+    const TimerScheduler* scheduler = network.getTimerScheduler();
+    if (!scheduler) {
+        request->send(503, CONTENT_TYPE_JSON, R"({"success":false,"error":"Timer scheduler not available"})");
+        return;
+    }
+
+    uint32_t currentEpoch = network.getCurrentEpoch();
+    const Config::TimersConfig& timersConfig = scheduler->getTimersConfig();
+
+    JsonDocument doc;
+    doc["timezone"] = timersConfig.timezone.data();
+    doc["current_epoch"] = currentEpoch;
+
+    // Include local time as seconds since midnight for UI convenience.
+    // Without NTP there is no instant to resolve the zone at, so the
+    // derived fields are reported as unknown rather than describing
+    // epoch 0.
+    // Outlives the document: ArduinoJson stores a const char* by
+    // reference, so tz_abbrev must not point at a dead local.
+    LocalTime::Info tzInfo = {};
+    if (currentEpoch != 0) {
+        doc["local_seconds_since_midnight"] = scheduler->getSecondsSinceMidnight(currentEpoch);
+
+        tzInfo = LocalTime::describe(currentEpoch, timersConfig.timezone.data());
+        doc["tz_abbrev"] = tzInfo.abbrev.data();
+        doc["tz_offset_minutes"] = tzInfo.offset_minutes;
+        doc["is_dst"] = tzInfo.is_dst;
+    } else {
+        doc["local_seconds_since_midnight"] = 0;
+    }
+
+    JsonArray timers = doc["timers"].to<JsonArray>();
+    for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
+        const Config::TimerEntry& timer = timersConfig.timers[i];
+        JsonObject timerObj = timers.add<JsonObject>();
+        timerObj["index"] = i;
+        timerObj["enabled"] = timer.enabled;
+
+        if (timer.enabled) {
+            timerObj["type"] = static_cast<int>(timer.type);
+            timerObj["action"] = static_cast<int>(timer.action);
+            timerObj["preset_index"] = timer.preset_index;
+            timerObj["target_time"] = timer.target_time;
+            timerObj["duration_seconds"] = timer.duration_seconds;
+            timerObj["remaining_seconds"] = scheduler->getRemainingSeconds(i, currentEpoch);
+            timerObj["paused"] = timer.paused;
+            timerObj["days_mask"] = timer.days_mask;
+
+            // Add type name for UI convenience
+            switch (timer.type) {
+                case Config::TimerType::COUNTDOWN:
+                    timerObj["type_name"] = "countdown";
+                    break;
+                case Config::TimerType::SCHEDULE:
+                    // Wire name predates the "schedule" wording; kept stable.
+                    timerObj["type_name"] = "alarm_daily";
+                    break;
+            }
+        }
+    }
+
+    String response;
+    serializeJson(doc, response);
+    request->send(200, CONTENT_TYPE_JSON, response);
+});
+
+// POST /api/timers/countdown - Set a countdown timer
+{
+    auto* handler = new AsyncCallbackJsonWebHandler(
+        AsyncURIMatcher::exact("/api/timers/countdown"),
+        [this](AsyncWebServerRequest* request, const JsonVariant& doc) {
             TimerScheduler* scheduler = network.getTimerScheduler();
             if (!scheduler) {
                 request->send(503, CONTENT_TYPE_JSON, R"({"success":false,"error":"Timer scheduler not available"})");
                 return;
             }
 
-            // Required: hour and minute for the schedule time
-            if (doc["hour"].isNull() || doc["minute"].isNull()) {
-                request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Hour and minute required"})");
+            // Required: duration in seconds
+            if (doc["duration"].isNull()) {
+                request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Duration required"})");
                 return;
             }
 
-            uint8_t hour = doc["hour"];
-            uint8_t minute = doc["minute"];
-            if (hour > 23 || minute > 59) {
-                request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid time"})");
+            uint32_t duration = doc["duration"];
+            if (duration == 0 || duration > 86400 * 7) { // Max 7 days
+                request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid duration"})");
                 return;
             }
 
             // Optional: index (defaults to first available slot)
             int timerIndex = doc[JSON_KEY_INDEX] | -1;
             if (timerIndex == -1) {
+                // Find first available slot
                 const Config::TimersConfig& timersConfig = scheduler->getTimersConfig();
                 for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
                     if (!timersConfig.timers[i].enabled) {
@@ -930,355 +852,430 @@ void WebServerManager::setupAPIRoutes() {
                     action = Config::TimerAction::TURN_OFF;
             }
 
-            uint8_t presetIndex = static_cast<uint8_t>(doc["preset_index"] | 0);
+            // Optional: preset_index (only used if action is LOAD_PRESET)
+            auto presetIndex = static_cast<uint8_t>(doc["preset_index"] | 0);
 
-            // Optional: days — weekday mask, bit n = tm_wday n (Sunday = 0).
-            // Defaults to every day; an empty mask is an error, not a pause.
-            int days = doc["days"] | static_cast<int>(Config::SCHEDULE_EVERY_DAY);
-            if (days <= 0 || days > Config::SCHEDULE_EVERY_DAY) {
-                request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid days"})");
-                return;
-            }
-
-            uint32_t secondsSinceMidnight = hour * 3600 + minute * 60;
-            bool success = scheduler->setSchedule(static_cast<uint8_t>(timerIndex), secondsSinceMidnight, action,
-                                                  presetIndex, static_cast<uint8_t>(days));
-
-            if (success) {
+            uint32_t currentEpoch = network.getCurrentEpoch();
+            if (scheduler->setCountdown(static_cast<uint8_t>(timerIndex), duration, action, presetIndex,
+                                        currentEpoch)) {
                 JsonDocument responseDoc;
                 responseDoc["success"] = true;
                 responseDoc["index"] = timerIndex;
+                responseDoc["remaining_seconds"] = duration;
 
                 String response;
                 serializeJson(responseDoc, response);
                 request->send(200, CONTENT_TYPE_JSON, response);
             } else {
-                request->send(500, CONTENT_TYPE_JSON, R"({"success":false,"error":"Failed to set schedule"})");
+                request->send(500, CONTENT_TYPE_JSON, R"({"success":false,"error":"Failed to set timer"})");
             }
-        };
+        });
+    handler->setMethod(HTTP_POST);
+    server.addHandler(handler);
+}
 
-        for (const char* path : {"/api/timers/schedule", "/api/timers/alarm"}) {
-            auto* handler = new AsyncCallbackJsonWebHandler(AsyncURIMatcher::exact(path), setScheduleHandler);
-            handler->setMethod(HTTP_POST);
-            server.addHandler(handler);
-        }
-    }
-
-    // POST /api/timers/pause - Pause or resume a schedule in place
-    {
-        auto* handler = new AsyncCallbackJsonWebHandler(
-            AsyncURIMatcher::exact("/api/timers/pause"),
-            [this](AsyncWebServerRequest* request, const JsonVariant& doc) {
-                TimerScheduler* scheduler = network.getTimerScheduler();
-                if (!scheduler) {
-                    request->send(503, CONTENT_TYPE_JSON,
-                                  R"({"success":false,"error":"Timer scheduler not available"})");
-                    return;
-                }
-
-                if (doc[JSON_KEY_INDEX].isNull() || doc["paused"].isNull()) {
-                    request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Index and paused required"})");
-                    return;
-                }
-
-                int timerIndex = doc[JSON_KEY_INDEX];
-                if (timerIndex < 0 || timerIndex >= Config::TimersConfig::MAX_TIMERS) {
-                    request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid timer index"})");
-                    return;
-                }
-
-                bool paused = doc["paused"];
-                if (scheduler->setPaused(static_cast<uint8_t>(timerIndex), paused)) {
-                    request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
-                } else {
-                    // The only remaining failure modes are an empty slot or a countdown.
-                    request->send(400, CONTENT_TYPE_JSON,
-                                  R"({"success":false,"error":"Slot does not hold a schedule"})");
-                }
-            });
-        handler->setMethod(HTTP_POST);
-        server.addHandler(handler);
-    }
-
-    // DELETE /api/timers - Cancel a timer by index
-    {
-        auto* handler = new AsyncCallbackJsonWebHandler(
-            AsyncURIMatcher::exact(API_PATH_TIMERS), [this](AsyncWebServerRequest* request, const JsonVariant& doc) {
-                TimerScheduler* scheduler = network.getTimerScheduler();
-                if (!scheduler) {
-                    request->send(503, CONTENT_TYPE_JSON,
-                                  R"({"success":false,"error":"Timer scheduler not available"})");
-                    return;
-                }
-
-                if (doc[JSON_KEY_INDEX].isNull()) {
-                    request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Timer index required"})");
-                    return;
-                }
-
-                int timerIndex = doc[JSON_KEY_INDEX];
-                if (timerIndex < 0 || timerIndex >= Config::TimersConfig::MAX_TIMERS) {
-                    request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid timer index"})");
-                    return;
-                }
-
-                if (scheduler->cancelTimer(static_cast<uint8_t>(timerIndex))) {
-                    request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
-                } else {
-                    request->send(500, CONTENT_TYPE_JSON, R"({"success":false,"error":"Failed to cancel timer"})");
-                }
-            });
-        handler->setMethod(HTTP_DELETE);
-        server.addHandler(handler);
-    }
-
-    // POST /api/timers/timezone - Set the POSIX TZ string
-    {
-        auto* handler = new AsyncCallbackJsonWebHandler(
-            AsyncURIMatcher::exact("/api/timers/timezone"),
-            [this](AsyncWebServerRequest* request, const JsonVariant& doc) {
-                TimerScheduler* scheduler = network.getTimerScheduler();
-                if (!scheduler) {
-                    request->send(503, CONTENT_TYPE_JSON,
-                                  R"({"success":false,"error":"Timer scheduler not available"})");
-                    return;
-                }
-
-                if (doc["tz"].isNull()) {
-                    request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Timezone string required"})");
-                    return;
-                }
-
-                if (const char* tz = doc["tz"]; !scheduler->setTimezone(tz)) {
-                    request->send(400, CONTENT_TYPE_JSON,
-                                  R"({"success":false,"error":"Invalid POSIX timezone string"})");
-                    return;
-                }
-
-                request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
-            });
-        handler->setMethod(HTTP_POST);
-        server.addHandler(handler);
-    }
-
-    // GET /api/touch - Get touch configuration and current values
-    server.on("/api/touch", HTTP_GET, [this](AsyncWebServerRequest* request) {
-        TouchController* touch = network.getTouchController();
-        if (!touch) {
-            request->send(503, CONTENT_TYPE_JSON, R"({"success":false,"error":"Touch controller not available"})");
+// POST /api/timers/schedule - Set or update a schedule.
+// "/api/timers/alarm" is the pre-rename path, kept as an alias so that
+// existing scripts keep working; type_name stays "alarm_daily" for the
+// same reason.
+{
+    auto setScheduleHandler = [this](AsyncWebServerRequest* request, const JsonVariant& doc) {
+        TimerScheduler* scheduler = network.getTimerScheduler();
+        if (!scheduler) {
+            request->send(503, CONTENT_TYPE_JSON, R"({"success":false,"error":"Timer scheduler not available"})");
             return;
         }
 
-        JsonDocument doc;
-        const Config::TouchConfig& touchConfig = touch->getTouchConfig();
-
-        doc["enabled"] = touchConfig.enabled;
-        doc["threshold"] = touchConfig.threshold;
-
-        // Pin mappings
-        JsonArray pins = doc["pins"].to<JsonArray>();
-        for (uint8_t i = 0; i < Config::TouchConfig::MAX_TOUCH_PINS; i++) {
-            JsonObject pin = pins.add<JsonObject>();
-            pin["index"] = i;
-            pin["gpio"] = TouchController::getGpioPin(i);
-            pin["action"] = (i == 0) ? "Switch Show" : (i == 1) ? "Switch Variant" : "Switch Layout";
+        // Required: hour and minute for the schedule time
+        if (doc["hour"].isNull() || doc["minute"].isNull()) {
+            request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Hour and minute required"})");
+            return;
         }
 
-        // Current touch values for debugging/calibration
-        std::array<uint32_t, Config::TouchConfig::MAX_TOUCH_PINS> touchValues;
-        touch->getTouchValues(touchValues.data());
-        JsonArray values = doc["values"].to<JsonArray>();
-        for (uint8_t i = 0; i < Config::TouchConfig::MAX_TOUCH_PINS; i++) {
-            values.add(touchValues[i]);
+        uint8_t hour = doc["hour"];
+        uint8_t minute = doc["minute"];
+        if (hour > 23 || minute > 59) {
+            request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid time"})");
+            return;
         }
 
-        String response;
-        serializeJson(doc, response);
-        request->send(200, CONTENT_TYPE_JSON, response);
-    });
-
-    // POST /api/touch - Update touch configuration
-    {
-        auto* handler = new AsyncCallbackJsonWebHandler(
-            AsyncURIMatcher::exact("/api/touch"), [this](AsyncWebServerRequest* request, const JsonVariant& doc) {
-                TouchController* touch = network.getTouchController();
-                if (!touch) {
-                    request->send(503, CONTENT_TYPE_JSON,
-                                  R"({"success":false,"error":"Touch controller not available"})");
-                    return;
+        // Optional: index (defaults to first available slot)
+        int timerIndex = doc[JSON_KEY_INDEX] | -1;
+        if (timerIndex == -1) {
+            const Config::TimersConfig& timersConfig = scheduler->getTimersConfig();
+            for (uint8_t i = 0; i < Config::TimersConfig::MAX_TIMERS; i++) {
+                if (!timersConfig.timers[i].enabled) {
+                    timerIndex = i;
+                    break;
                 }
+            }
+            if (timerIndex == -1) {
+                request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"All timer slots are full"})");
+                return;
+            }
+        }
 
-                Config::TouchConfig touchConfig = touch->getTouchConfig();
+        // Optional: action (defaults to TURN_OFF)
+        Config::TimerAction action = Config::TimerAction::TURN_OFF;
+        if (!doc["action"].isNull()) {
+            int actionInt = doc["action"];
+            if (actionInt == 0)
+                action = Config::TimerAction::LOAD_PRESET;
+            else
+                action = Config::TimerAction::TURN_OFF;
+        }
 
-                // Update enabled state if provided
-                if (!doc["enabled"].isNull()) {
-                    touchConfig.enabled = doc["enabled"];
-                }
+        auto presetIndex = static_cast<uint8_t>(doc["preset_index"] | 0);
 
-                // Update threshold if provided
-                if (!doc["threshold"].isNull()) {
-                    touchConfig.threshold = doc["threshold"];
-                }
+        // Optional: days — weekday mask, bit n = tm_wday n (Sunday = 0).
+        // Defaults to every day; an empty mask is an error, not a pause.
+        int days = doc["days"] | static_cast<int>(Config::SCHEDULE_EVERY_DAY);
+        if (days <= 0 || days > Config::SCHEDULE_EVERY_DAY) {
+            request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid days"})");
+            return;
+        }
 
-                touch->setTouchConfig(touchConfig);
-                request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
-            });
+        uint32_t secondsSinceMidnight = hour * 3600 + minute * 60;
+        bool success = scheduler->setSchedule(static_cast<uint8_t>(timerIndex), secondsSinceMidnight, action,
+                                              presetIndex, static_cast<uint8_t>(days));
+
+        if (success) {
+            JsonDocument responseDoc;
+            responseDoc["success"] = true;
+            responseDoc["index"] = timerIndex;
+
+            String response;
+            serializeJson(responseDoc, response);
+            request->send(200, CONTENT_TYPE_JSON, response);
+        } else {
+            request->send(500, CONTENT_TYPE_JSON, R"({"success":false,"error":"Failed to set schedule"})");
+        }
+    };
+
+    for (const char* path : {"/api/timers/schedule", "/api/timers/alarm"}) {
+        auto* handler = new AsyncCallbackJsonWebHandler(AsyncURIMatcher::exact(path), setScheduleHandler);
         handler->setMethod(HTTP_POST);
         server.addHandler(handler);
     }
+}
 
-    // GET /api/ota/check - kick off a background check on Core 1
-    server.on(API_PATH_OTA_CHECK, HTTP_GET, [](AsyncWebServerRequest* request) {
-        JsonDocument doc;
-        bool started = OTAUpdater::startBackgroundCheck(OTA_GITHUB_OWNER, OTA_GITHUB_REPO);
-        if (started) {
-            doc["started"] = true;
-            request->send(202, CONTENT_TYPE_JSON, "{\"started\":true}");
+// POST /api/timers/pause - Pause or resume a schedule in place
+{
+    auto* handler = new AsyncCallbackJsonWebHandler(
+        AsyncURIMatcher::exact("/api/timers/pause"), [this](AsyncWebServerRequest* request, const JsonVariant& doc) {
+            TimerScheduler* scheduler = network.getTimerScheduler();
+            if (!scheduler) {
+                request->send(503, CONTENT_TYPE_JSON, R"({"success":false,"error":"Timer scheduler not available"})");
+                return;
+            }
+
+            if (doc[JSON_KEY_INDEX].isNull() || doc["paused"].isNull()) {
+                request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Index and paused required"})");
+                return;
+            }
+
+            int timerIndex = doc[JSON_KEY_INDEX];
+            if (timerIndex < 0 || timerIndex >= Config::TimersConfig::MAX_TIMERS) {
+                request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid timer index"})");
+                return;
+            }
+
+            bool paused = doc["paused"];
+            if (scheduler->setPaused(static_cast<uint8_t>(timerIndex), paused)) {
+                request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
+            } else {
+                // The only remaining failure modes are an empty slot or a countdown.
+                request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Slot does not hold a schedule"})");
+            }
+        });
+    handler->setMethod(HTTP_POST);
+    server.addHandler(handler);
+}
+
+// DELETE /api/timers - Cancel a timer by index
+{
+    auto* handler = new AsyncCallbackJsonWebHandler(
+        AsyncURIMatcher::exact(API_PATH_TIMERS), [this](AsyncWebServerRequest* request, const JsonVariant& doc) {
+            TimerScheduler* scheduler = network.getTimerScheduler();
+            if (!scheduler) {
+                request->send(503, CONTENT_TYPE_JSON, R"({"success":false,"error":"Timer scheduler not available"})");
+                return;
+            }
+
+            if (doc[JSON_KEY_INDEX].isNull()) {
+                request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Timer index required"})");
+                return;
+            }
+
+            int timerIndex = doc[JSON_KEY_INDEX];
+            if (timerIndex < 0 || timerIndex >= Config::TimersConfig::MAX_TIMERS) {
+                request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid timer index"})");
+                return;
+            }
+
+            if (scheduler->cancelTimer(static_cast<uint8_t>(timerIndex))) {
+                request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
+            } else {
+                request->send(500, CONTENT_TYPE_JSON, R"({"success":false,"error":"Failed to cancel timer"})");
+            }
+        });
+    handler->setMethod(HTTP_DELETE);
+    server.addHandler(handler);
+}
+
+// POST /api/timers/timezone - Set the POSIX TZ string
+{
+    auto* handler = new AsyncCallbackJsonWebHandler(
+        AsyncURIMatcher::exact("/api/timers/timezone"), [this](AsyncWebServerRequest* request, const JsonVariant& doc) {
+            TimerScheduler* scheduler = network.getTimerScheduler();
+            if (!scheduler) {
+                request->send(503, CONTENT_TYPE_JSON, R"({"success":false,"error":"Timer scheduler not available"})");
+                return;
+            }
+
+            if (doc["tz"].isNull()) {
+                request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Timezone string required"})");
+                return;
+            }
+
+            if (const char* tz = doc["tz"]; !scheduler->setTimezone(tz)) {
+                request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid POSIX timezone string"})");
+                return;
+            }
+
+            request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
+        });
+    handler->setMethod(HTTP_POST);
+    server.addHandler(handler);
+}
+
+// GET /api/touch - Get touch configuration and current values
+server.on("/api/touch", HTTP_GET, [this](AsyncWebServerRequest* request) {
+    const TouchController* touch = network.getTouchController();
+    if (!touch) {
+        request->send(503, CONTENT_TYPE_JSON, R"({"success":false,"error":"Touch controller not available"})");
+        return;
+    }
+
+    JsonDocument doc;
+    const Config::TouchConfig& touchConfig = touch->getTouchConfig();
+
+    doc["enabled"] = touchConfig.enabled;
+    doc["threshold"] = touchConfig.threshold;
+
+    // Pin mappings
+    JsonArray pins = doc["pins"].to<JsonArray>();
+    for (uint8_t i = 0; i < Config::TouchConfig::MAX_TOUCH_PINS; i++) {
+        JsonObject pin = pins.add<JsonObject>();
+        pin["index"] = i;
+        pin["gpio"] = TouchController::getGpioPin(i);
+        const char* action;
+        if (i == 0) {
+            action = "Switch Show";
+        } else if (i == 1) {
+            action = "Switch Variant";
         } else {
-            doc["started"] = false;
-            doc["error"] = "OTA already in progress";
-            String body;
-            serializeJson(doc, body);
-            request->send(409, CONTENT_TYPE_JSON, body);
+            action = "Switch Layout";
         }
-    });
+        pin["action"] = action;
+    }
 
-    // POST /api/ota/update - kick off a background install on Core 1
-    server.on(API_PATH_OTA_UPDATE, HTTP_POST, [](AsyncWebServerRequest* request) {
-        bool force = request->hasParam("force") && (request->getParam("force")->value() == String("true") ||
-                                                    request->getParam("force")->value() == String("1"));
+    // Current touch values for debugging/calibration
+    std::array<uint32_t, Config::TouchConfig::MAX_TOUCH_PINS> touchValues;
+    touch->getTouchValues(touchValues.data());
+    JsonArray values = doc["values"].to<JsonArray>();
+    for (uint8_t i = 0; i < Config::TouchConfig::MAX_TOUCH_PINS; i++) {
+        values.add(touchValues[i]);
+    }
 
-        bool started = OTAUpdater::startBackgroundUpdateFromLatestCheck(force);
-        if (started) {
-            request->send(202, CONTENT_TYPE_JSON, "{\"started\":true}");
-        } else {
-            String reason = "OTA already in progress or no completed check";
-            if (CheckState cs = OTAUpdater::getCheckState(); cs == CheckState::Done) {
-                reason = "Latest version is not newer than running (use ?force=true to override)";
-            } else if (cs == CheckState::InProgress) {
-                reason = "A check is still running";
-            } else if (cs == CheckState::Failed) {
-                reason = "Latest check failed; retry";
+    String response;
+    serializeJson(doc, response);
+    request->send(200, CONTENT_TYPE_JSON, response);
+});
+
+// POST /api/touch - Update touch configuration
+{
+    auto* handler = new AsyncCallbackJsonWebHandler(
+        AsyncURIMatcher::exact("/api/touch"), [this](AsyncWebServerRequest* request, const JsonVariant& doc) {
+            TouchController* touch = network.getTouchController();
+            if (!touch) {
+                request->send(503, CONTENT_TYPE_JSON, R"({"success":false,"error":"Touch controller not available"})");
+                return;
             }
-            JsonDocument doc;
-            doc["started"] = false;
-            doc["error"] = reason;
-            String body;
-            serializeJson(doc, body);
-            request->send(409, CONTENT_TYPE_JSON, body);
-        }
-    });
 
-    // GET /api/ota/status - state-machine snapshot for the UI to poll
-    server.on("/api/ota/status", HTTP_GET, [](AsyncWebServerRequest* request) {
+            Config::TouchConfig touchConfig = touch->getTouchConfig();
+
+            // Update enabled state if provided
+            if (!doc["enabled"].isNull()) {
+                touchConfig.enabled = doc["enabled"];
+            }
+
+            // Update threshold if provided
+            if (!doc["threshold"].isNull()) {
+                touchConfig.threshold = doc["threshold"];
+            }
+
+            touch->setTouchConfig(touchConfig);
+            request->send(200, CONTENT_TYPE_JSON, JSON_RESPONSE_SUCCESS);
+        });
+    handler->setMethod(HTTP_POST);
+    server.addHandler(handler);
+}
+
+// GET /api/ota/check - kick off a background check on Core 1
+server.on(API_PATH_OTA_CHECK, HTTP_GET, [](AsyncWebServerRequest* request) {
+    JsonDocument doc;
+    bool started = OTAUpdater::startBackgroundCheck(OTA_GITHUB_OWNER, OTA_GITHUB_REPO);
+    if (started) {
+        doc["started"] = true;
+        request->send(202, CONTENT_TYPE_JSON, "{\"started\":true}");
+    } else {
+        doc["started"] = false;
+        doc["error"] = "OTA already in progress";
+        String body;
+        serializeJson(doc, body);
+        request->send(409, CONTENT_TYPE_JSON, body);
+    }
+});
+
+// POST /api/ota/update - kick off a background install on Core 1
+server.on(API_PATH_OTA_UPDATE, HTTP_POST, [](AsyncWebServerRequest* request) {
+    bool force = request->hasParam("force") && (request->getParam("force")->value() == String("true") ||
+                                                request->getParam("force")->value() == String("1"));
+
+    bool started = OTAUpdater::startBackgroundUpdateFromLatestCheck(force);
+    if (started) {
+        request->send(202, CONTENT_TYPE_JSON, "{\"started\":true}");
+    } else {
+        String reason = "OTA already in progress or no completed check";
+        if (CheckState cs = OTAUpdater::getCheckState(); cs == CheckState::Done) {
+            reason = "Latest version is not newer than running (use ?force=true to override)";
+        } else if (cs == CheckState::InProgress) {
+            reason = "A check is still running";
+        } else if (cs == CheckState::Failed) {
+            reason = "Latest check failed; retry";
+        }
         JsonDocument doc;
+        doc["started"] = false;
+        doc["error"] = reason;
+        String body;
+        serializeJson(doc, body);
+        request->send(409, CONTENT_TYPE_JSON, body);
+    }
+});
 
-        doc["firmware_version"] = FIRMWARE_VERSION;
-        doc["build_date"] = FIRMWARE_BUILD_DATE;
-        doc["build_time"] = FIRMWARE_BUILD_TIME;
+// GET /api/ota/status - state-machine snapshot for the UI to poll
+server.on("/api/ota/status", HTTP_GET, [](AsyncWebServerRequest* request) {
+    JsonDocument doc;
 
-        String partitionLabel;
-        if (uint32_t partitionAddress = 0; OTAUpdater::getRunningPartitionInfo(partitionLabel, partitionAddress)) {
-            doc["partition"] = partitionLabel;
-            doc["partition_address"] = partitionAddress;
+    doc["firmware_version"] = FIRMWARE_VERSION;
+    doc["build_date"] = FIRMWARE_BUILD_DATE;
+    doc["build_time"] = FIRMWARE_BUILD_TIME;
+
+    String partitionLabel;
+    if (uint32_t partitionAddress = 0; OTAUpdater::getRunningPartitionInfo(partitionLabel, partitionAddress)) {
+        doc["partition"] = partitionLabel;
+        doc["partition_address"] = partitionAddress;
+    }
+    doc["unconfirmed_update"] = OTAUpdater::hasUnconfirmedUpdate();
+
+    uint32_t freeHeap;
+    uint32_t minFreeHeap;
+    uint32_t psramFree;
+    OTAUpdater::getMemoryInfo(freeHeap, minFreeHeap, psramFree);
+    doc["free_heap"] = freeHeap;
+    doc["min_free_heap"] = minFreeHeap;
+    doc["psram_free"] = psramFree;
+    doc["ota_safe"] = OTAUpdater::hasEnoughMemory();
+
+    // check sub-object
+    {
+        JsonObject chk = doc["check"].to<JsonObject>();
+        CheckState cs = OTAUpdater::getCheckState();
+        switch (cs) {
+            case CheckState::Idle:
+                chk["state"] = "idle";
+                break;
+            case CheckState::InProgress:
+                chk["state"] = "in_progress";
+                break;
+            case CheckState::Done:
+                chk["state"] = "done";
+                break;
+            case CheckState::Failed:
+                chk["state"] = "failed";
+                break;
         }
-        doc["unconfirmed_update"] = OTAUpdater::hasUnconfirmedUpdate();
-
-        uint32_t freeHeap, minFreeHeap, psramFree;
-        OTAUpdater::getMemoryInfo(freeHeap, minFreeHeap, psramFree);
-        doc["free_heap"] = freeHeap;
-        doc["min_free_heap"] = minFreeHeap;
-        doc["psram_free"] = psramFree;
-        doc["ota_safe"] = OTAUpdater::hasEnoughMemory();
-
-        // check sub-object
-        {
-            JsonObject chk = doc["check"].to<JsonObject>();
-            CheckState cs = OTAUpdater::getCheckState();
-            switch (cs) {
-                case CheckState::Idle:
-                    chk["state"] = "idle";
-                    break;
-                case CheckState::InProgress:
-                    chk["state"] = "in_progress";
-                    break;
-                case CheckState::Done:
-                    chk["state"] = "done";
-                    break;
-                case CheckState::Failed:
-                    chk["state"] = "failed";
-                    break;
-            }
-            if (cs == CheckState::Done || cs == CheckState::InProgress) {
-                FirmwareInfo info = OTAUpdater::getCheckResult();
-                if (info.isValid) {
-                    chk["version"] = info.version;
-                    chk["name"] = info.name;
-                    chk["size_bytes"] = info.size;
-                    chk["download_url"] = info.downloadUrl;
-                    chk["changelog"] = info.changelog;
-                }
+        if (cs == CheckState::Done || cs == CheckState::InProgress) {
+            FirmwareInfo info = OTAUpdater::getCheckResult();
+            if (info.isValid) {
+                chk["version"] = info.version;
+                chk["name"] = info.name;
+                chk["size_bytes"] = info.size;
+                chk["download_url"] = info.downloadUrl;
+                chk["changelog"] = info.changelog;
             }
         }
+    }
 
-        // update sub-object
-        {
-            JsonObject upd = doc["update"].to<JsonObject>();
-            Progress p = OTAUpdater::getProgress();
-            switch (p.state) {
-                case UpdateState::Idle:
-                    upd["state"] = "idle";
-                    break;
-                case UpdateState::Downloading:
-                    upd["state"] = "downloading";
-                    break;
-                case UpdateState::Flashing:
-                    upd["state"] = "flashing";
-                    break;
-                case UpdateState::Pending:
-                    upd["state"] = "pending";
-                    break;
-                case UpdateState::Failed:
-                    upd["state"] = "failed";
-                    break;
-            }
-            upd["percent"] = p.percent;
-            upd["bytes_written"] = p.bytes_written;
-            upd["expected_bytes"] = p.expected_bytes;
-            upd["started_at_ms"] = p.started_at_ms;
-            if (!p.error_message.isEmpty()) upd["error"] = p.error_message;
+    // update sub-object
+    {
+        JsonObject upd = doc["update"].to<JsonObject>();
+        Progress p = OTAUpdater::getProgress();
+        switch (p.state) {
+            case UpdateState::Idle:
+                upd["state"] = "idle";
+                break;
+            case UpdateState::Downloading:
+                upd["state"] = "downloading";
+                break;
+            case UpdateState::Flashing:
+                upd["state"] = "flashing";
+                break;
+            case UpdateState::Pending:
+                upd["state"] = "pending";
+                break;
+            case UpdateState::Failed:
+                upd["state"] = "failed";
+                break;
         }
+        upd["percent"] = p.percent;
+        upd["bytes_written"] = p.bytes_written;
+        upd["expected_bytes"] = p.expected_bytes;
+        upd["started_at_ms"] = p.started_at_ms;
+        if (!p.error_message.isEmpty()) upd["error"] = p.error_message;
+    }
 
-        String response;
-        serializeJson(doc, response);
-        request->send(200, CONTENT_TYPE_JSON, response);
-    });
+    String response;
+    serializeJson(doc, response);
+    request->send(200, CONTENT_TYPE_JSON, response);
+});
 
-    // POST /api/ota/confirm - manual boot confirmation (escape hatch)
-    server.on("/api/ota/confirm", HTTP_POST, [](AsyncWebServerRequest* request) {
-        bool success = OTAUpdater::confirmBoot();
-        JsonDocument doc;
-        doc[JSON_KEY_SUCCESS] = success;
-        doc["message"] = success ? "Boot confirmed, rollback disabled" : "Failed to confirm boot";
-        String response;
-        serializeJson(doc, response);
-        request->send(success ? 200 : 500, CONTENT_TYPE_JSON, response);
-    });
+// POST /api/ota/confirm - manual boot confirmation (escape hatch)
+server.on("/api/ota/confirm", HTTP_POST, [](AsyncWebServerRequest* request) {
+    bool success = OTAUpdater::confirmBoot();
+    JsonDocument doc;
+    doc[JSON_KEY_SUCCESS] = success;
+    doc["message"] = success ? "Boot confirmed, rollback disabled" : "Failed to confirm boot";
+    String response;
+    serializeJson(doc, response);
+    request->send(success ? 200 : 500, CONTENT_TYPE_JSON, response);
+});
 
-    // GET /about - About page
-    server.on("/about", HTTP_GET, [](AsyncWebServerRequest* request) {
-        sendGzippedResponse(request, CONTENT_TYPE_HTML, ABOUT_GZ, ABOUT_GZ_LEN);
-    });
+// GET /about - About page
+server.on("/about", HTTP_GET, [](AsyncWebServerRequest* request) {
+    sendGzippedResponse(request, CONTENT_TYPE_HTML, ABOUT_GZ, ABOUT_GZ_LEN);
+});
 
-    // GET /settings - Settings page
-    server.on("/settings", HTTP_GET, [](AsyncWebServerRequest* request) {
-        sendGzippedResponse(request, CONTENT_TYPE_HTML, SETTINGS_GZ, SETTINGS_GZ_LEN);
-    });
+// GET /settings - Settings page
+server.on("/settings", HTTP_GET, [](AsyncWebServerRequest* request) {
+    sendGzippedResponse(request, CONTENT_TYPE_HTML, SETTINGS_GZ, SETTINGS_GZ_LEN);
+});
 
-    // GET /timers - Timers page
-    server.on("/timers", HTTP_GET, [](AsyncWebServerRequest* request) {
-        sendGzippedResponse(request, CONTENT_TYPE_HTML, TIMERS_GZ, TIMERS_GZ_LEN);
-    });
+// GET /timers - Timers page
+server.on("/timers", HTTP_GET, [](AsyncWebServerRequest* request) {
+    sendGzippedResponse(request, CONTENT_TYPE_HTML, TIMERS_GZ, TIMERS_GZ_LEN);
+});
 #endif
 }
 

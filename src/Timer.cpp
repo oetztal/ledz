@@ -25,7 +25,7 @@ namespace Support {
         return result;
     }
 
-    unsigned long Timer::elapsed() {
+    unsigned long Timer::elapsed() const {
         return millis() - start_time;
     }
 } // Support

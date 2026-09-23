@@ -18,7 +18,7 @@ namespace Show {
          * Constructor with configurable parameters
          * @param num_steps_per_cycle Steps per complete color rotation (default: 21, should be multiple of 7)
          */
-        TheaterChase(unsigned int num_steps_per_cycle);
+        explicit TheaterChase(unsigned int num_steps_per_cycle);
 
         /**
          * Execute the show - update theater chase animation
@@ -27,7 +27,7 @@ namespace Show {
          */
         void execute(Strip::Strip& strip, Iteration iteration) override;
 
-        const char* name() { return "TheaterChase"; }
+        const char* name() const { return "TheaterChase"; }
     };
 } // namespace Show
 

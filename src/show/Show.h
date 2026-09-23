@@ -5,7 +5,7 @@
 #include "strip/Strip.h"
 
 namespace Show {
-    typedef uint64_t Iteration;
+    using Iteration = uint64_t;
 
     class Show {
     public:

@@ -93,7 +93,12 @@ void TouchController::begin() {
 #ifdef ARDUINO
     ESP_LOGI(TAG, "Initializing touch pins");
     for (uint8_t i = 0; i < Config::TouchConfig::MAX_TOUCH_PINS; i++) {
-        const char* action = (i == 0) ? "Switch Show" : (i == 1) ? "Switch Variant" : "Switch Layout";
+        const char* action = "Switch Layout";
+        if (i == 0) {
+            action = "Switch Show";
+        } else if (i == 1) {
+            action = "Switch Variant";
+        }
         ESP_LOGI(TAG, "  Touch pin %u (GPIO %u) -> %s", i, TOUCH_PINS[i], action);
     }
     ESP_LOGI(TAG, "  Enabled: %s, Threshold: %u", touchConfig.enabled ? "yes" : "no", touchConfig.threshold);
@@ -116,64 +121,55 @@ void TouchController::update() {
         bool isTouched = touchValue > touchConfig.threshold;
 
         // Detect rising edge (transition from not-touched to touched)
-        if (isTouched && !wasTouched[i]) {
-            // Check debounce
-            if (now - lastTouchTime[i] >= DEBOUNCE_MS) {
-                lastTouchTime[i] = now;
+        // Check debounce
+        if (isTouched && !wasTouched[i] && now - lastTouchTime[i] >= DEBOUNCE_MS) {
+            lastTouchTime[i] = now;
 
-                if (i == 0) {
-                    // Button 1: Switch Show
-                    currentShowIdx = (currentShowIdx + 1) % NUM_SHOW_VARIANTS;
-                    currentVariantIdx = 0; // Reset to first variant of new show
+            if (i == 0) {
+                // Button 1: Switch Show
+                currentShowIdx = (currentShowIdx + 1) % NUM_SHOW_VARIANTS;
+                currentVariantIdx = 0; // Reset to first variant of new show
 
-                    const ShowVariantGroup& group = SHOW_VARIANTS[currentShowIdx];
-                    const char* params = group.variants[currentVariantIdx];
+                const ShowVariantGroup& group = SHOW_VARIANTS[currentShowIdx];
+                const char* params = group.variants[currentVariantIdx];
 
-                    ESP_LOGI(TAG, "Switching show to %s with variant %d: %s", group.showName, currentVariantIdx,
-                             params);
-                    showController.queueShowChange(group.showName, params);
-                } else if (i == 1) {
-                    // Button 2: Switch Variant (Circulate variants of current show)
-                    const ShowVariantGroup& group = SHOW_VARIANTS[currentShowIdx];
-                    currentVariantIdx = (currentVariantIdx + 1) % group.numVariants;
+                ESP_LOGI(TAG, "Switching show to %s with variant %d: %s", group.showName, currentVariantIdx, params);
+                showController.queueShowChange(group.showName, params);
+            } else if (i == 1) {
+                // Button 2: Switch Variant (Circulate variants of current show)
+                const ShowVariantGroup& group = SHOW_VARIANTS[currentShowIdx];
+                currentVariantIdx = (currentVariantIdx + 1) % group.numVariants;
 
-                    const char* params = group.variants[currentVariantIdx];
+                const char* params = group.variants[currentVariantIdx];
 
-                    ESP_LOGI(TAG, "Loading variant %d for show %s: %s", currentVariantIdx, group.showName, params);
-                    showController.queueShowChange(group.showName, params);
-                } else if (i == 2) {
-                    // Button 3: Switch Layout (8 steps matching Python script)
-                    static uint8_t layoutStep = 0;
-                    layoutStep = (layoutStep + 1) % 8;
+                ESP_LOGI(TAG, "Loading variant %d for show %s: %s", currentVariantIdx, group.showName, params);
+                showController.queueShowChange(group.showName, params);
+            } else if (i == 2) {
+                // Button 3: Switch Layout (8 steps matching Python script)
+                static uint8_t layoutStep = 0;
+                layoutStep = (layoutStep + 1) % 8;
 
-                    bool reverse = false;
-                    bool mirror = false;
-                    int16_t dead_leds = 0;
+                bool reverse = false;
+                bool mirror = false;
+                int16_t dead_leds = 0;
 
-                    // Python create_layouts uses (dead_leds, reverse, mirror) logic:
-                    // 0: (0, F, F)
-                    // 1: (0, F, T)
-                    // 2: (0, T, F)
-                    // 3: (0, T, T)
-                    // 4: (D, F, F)
-                    // 5: (D, F, T)
-                    // 6: (D, T, F)
-                    // 7: (D, T, T)
-                    // Note: Python script order is slightly different but covers same combinations
+                // Python create_layouts uses (dead_leds, reverse, mirror) logic:
+                // 0: (0, F, F)
+                // 1: (0, F, T)
+                // 2: (0, T, F)
+                // 3: (0, T, T)
+                // 4: (D, F, F)
+                // 5: (D, F, T)
+                // 6: (D, T, F)
+                // 7: (D, T, T)
+                // Note: Python script order is slightly different but covers same combinations
 
-                    reverse = (layoutStep % 4) >= 2;
-                    mirror = (layoutStep % 2) == 1;
+                reverse = (layoutStep % 4) >= 2;
+                mirror = (layoutStep % 2) == 1;
 
-                    if (layoutStep >= 4) {
-                        Config::DeviceConfig deviceConfig = config.loadDeviceConfig();
-                        // TODO: fix this
-                        // dead_leds = deviceConfig.dead_leds;
-                    }
-
-                    ESP_LOGI(TAG, "Switching layout to step %u (rev=%d, mir=%d, dead=%d)", layoutStep, reverse, mirror,
-                             dead_leds);
-                    showController.queueLayoutChange(reverse, mirror, dead_leds);
-                }
+                ESP_LOGI(TAG, "Switching layout to step %u (rev=%d, mir=%d, dead=%d)", layoutStep, reverse, mirror,
+                         dead_leds);
+                showController.queueLayoutChange(reverse, mirror, dead_leds);
             }
         }
 

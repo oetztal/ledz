@@ -48,7 +48,7 @@ namespace Show {
          */
         void execute(Strip::Strip& strip, Iteration iteration) override;
 
-        const char* name() { return "Wave"; }
+        const char* name() const { return "Wave"; }
     };
 } // namespace Show
 
