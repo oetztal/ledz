@@ -1,4 +1,5 @@
 #include <memory>
+#include <new>
 
 #include "Log.h"
 #include "Network.h"
@@ -54,10 +55,8 @@ void setup() {
 
         // Set layout pointers for runtime reconfiguration
         showController.setStrip(std::move(base));
-    } catch (const std::exception& e) {
-        ESP_LOGE(TAG, "Error initializing LED strip: %s", e.what());
-    } catch (...) {
-        ESP_LOGE(TAG, "Unknown error initializing LED strip");
+    } catch (const std::bad_alloc& e) {
+        ESP_LOGE(TAG, "Out of memory initializing LED strip: %s", e.what());
     }
 #endif
 
@@ -68,21 +67,9 @@ void setup() {
     // LED task: Core 1 (isolated from WiFi)
     // Network task: Core 0 (same as WiFi stack)
 
-    try {
-        ledShow.startTask();
-    } catch (const std::exception& e) {
-        ESP_LOGE(TAG, "Error starting LED show task: %s", e.what());
-    } catch (...) {
-        ESP_LOGE(TAG, "Unknown error starting LED show task");
-    }
-
-    try {
-        network.startTask();
-    } catch (const std::exception& e) {
-        ESP_LOGE(TAG, "Error starting network task: %s", e.what());
-    } catch (...) {
-        ESP_LOGE(TAG, "Unknown error starting network task");
-    }
+    // startTask() forwards to xTaskCreatePinnedToCore and does not throw.
+    ledShow.startTask();
+    network.startTask();
 }
 
 void loop() {

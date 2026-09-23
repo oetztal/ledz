@@ -55,13 +55,19 @@ namespace ota {
 
 namespace ota {
 
-    namespace {
+    namespace detail {
 
-        bool isDigit(char c) {
+        inline bool isDigit(char c) {
             return c >= '0' && c <= '9';
         }
 
-        bool parseIntPrefix(const std::string& s, int& out, size_t& consumed) {
+        // Index of the next '.' at or after `from`, or s.size() when absent.
+        inline size_t findDot(const std::string& s, size_t from) {
+            const auto pos = s.find('.', from);
+            return pos == std::string::npos ? s.size() : pos;
+        }
+
+        inline bool parseIntPrefix(const std::string& s, int& out, size_t& consumed) {
             out = 0;
             consumed = 0;
             if (s.empty() || !isDigit(s[0])) return false;
@@ -84,25 +90,14 @@ namespace ota {
         //   2. Identifiers with letters or hyphens are compared lexically in ASCII.
         //   3. Numeric identifiers always have lower precedence than alphanumeric.
         //   4. A larger set of pre-release fields has higher precedence.
-        int comparePrereleaseIdentifiers(const std::string& a, const std::string& b) {
+        inline int comparePrereleaseIdentifiers(const std::string& a, const std::string& b) {
             if (a == b) return 0;
 
-            size_t i = 0, j = 0;
+            size_t i = 0;
+            size_t j = 0;
             while (i < a.size() || j < b.size()) {
-                size_t ai = a.size();
-                size_t bj = b.size();
-                for (size_t k = i; k < a.size(); k++) {
-                    if (a[k] == '.') {
-                        ai = k;
-                        break;
-                    }
-                }
-                for (size_t k = j; k < b.size(); k++) {
-                    if (b[k] == '.') {
-                        bj = k;
-                        break;
-                    }
-                }
+                const size_t ai = findDot(a, i);
+                const size_t bj = findDot(b, j);
 
                 std::string ida = a.substr(i, ai - i);
                 std::string idb = b.substr(j, bj - j);
@@ -126,7 +121,8 @@ namespace ota {
                 bool aNum = isDigit(ida[0]);
 
                 if (bool bNum = isDigit(idb[0]); aNum && bNum) {
-                    long va = 0, vb = 0;
+                    long va = 0;
+                    long vb = 0;
                     for (char c : ida)
                         va = va * 10 + (c - '0');
                     for (char c : idb)
@@ -147,7 +143,7 @@ namespace ota {
             return 0;
         }
 
-    } // namespace
+    } // namespace detail
 
     inline std::optional<SemVer> parseSemVer(const std::string& tag) {
         if (tag.empty()) return std::nullopt;
@@ -175,7 +171,7 @@ namespace ota {
             if (core[i] == '.') {
                 if (dotCount >= 2) return std::nullopt;
                 dots[dotCount++] = static_cast<int>(i);
-            } else if (!isDigit(core[i])) {
+            } else if (!detail::isDigit(core[i])) {
                 return std::nullopt;
             }
         }
@@ -187,9 +183,9 @@ namespace ota {
         std::string sPatch = core.substr(dots[1] + 1);
 
         size_t consumed = 0;
-        if (!parseIntPrefix(sMajor, v.major, consumed) || consumed != sMajor.size()) return std::nullopt;
-        if (!parseIntPrefix(sMinor, v.minor, consumed) || consumed != sMinor.size()) return std::nullopt;
-        if (!parseIntPrefix(sPatch, v.patch, consumed) || consumed != sPatch.size()) return std::nullopt;
+        if (!detail::parseIntPrefix(sMajor, v.major, consumed) || consumed != sMajor.size()) return std::nullopt;
+        if (!detail::parseIntPrefix(sMinor, v.minor, consumed) || consumed != sMinor.size()) return std::nullopt;
+        if (!detail::parseIntPrefix(sPatch, v.patch, consumed) || consumed != sPatch.size()) return std::nullopt;
 
         if (v.major < 0 || v.minor < 0 || v.patch < 0) return std::nullopt;
 
@@ -207,7 +203,7 @@ namespace ota {
         if (!aHasPre && !bHasPre) return 0;
         if (!aHasPre) return 1;
         if (!bHasPre) return -1;
-        return comparePrereleaseIdentifiers(a.prerelease, b.prerelease);
+        return detail::comparePrereleaseIdentifiers(a.prerelease, b.prerelease);
     }
 
     inline bool isNewerVersion(const std::string& latest, const std::string& current) {

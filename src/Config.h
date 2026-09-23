@@ -46,7 +46,7 @@ namespace Config {
     /**
      * Gamma correction modes
      */
-    enum GammaMode {
+    enum class GammaMode : uint8_t {
         GAMMA_DEFAULT = 0,  // Use our improved gamma (γ=2.2) - recommended
         GAMMA_NEOPIXEL = 1, // Use Adafruit NeoPixel gamma (γ=2.6)
         GAMMA_NONE = 2      // No gamma correction
@@ -63,10 +63,10 @@ namespace Config {
 #else
         uint8_t led_pin = 39;
 #endif
-        uint16_t cycle_time = 10;             // Cycle time in ms (e.g., 10, 20, 25, 50)
-        GammaMode gamma_mode = GAMMA_DEFAULT; // Gamma correction mode
-        std::array<char, 16> device_id{};     // e.g., "AABBCC"
-        std::array<char, 32> device_name{};   // Custom device name
+        uint16_t cycle_time = 10;                        // Cycle time in ms (e.g., 10, 20, 25, 50)
+        GammaMode gamma_mode = GammaMode::GAMMA_DEFAULT; // Gamma correction mode
+        std::array<char, 16> device_id{};                // e.g., "AABBCC"
+        std::array<char, 32> device_name{};              // Custom device name
     };
 
     /**

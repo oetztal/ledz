@@ -52,7 +52,7 @@ namespace Strip {
          * @param color Input color
          * @return Gamma-corrected color
          */
-        uint32_t applyGammaCorrection(uint32_t color);
+        uint32_t applyGammaCorrection(uint32_t color) const;
 
         /**
          * Apply brightness scaling to a gamma-corrected color.
@@ -62,7 +62,7 @@ namespace Strip {
          * @param color Gamma-corrected color
          * @return Brightness-scaled color
          */
-        uint32_t applyBrightness(uint32_t color);
+        uint32_t applyBrightness(uint32_t color) const;
 
         /**
          * Scale a single 8-bit channel by an 8-bit factor (0-255).

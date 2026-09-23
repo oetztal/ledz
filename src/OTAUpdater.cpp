@@ -7,7 +7,7 @@
 //   - EspHttpReader: streaming adapter so ArduinoJson can parse the body
 //     chunk by chunk without an intermediate buffer.
 //   - State machine: CheckState / UpdateState observable from Core 0.
-//   - Worker tasks pinned to Core 1 so /api/ota/* handlers return in
+//   - Worker tasks pinned to Core 1 so the /api/ota/ handlers return in
 //     microseconds and the rest of the web UI keeps serving.
 //
 
@@ -216,6 +216,8 @@ namespace {
 
     struct InProgressGuard {
         bool armed = false;
+        InProgressGuard(const InProgressGuard&) = delete;
+        InProgressGuard& operator=(const InProgressGuard&) = delete;
         InProgressGuard() {
             bool expected = false;
             if (otaState().updateInProgress.compare_exchange_strong(expected, true)) {

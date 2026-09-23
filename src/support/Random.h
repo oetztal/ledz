@@ -39,13 +39,17 @@ namespace Support {
     };
 
     namespace detail {
-        // Function-local static in randomSeed() holds the override. Set by
-        // setRandomSeedOverride() (which reaches it through the same static).
-        // Sentinel -1 means "no override"; kept as a signed value so any caller-
-        // supplied unsigned value can never accidentally hit it. C++11 guarantees
+        // Function-local statics in randomSeed() hold the override. Set by
+        // setRandomSeedOverride() (which reaches them through the same statics).
+        // An explicit boolean tracks presence because Random::result_type is
+        // unsigned, so a negative sentinel cannot work. C++11 guarantees
         // thread-safe first-read initialisation, so no lock is needed.
+        inline bool& hasSeedOverride() {
+            static bool set = false;
+            return set;
+        }
         inline Random::result_type& seedOverride() {
-            static Random::result_type forcedSeed = -1;
+            static Random::result_type forcedSeed = 0;
             return forcedSeed;
         }
     }
@@ -55,13 +59,22 @@ namespace Support {
      *
      * Used by the host-side show simulator ([env:native_show_sim]) to make
      * random shows (Fire, ColorRun, Starlight) reproducible across runs.
-     * The override is held until cleared; pass any value < 0 to clear it.
+     * The override is held until clearRandomSeedOverride() is called.
      *
      * On the device the override is never set, so randomSeed() always
      * returns hardware entropy — no firmware behaviour change.
      */
     inline void setRandomSeedOverride(Random::result_type seed) {
         detail::seedOverride() = seed;
+        detail::hasSeedOverride() = true;
+    }
+
+    /**
+     * Clear a previously installed seed override so randomSeed() falls back to
+     * hardware entropy (ESP32) or the wall clock (host).
+     */
+    inline void clearRandomSeedOverride() {
+        detail::hasSeedOverride() = false;
     }
 
     /**
@@ -70,8 +83,8 @@ namespace Support {
      *         on the ESP32, wall clock elsewhere
      */
     inline Random::result_type randomSeed() {
-        if (const auto forcedSeed = detail::seedOverride(); forcedSeed >= 0) {
-            return forcedSeed;
+        if (detail::hasSeedOverride()) {
+            return detail::seedOverride();
         }
 #ifdef ARDUINO
         return static_cast<Random::result_type>(esp_random());

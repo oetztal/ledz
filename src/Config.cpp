@@ -129,7 +129,8 @@ namespace Config {
         config.num_pixels = prefs.getUShort("num_pixels", 1);
         config.led_pin = prefs.getUChar("led_pin", PIN_NEOPIXEL);
         config.cycle_time = prefs.getUShort("cycle_time", 10);
-        config.gamma_mode = static_cast<GammaMode>(prefs.getUChar("gamma_mode", GAMMA_DEFAULT));
+        config.gamma_mode =
+            static_cast<GammaMode>(prefs.getUChar("gamma_mode", static_cast<uint8_t>(GammaMode::GAMMA_DEFAULT)));
         prefs.getString("device_name", config.device_name.data(), config.device_name.size());
 
         prefs.end();

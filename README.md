@@ -263,6 +263,14 @@ Aggregate metrics:
 curl -s "https://sonarcloud.io/api/measures/component?component=oetztal_ledz&metricKeys=bugs,vulnerabilities,code_smells,coverage,sqale_rating,alert_status"
 ```
 
+A full triage of the open issues is encoded in `sonar-project.properties` as
+`sonar.issue.ignore.multicriteria` entries: false positives (e.g. `new` whose
+ownership is transferred to the async web server, `.` vs `::` on the global
+`WiFi` instance, bounded `strncpy`) and deliberate patterns (config macros,
+`#undef` of framework log macros, FreeRTOS `void*` trampolines, socket
+`reinterpret_cast`s). Each entry carries a rationale comment directly above it,
+so re-evaluate that comment — not the raw issue count — before removing one.
+
 ### Web Assets
 
 Web files in `data/` are automatically minified and gzip-compressed into C++ header files during the build process. No manual steps required.

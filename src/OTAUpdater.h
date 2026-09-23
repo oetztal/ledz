@@ -4,7 +4,7 @@
 // Architecture:
 //   - TLS-verified GitHub release check, performed off the AsyncTCP thread.
 //   - State machine (`CheckState`, `UpdateState`) observable via /api/ota/status.
-//   - Background workers pinned to Core 1 so /api/ota/* handlers return in
+//   - Background workers pinned to Core 1 so the /api/ota/ handlers return in
 //     microseconds and the rest of the web UI keeps serving during the
 //     multi-minute download.
 //

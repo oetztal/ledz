@@ -333,7 +333,7 @@ void ShowController::setStrip(std::unique_ptr<Strip::Strip>&& base) {
         auto basePtr = static_cast<Strip::Base*>(baseStrip.get());
         basePtr->setGammaMode(deviceConfig.gamma_mode);
 #ifdef ARDUINO
-        ESP_LOGI(TAG, "Gamma mode set to: %d", deviceConfig.gamma_mode);
+        ESP_LOGI(TAG, "Gamma mode set to: %d", static_cast<int>(deviceConfig.gamma_mode));
 #endif
     } else {
 #ifdef ARDUINO

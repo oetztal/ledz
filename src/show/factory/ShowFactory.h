@@ -37,14 +37,15 @@ namespace Show::Factory {
         };
 
     private:
-        std::map<std::string, ShowConstructor> showConstructors;
+        std::map<std::string, ShowConstructor, std::less<>> showConstructors;
         std::vector<ShowInfo> showList;
 
     public:
         ShowFactory();
 
-        // disable copy constructor
+        // disable copy constructor and copy assignment
         ShowFactory(const ShowFactory&) = delete;
+        ShowFactory& operator=(const ShowFactory&) = delete;
 
         /**
          * Register a show with the factory

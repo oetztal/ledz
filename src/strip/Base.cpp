@@ -25,7 +25,7 @@ namespace Strip {
         strip->setBrightness(255);
         brightness = 255;
         // Default to improved gamma correction
-        gammaMode = Config::GAMMA_DEFAULT;
+        gammaMode = Config::GammaMode::GAMMA_DEFAULT;
 #endif
     }
 
@@ -94,16 +94,16 @@ namespace Strip {
 #ifdef ARDUINO
     void Base::setGammaMode(Config::GammaMode mode) {
         gammaMode = mode;
-        ESP_LOGI(TAG, "Gamma mode set to: %d", mode);
+        ESP_LOGI(TAG, "Gamma mode set to: %d", static_cast<int>(mode));
     }
 
-    uint32_t Base::applyGammaCorrection(uint32_t color) {
+    uint32_t Base::applyGammaCorrection(uint32_t color) const {
         switch (gammaMode) {
-            case Config::GAMMA_NONE:
+            case Config::GammaMode::GAMMA_NONE:
                 return color;
-            case Config::GAMMA_NEOPIXEL:
+            case Config::GammaMode::GAMMA_NEOPIXEL:
                 return Adafruit_NeoPixel::gamma32(color);
-            case Config::GAMMA_DEFAULT:
+            case Config::GammaMode::GAMMA_DEFAULT:
             default:
                 return Support::Gamma::correct32(color);
         }
@@ -117,7 +117,7 @@ namespace Strip {
         return static_cast<uint8_t>((static_cast<uint16_t>(component) * (static_cast<uint16_t>(scale) + 1)) >> 8);
     }
 
-    uint32_t Base::applyBrightness(uint32_t color) {
+    uint32_t Base::applyBrightness(uint32_t color) const {
         if (brightness == 255) {
             return color;
         }
