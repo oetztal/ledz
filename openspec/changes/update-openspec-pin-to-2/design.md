@@ -74,17 +74,17 @@ Rollback is a single revert: restore `OPENSPEC_VERSION` to `1.15.0`. The documen
 
 ## Open Questions
 
-None. The reviewer (wuan) approved the change as specified on 2026-11-16. The
-approved decisions are the exact `2.0.0` pin over a floating `latest`/`^2`
-(decision 1), keeping `npx` and documenting the raised Node.js `>=22.12.0` floor
-in `AGENTS.md` and the pre-commit comment (decision 2), `skip_specs: true` for a
-pure tooling change with no spec delta (decision 4), and treating the 2.0 skills
-migration as a no-op with no `openspec update` run (decision 5).
+None. The reviewer (wuan) approved the change as specified on 2026-11-16 and
+then directed that it be implemented ("Implement the change"); the latest
+approval, on the frozen artifacts, again requested no changes. The approved
+decisions are the exact `2.0.0` pin over a floating `latest`/`^2` (decision 1),
+keeping `npx` and documenting the raised Node.js `>=22.12.0` floor in `AGENTS.md`
+and the pre-commit comment (decision 2), `skip_specs: true` for a pure tooling
+change with no spec delta (decision 4), and treating the 2.0 skills migration as
+a no-op with no `openspec update` run (decision 5).
 
-On a second review the same day, wuan approved the frozen artifacts and directed
-that the change be implemented ("Implement the change"), so the scope above is
-final and no further propose-side revisions were requested. Implementation is
-the apply-stage work captured in `tasks.md`.
+The approved scope is therefore final: nothing further to revise on the propose
+side, and implementation is the apply-stage work captured in `tasks.md`.
 
 The committed tree still validates under both `1.15.0` and `2.0.0` with
 `validate --all --strict`: all 14 specs pass, so the bump stays a one-line pin
