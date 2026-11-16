@@ -117,6 +117,24 @@ When push is above `0`, the pixel(s) nearest the centre `c` (the single pixel at
 - **WHEN** the two centre pixels of a strip with even `N` are lit and one iteration runs with push `1`, decay `1` and no emission
 - **THEN** both centre pixels are black
 
+### Requirement: Push never samples across the centre
+
+When push is above `0`, a pixel on one side of the centre `c` SHALL NOT sample the previous state from the other side of `c - scroll`, even when it lies closer to the centre than the push distance. Its sample position SHALL instead stop at `c - scroll` (before warp is added), so the content on each side flows outward without interleaving with the other side.
+
+#### Scenario: Pixel inside the push distance samples the centre
+
+- **WHEN** only pixel `11` of a 21-pixel strip (`c = 10`) is lit and one iteration runs with push `2`, zoom `1`, decay `1`
+- **THEN** pixel `13` is lit and every other pixel, including pixel `9`, is black
+
+### Requirement: Centre offset moves the transform centre
+
+The transform SHALL accept a centre offset `center` in pixels (default `0`). Zoom, push and the mirror fold SHALL use `c = (N - 1) / 2 + center` as their centre. An offset of `0` SHALL have no effect.
+
+#### Scenario: Push flows away from an offset centre
+
+- **WHEN** only pixel `10` of a 21-pixel strip is lit, `center = -4` (so `c = 6`), and one iteration runs with push `1`, zoom `1`, decay `1`
+- **THEN** pixel `11` is lit and every other pixel is black
+
 ### Requirement: Mirror fold makes the strip symmetric
 
 When mirror is enabled, each pixel SHALL sample the previous state at its distance from the centre, folded onto the lower half, so the resulting frame is symmetric about the strip centre.

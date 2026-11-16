@@ -15,7 +15,8 @@ short "emitter" functions instead of writing each effect from scratch.
   mirror fold), multiplies it by a decay factor, and lets the show add new
   light on top before writing the result to the strip.
 - Add a **Tunnel** show: a hue-cycling emitter at the strip centre with
-  zoom < 1, so rings of colour stream outward toward both ends, with an
+  zoom < 1, so rings of colour stream outward toward both ends, a swaying
+  vanishing point that bends the rings as if the tunnel turned, and an
   optional sine warp for a liquid wobble.
 - Add an **Echo** show: several particles bounce between the strip ends and
   leave long, decaying comet trails behind them.

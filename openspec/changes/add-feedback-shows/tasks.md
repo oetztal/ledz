@@ -41,6 +41,12 @@
 - [x] 7.5 Re-run the whole native suite, the firmware build, clang-format, and `openspec validate add-feedback-shows --strict`. Verify everything passes and record the flash delta.
 - [x] 7.6 After review, clear the centre pixel pair on even-length strips (`|x - c| <= 0.5`) so it cannot accumulate, and split Echo's sub-step emission at a bounce so the turn-around pixel is not skipped. Add feedback and Tunnel regression tests. Verify `pio test -e native -f test_feedback -f test_shows` passes.
 
+## 8. Tunnel sway
+
+- [x] 8.1 Add `center` to `Support::FeedbackTransform`, clamp push samples at the centre so they never cross it, and add `test/test_feedback` cases for both. Verify `pio test -e native -f test_feedback` passes.
+- [x] 8.2 Add `sway` to Tunnel (constructor, clamping, drifting centre with anti-aliased emission, mirror only without warp and sway), the manifest (default `0.4`, hyperspace `0.5`, liquid `0.3`), factory, simulator parameter table, UI section and load switch, and docs. Add Tunnel and factory test cases. Verify `pio test -e native -f test_shows -f test_show_factory` passes.
+- [x] 8.3 Rebuild the simulator, re-render the Tunnel gallery PNGs, and verify the rings bend visibly within the 300-iteration previews.
+
 ## Workflow follow-up
 
 - Archive the change with `/opsx:archive` after review and merge.

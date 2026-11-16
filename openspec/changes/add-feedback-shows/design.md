@@ -111,6 +111,21 @@ that push and zoom carry outward, and the dark gaps between rings give the
 contrast the continuous emission lacked. `pulse = 0` restores continuous
 emission. `f` is the show's own frame counter, like the hue accumulator.
 
+### Tunnel sway
+
+With a fixed centre every ring is the same symmetric chevron at the same
+interval, which reads as monotonous in the gallery. Tunnel therefore moves
+the transform centre (`FeedbackTransform::center`) and the emission point
+along `sway·half·(sin(0.015 f) + 0.5 sin(0.037 f + 1)) / 1.5`. Two
+incommensurate sines (about 4.2 s and 1.7 s at 100 Hz) keep the drift from
+looping visibly, and the faster period lets a 300-iteration preview show
+more than one bend. The mirror fold is only used when both warp and sway are
+`0`. The off-pixel centre exposed a push artefact: pixels nearer the centre
+than the push sampled the opposite side, interleaving both halves into a
+comb (mirroring had hidden it). Push therefore clamps the sample at the
+centre. An extra complementary-colour "wall" glow between rings was tried
+and dropped: on the strip it shows as fast colour flicker.
+
 ### Echo speeds and swept emission
 
 Equal particle speeds make every trail parallel, a regular lattice. Particle

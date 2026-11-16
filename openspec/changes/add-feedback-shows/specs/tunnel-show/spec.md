@@ -43,9 +43,9 @@ The Tunnel show SHALL render through feedback with its `zoom` parameter as the z
 - **WHEN** Tunnel runs with default parameters on a 60-pixel strip for 200 iterations
 - **THEN** pixel `0` and pixel `59` are each non-black in at least one of those iterations
 
-#### Scenario: Output is symmetric without warp
+#### Scenario: Output is symmetric without warp or sway
 
-- **WHEN** Tunnel runs with `warp == 0`
+- **WHEN** Tunnel runs with `warp == 0` and `sway == 0`
 - **THEN** pixels `i` and `N - 1 - i` have equal colour at every iteration
 
 ### Requirement: Tunnel warp adds a wobble
@@ -57,14 +57,28 @@ When `warp > 0`, the Tunnel show SHALL apply the feedback warp with amplitude `w
 - **WHEN** Tunnel runs with `warp == 2.0` for 100 iterations on a 60-pixel strip
 - **THEN** at least one iteration has pixels `i` and `N - 1 - i` with differing colour for some `i`
 
+### Requirement: Tunnel sway drifts the vanishing point
+
+The Tunnel show SHALL offset its centre (emission point and feedback transform centre) from the strip middle by `sway * ((N - 1) / 2) * (sin(0.015 f) + 0.5 sin(0.037 f + 1)) / 1.5` pixels, where `f` counts the show's iterations from `0`, so the rings curve as if the tunnel turned. An off-pixel centre SHALL get anti-aliased emission. With `sway == 0` the centre SHALL stay at the middle.
+
+#### Scenario: Sway breaks symmetry
+
+- **WHEN** Tunnel runs with `warp == 0` and `sway == 0.4` for 100 iterations on a 60-pixel strip
+- **THEN** at least one iteration has pixels `i` and `N - 1 - i` with differing colour for some `i`
+
+#### Scenario: Sway moves the brightest pixel
+
+- **WHEN** Tunnel runs with `sway == 1.0`, `pulse == 0` and `push == 1` on a 61-pixel strip for 300 iterations
+- **THEN** the brightest pixel is left of the middle in some iteration and right of it in another
+
 ### Requirement: Tunnel accepts parameters
 
-The Tunnel show SHALL accept `zoom` (float, default `0.97`, clamped to `[0.5, 1.0]`), `decay` (float, default `0.93`, clamped to `[0.0, 1.0]`), `hue_speed` (float, default `2.5`, clamped to `[0.0, 16.0]`), `warp` (float, default `0.0`, clamped to `[0.0, 8.0]`), `push` (float, default `1.0`, clamped to `[0.0, 4.0]`), and `pulse` (integer, default `20`, clamped to `[0, 200]`). Missing keys SHALL take their defaults; out-of-range values SHALL be clamped without error.
+The Tunnel show SHALL accept these parameters, each with a default and a clamp range: `zoom` (`0.97`, `[0.5, 1.0]`), `decay` (`0.97`, `[0.0, 1.0]`), `hue_speed` (`2.5`, `[0.0, 16.0]`), `warp` (`0.0`, `[0.0, 8.0]`), `push` (`1.0`, `[0.0, 4.0]`), `pulse` (integer, `20`, `[0, 200]`) and `sway` (`0.4`, `[0.0, 1.0]`); all but `pulse` are floats. Missing keys SHALL take their defaults; out-of-range values SHALL be clamped without error.
 
 #### Scenario: Defaults from empty params
 
 - **WHEN** Tunnel is created with `params_json == "{}"`
-- **THEN** it has `zoom=0.97`, `decay=0.93`, `hue_speed=2.5`, `warp=0.0`, `push=1.0`, `pulse=20`
+- **THEN** it has `zoom=0.97`, `decay=0.97`, `hue_speed=2.5`, `warp=0.0`, `push=1.0`, `pulse=20`, `sway=0.4`
 
 #### Scenario: Out-of-range values are clamped
 
