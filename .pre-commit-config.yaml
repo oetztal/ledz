@@ -6,7 +6,8 @@
 # Tooling assumed on PATH:
 #   - clang-format 19.1.7 (pip install clang-format==19.1.7 or brew install llvm@19)
 #   - shellcheck       (brew install shellcheck)
-#   - openspec CLI     (auto-installed by scripts/validate-openspec.sh)
+#   - openspec CLI     (auto-installed by scripts/validate-openspec.sh;
+#                       the pinned 2.0 CLI needs Node.js >=22.12.0)
 #   - node / npm       (for the commitlint commit-msg hook)
 #
 # The clang-format hook runs `clang-format --dry-run --Werror` on staged C/C++
