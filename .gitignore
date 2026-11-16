@@ -8,6 +8,7 @@ __pycache__
 .claude
 .opencode
 .junie
+.agents
 .mcp.json
 
 # Per-developer direnv / shell environment (generated locally by direnv)
