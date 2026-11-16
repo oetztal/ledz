@@ -113,7 +113,7 @@ The `commitlint` pre-commit hook (`commit-msg` stage, config in `.commitlintrc.y
 
 A `.clang-format` config matches the existing style (4-space indent, K&R-ish braces, pointer/reference left). Run `pre-commit install` once after cloning; `git commit` then fails if staged C/C++ under `src/`, `test/`, or `include/` is not clang-format clean, if `scripts/*.sh` is not shellcheck clean, or if `openspec/**` doesn't pass `openspec validate --all --strict`. Format manually with `clang-format -i <file>`; bypass with `git commit --no-verify` only when you really mean it.
 
-**Pinned to clang-format 19.1.7** — newer majors (23+) reformat macro line-continuations differently, so locally install via `pip install clang-format==19.1.7` (or `brew install llvm@19`); the CI workflow installs the same wheel. OpenSpec validation is pinned via `OPENSPEC_VERSION` in `scripts/validate-openspec.sh`.
+**Pinned to clang-format 19.1.7** — newer majors (23+) reformat macro line-continuations differently, so locally install via `pip install clang-format==19.1.7` (or `brew install llvm@19`); the CI workflow installs the same wheel. OpenSpec validation is pinned via `OPENSPEC_VERSION` in `scripts/validate-openspec.sh`; the pinned 2.0 CLI is installed through `npx`, so the gate needs Node.js `>=22.12.0` on `PATH` (the 2.0 package's engine floor).
 
 ## Static Analysis (SonarCloud)
 
