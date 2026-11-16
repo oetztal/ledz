@@ -94,6 +94,21 @@ config.reset();
 ESP.restart();
 ```
 
+### Commit messages
+
+Use [Conventional Commits](https://www.conventionalcommits.org/): `<type>(<scope>): <description>`.
+
+- **Types**: `feat` (new behaviour), `fix` (bug fix), `docs`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `style` (formatting only), `revert`.
+- **Scopes**: `show`, `web`, `ota`, `config`, `net`, `strip`, `tests`, `docs`, `deps` (dependency bumps), `ci` (workflows), `build` (build tooling), `release`. Scope is optional but must be lowercase.
+- **Description**: imperative, no trailing period, ≤ 72 chars (e.g. `fix(ota): retry manifest fetch on timeout`). Lowercase unless a proper noun or acronym requires capitals (`fix(net): handle WiFi reconnect`).
+- **Body**: explain *why*, not *what*; wrap at ~72 chars (commitlint hard-caps lines at 100 so URLs can overflow).
+- **Breaking changes**: add `!` after the type/scope (`feat(config)!: rename num_pixels`) and a `BREAKING CHANGE:` footer describing the migration.
+- **Issues**: reference them in the footer (`Refs: #123`, `Closes: #123`).
+
+One logical change per commit; a refactor and a behaviour change belong in separate commits so `git revert` and `git bisect` stay useful.
+
+The `commitlint` pre-commit hook (`commit-msg` stage, config in `.commitlintrc.yml`) enforces these rules. `pre-commit install` installs it because `.pre-commit-config.yaml` sets `default_install_hook_types: [pre-commit, commit-msg]`; it needs node/npm on `PATH`. Bypass with `git commit --no-verify` only when you really mean it.
+
 ### Formatting / pre-commit
 
 A `.clang-format` config matches the existing style (4-space indent, K&R-ish braces, pointer/reference left). Run `pre-commit install` once after cloning; `git commit` then fails if staged C/C++ under `src/`, `test/`, or `include/` is not clang-format clean, if `scripts/*.sh` is not shellcheck clean, or if `openspec/**` doesn't pass `openspec validate --all --strict`. Format manually with `clang-format -i <file>`; bypass with `git commit --no-verify` only when you really mean it.

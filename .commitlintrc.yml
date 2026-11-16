@@ -1,0 +1,17 @@
+---
+# Commit message rules, enforced by the commitlint pre-commit hook
+# (`commit-msg` stage). Keep in sync with AGENTS.md → "Commit messages".
+
+extends:
+  - '@commitlint/config-conventional'
+
+rules:
+  # `type(scope): description` — subject line capped at 72 chars.
+  header-max-length: [2, 'always', 72]
+
+  # Project scopes. The scope itself stays optional.
+  scope-case: [2, 'always', 'lower-case']
+  scope-enum:
+    - 2
+    - 'always'
+    - [build, ci, config, deps, docs, net, ota, release, show, strip, tests, web]
