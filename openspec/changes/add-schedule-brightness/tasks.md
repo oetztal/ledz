@@ -17,7 +17,7 @@
 
 - [ ] 3.1 `src/WebServerManager.cpp` `POST /api/timers/schedule`: parse optional `brightness` as `int` defaulting to -1 (absent or `null` → "not set"); reject a present value below 0 or above 255 with 400 `{"success":false,"error":"Invalid brightness"}` and change no slot; pass the value to `setSchedule`. Because `setSchedule` stores the parameter unconditionally, an in-place update without the field stores -1 and clears any previously stored brightness (reviewer point 2)
 - [ ] 3.2 `src/WebServerManager.cpp` `GET /api/timers`: for an occupied `SCHEDULE`, add `brightness` as the integer when `timer.brightness >= 0`, otherwise `null`; do not add it for countdown slots
-- [ ] 3.3 Manual `curl` pass against a device covering the "set and read over HTTP" scenarios: create with `brightness:64`, create without it (expect `null`), update with `brightness:200` (expect 200), update without it (expect `null` and confirm firing the updated schedule no longer changes brightness), `brightness:256` and `brightness:-1` (expect 400 and no change)
+- [ ] 3.3 Manual `curl` pass against a device covering the "Schedule brightness is accepted by the schedule endpoint" and "Schedule brightness is reported by the timers endpoint" scenarios: create with `brightness:64`, create without it (expect `null`), update with `brightness:200` (expect 200), update without it (expect `null` and confirm firing the updated schedule no longer changes brightness), `brightness:256` and `brightness:-1` (expect 400 and no change)
 
 ## 4. On-device firing behaviour
 
