@@ -793,6 +793,13 @@ void WebServerManager::setupAPIRoutes() {
                     case Config::TimerType::SCHEDULE:
                         // Wire name predates the "schedule" wording; kept stable.
                         timerObj["type_name"] = "alarm_daily";
+                        // Optional brightness: the integer when set, null when
+                        // not. The -1 storage sentinel never reaches the wire.
+                        if (timer.brightness >= 0) {
+                            timerObj["brightness"] = timer.brightness;
+                        } else {
+                            timerObj["brightness"] = nullptr;
+                        }
                         break;
                 }
             }
@@ -938,9 +945,28 @@ void WebServerManager::setupAPIRoutes() {
                 return;
             }
 
+            // Optional: brightness — applied only when a LOAD_PRESET schedule
+            // fires. Absent or null stores the -1 "not set" sentinel, which
+            // also clears any value on an in-place update (the request is the
+            // whole schedule). A present value must be an integer 0..255;
+            // out-of-range is rejected rather than clamped.
+            int brightness = -1;
+            if (!doc["brightness"].isNull()) {
+                if (!doc["brightness"].is<int>()) {
+                    request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid brightness"})");
+                    return;
+                }
+                brightness = doc["brightness"];
+                if (brightness < 0 || brightness > 255) {
+                    request->send(400, CONTENT_TYPE_JSON, R"({"success":false,"error":"Invalid brightness"})");
+                    return;
+                }
+            }
+
             uint32_t secondsSinceMidnight = hour * 3600 + minute * 60;
-            bool success = scheduler->setSchedule(static_cast<uint8_t>(timerIndex), secondsSinceMidnight, action,
-                                                  presetIndex, static_cast<uint8_t>(days));
+            bool success =
+                scheduler->setSchedule(static_cast<uint8_t>(timerIndex), secondsSinceMidnight, action, presetIndex,
+                                       static_cast<uint8_t>(days), static_cast<int16_t>(brightness));
 
             if (success) {
                 JsonDocument responseDoc;

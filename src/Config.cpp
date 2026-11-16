@@ -461,6 +461,11 @@ namespace Config {
                 snprintf(key.data(), key.size(), "timer_%u_days", i);
                 timersConfig.timers[i].days_mask = prefs.getUChar(key.data(), SCHEDULE_EVERY_DAY);
 
+                // Absent for schedules written by earlier firmware: the -1
+                // default means "no brightness", reproducing their behaviour.
+                snprintf(key.data(), key.size(), "timer_%u_bright", i);
+                timersConfig.timers[i].brightness = prefs.getShort(key.data(), -1);
+
                 // Firmware before the POSIX-timezone change used
                 // duration_seconds as a "last triggered epoch minute"
                 // marker for schedules, so a migrated entry has a number
@@ -535,6 +540,11 @@ namespace Config {
 
                 snprintf(key.data(), key.size(), "timer_%u_days", i);
                 prefs.putUChar(key.data(), config.timers[i].days_mask);
+
+                // "timer_11_bright" is 15 characters, exactly the NVS key
+                // limit (like "timer_11_paused").
+                snprintf(key.data(), key.size(), "timer_%u_bright", i);
+                prefs.putShort(key.data(), config.timers[i].brightness);
             }
         }
 

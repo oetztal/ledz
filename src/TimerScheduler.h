@@ -74,9 +74,9 @@ public:
      * Set a schedule.
      *
      * Naming the index of a slot that already holds a schedule updates it in
-     * place: time, action, preset and weekday mask are replaced, the slot
-     * and its paused state are kept, and the schedule becomes eligible to fire
-     * at its next occurrence, including later today.
+     * place: time, action, preset, weekday mask and brightness are replaced,
+     * the slot and its paused state are kept, and the schedule becomes
+     * eligible to fire at its next occurrence, including later today.
      *
      * @param index Timer slot index (0 .. MAX_TIMERS-1)
      * @param secondsSinceMidnight Time of day as seconds since midnight
@@ -85,10 +85,15 @@ public:
      * @param daysMask Weekdays to fire on, bit n = tm_wday n (Sunday = 0);
      *                 Config::SCHEDULE_EVERY_DAY for every day. 0 and values
      *                 above 0x7F are rejected.
+     * @param brightness Optional brightness applied when a LOAD_PRESET
+     *                   schedule fires: 0..255 to set it, -1 for "no
+     *                   brightness". Stored as given — the whole schedule is
+     *                   replaced, so an update that omits it clears any
+     *                   previously stored value.
      * @return true if schedule was set successfully
      */
     bool setSchedule(uint8_t index, uint32_t secondsSinceMidnight, Config::TimerAction action, uint8_t presetIndex,
-                     uint8_t daysMask = Config::SCHEDULE_EVERY_DAY);
+                     uint8_t daysMask = Config::SCHEDULE_EVERY_DAY, int16_t brightness = -1);
 
     /**
      * Pause or resume a schedule without changing any of its settings.

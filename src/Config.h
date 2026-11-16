@@ -152,6 +152,13 @@ namespace Config {
         // (Sunday = 0), so the check is (days_mask >> wday) & 1. 0x7F is
         // every day. Ignored by COUNTDOWN.
         uint8_t days_mask = SCHEDULE_EVERY_DAY;
+        // Optional brightness applied when a LOAD_PRESET schedule fires.
+        // -1 means "no brightness set" (the default, which reproduces the
+        // behaviour of schedules stored by older firmware); 0 is a valid
+        // brightness, distinct from "not set". int16_t, not uint8_t, so the
+        // sentinel stays representable. Ignored by COUNTDOWN and by TURN_OFF
+        // schedules.
+        int16_t brightness = -1;
     };
 
     /**
