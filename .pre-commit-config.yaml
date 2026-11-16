@@ -7,13 +7,20 @@
 #   - clang-format 19.1.7 (pip install clang-format==19.1.7 or brew install llvm@19)
 #   - shellcheck       (brew install shellcheck)
 #   - openspec CLI     (auto-installed by scripts/validate-openspec.sh)
+#   - node / npm       (for the commitlint commit-msg hook)
 #
 # The clang-format hook runs `clang-format --dry-run --Werror` on staged C/C++
 # files. Format with `clang-format -i <file>` (or have your editor do it on
 # save) before staging.
 #
+# Commit messages are checked by commitlint (`commit-msg` stage) using
+# .commitlintrc.yml. `pre-commit install` installs that hook too, because of
+# `default_install_hook_types` below.
+#
 # Static analysis deeper than formatting (clang-tidy, cppcheck, SonarQube)
 # stays in CI; this file is intentionally the cheap/fast gate.
+
+default_install_hook_types: [pre-commit, commit-msg]
 
 exclude: |
   (?x)^(
@@ -53,6 +60,14 @@ repos:
     rev: v0.10.0.1
     hooks:
       - id: shellcheck
+
+  - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
+    rev: v9.27.0
+    hooks:
+      - id: commitlint
+        stages: [commit-msg]
+        additional_dependencies:
+          - '@commitlint/config-conventional@21.2.4'
 
   - repo: local
     hooks:

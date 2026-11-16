@@ -1,6 +1,7 @@
 #ifndef LEDZ_STRIP_H
 #define LEDZ_STRIP_H
 
+#include <cstdint>
 #include <memory>
 
 namespace Strip {
