@@ -103,4 +103,9 @@ None required. Flash the new firmware; existing schedules load with no brightnes
 
 ## Open Questions
 
-- None blocking. The reviewer's two points are incorporated: a turn-off schedule ignores its brightness and never changes the global brightness (decision 2), and an in-place update without `brightness` stores the "not set" sentinel so the schedule ignores any brightness change (decision 3). Whether the brightness control should also be offered for countdown timers is out of scope per issue #23; it can be a follow-up if the UI makes countdowns the more natural place for it.
+None. Review resolved the two behavioural points below and the change was approved as specified:
+
+- A turn-off schedule ignores its brightness and never changes the global brightness (decision 2).
+- An in-place update without `brightness` stores the "not set" sentinel, so the updated schedule ignores any brightness change (decision 3).
+
+The three confirmations raised after the first revision were accepted as written: the brightness control is shown only for the "Load preset" action (decision 6), a turn-off schedule may keep a stored value but ignores it at fire time (decision 2), and `GET /api/timers` reports `null` rather than the `-1` storage sentinel (decision 3). Offering the same control for countdown timers stays out of scope per issue #23; it can be a follow-up if the UI makes countdowns the more natural place for it.
