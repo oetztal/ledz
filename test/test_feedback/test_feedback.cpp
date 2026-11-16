@@ -314,6 +314,39 @@ void test_push_clears_the_centre_pair_on_even_lengths() {
     TEST_ASSERT_EQUAL_FLOAT(0.0f, fb.intensity(10, 0));
 }
 
+void test_push_does_not_sample_across_the_centre() {
+    // Pixel 9 is closer to the centre (c = 10) than the push of 2, so without
+    // the clamp it would sample pixel 11 on the far side.
+    const Strip::PixelIndex n = 21;
+    FeedbackTransform tf;
+    tf.push = 2.0f;
+    Feedback fb;
+    MockStrip strip(n);
+    fb.begin(n, tf, 1.0f, 0);
+    fb.addPixel(11, WHITE);
+    step(fb, strip, tf, 1.0f, 1);
+    for (Strip::PixelIndex i = 0; i < n; i++) {
+        TEST_ASSERT_EQUAL_HEX32_MESSAGE(i == 13 ? WHITE : 0, strip.getPixelColor(i), "unexpected pixel");
+    }
+}
+
+void test_centre_offset_moves_the_push_centre() {
+    // With center -4 the centre is c = 6, so pixel 10 is no longer the
+    // (cleared) centre but content that push carries outward to pixel 11.
+    const Strip::PixelIndex n = 21;
+    FeedbackTransform tf;
+    tf.push = 1.0f;
+    tf.center = -4.0f;
+    Feedback fb;
+    MockStrip strip(n);
+    fb.begin(n, tf, 1.0f, 0);
+    fb.addPixel(10, WHITE);
+    step(fb, strip, tf, 1.0f, 1);
+    for (Strip::PixelIndex i = 0; i < n; i++) {
+        TEST_ASSERT_EQUAL_HEX32(i == 11 ? WHITE : 0, strip.getPixelColor(i));
+    }
+}
+
 void test_zero_push_changes_nothing() {
     const Strip::PixelIndex n = 40;
     FeedbackTransform plain;
@@ -459,6 +492,8 @@ int runUnityTests() {
     RUN_TEST(test_push_moves_content_outward_on_both_sides);
     RUN_TEST(test_push_clears_the_centre_pixel);
     RUN_TEST(test_push_clears_the_centre_pair_on_even_lengths);
+    RUN_TEST(test_push_does_not_sample_across_the_centre);
+    RUN_TEST(test_centre_offset_moves_the_push_centre);
     RUN_TEST(test_zero_push_changes_nothing);
     RUN_TEST(test_mirror_makes_output_symmetric);
     RUN_TEST(test_out_of_range_samples_are_black);

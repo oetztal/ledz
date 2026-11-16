@@ -94,7 +94,8 @@ feedback.render(strip);
 ```
 
 Available transforms are `zoom`, `scroll`, `warp_amp`/`warp_freq`/`warp_speed`,
-`mirror`, and `push`. Emission can be added at a fractional position with
+`mirror`, `push`, and `center` (shifts the centre that zoom, push and mirror
+work around). Emission can be added at a fractional position with
 `add()` (anti-aliased) or at an integer pixel with `addPixel()`. Both buffers are
 `3 * N` floats (24 bytes per LED) and are reallocated only when the strip length
 changes.

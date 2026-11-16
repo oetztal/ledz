@@ -15,7 +15,10 @@ namespace Support {
      *
      *     c + (x - c) * zoom - sign(x - c) * push - scroll + warp_amp * sin(warp_freq * x + warp_speed * t)
      *
-     * with c = (N - 1) / 2. The default is the identity transform.
+     * with c = (N - 1) / 2 + center. Under push the sample (before warp) never
+     * crosses c - scroll; pixels nearer the centre than the push sample the centre.
+     *
+     * The default is the identity transform.
      */
     struct FeedbackTransform {
         float zoom = 1.0f;        // about the centre; < 1 moves content outward
@@ -25,6 +28,7 @@ namespace Support {
         float warp_speed = 0.05f; // rad/iteration
         bool mirror = false;      // fold the upper half onto the lower half
         float push = 0.0f;        // px/iteration outward from the centre, on both sides; clears the centre pixel(s)
+        float center = 0.0f;      // px; shifts the centre c used by zoom, push and mirror
     };
 
     /**

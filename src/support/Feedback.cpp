@@ -77,7 +77,7 @@ namespace Support {
         }
 
         decay = std::clamp(decay, 0.0f, 1.0f);
-        const float c = (static_cast<float>(length_) - 1.0f) * 0.5f;
+        const float c = (static_cast<float>(length_) - 1.0f) * 0.5f + transform.center;
         const bool wrap = transform.scroll != 0.0f;
         const bool warp = transform.warp_amp != 0.0f;
         const auto phase = static_cast<float>(static_cast<double>(t) * transform.warp_speed);
@@ -90,10 +90,16 @@ namespace Support {
             float s = c + (xd - c) * transform.zoom - transform.scroll;
             // Push samples closer to the centre, so content moves outward at a
             // constant speed even near the centre, where zoom barely moves it.
-            if (xd > c) {
-                s -= transform.push;
-            } else if (xd < c) {
-                s += transform.push;
+            // Pixels nearer the centre than the push stop at the centre rather
+            // than sampling the other side, which would interleave the two
+            // halves into a comb whenever the centre is off-pixel.
+            if (transform.push > 0.0f) {
+                const float cs = c - transform.scroll;
+                if (xd > c) {
+                    s = std::max(s - transform.push, cs);
+                } else if (xd < c) {
+                    s = std::min(s + transform.push, cs);
+                }
             }
             if (warp) {
                 s += transform.warp_amp * std::sin(transform.warp_freq * xd + phase);
