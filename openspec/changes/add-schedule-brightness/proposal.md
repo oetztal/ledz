@@ -6,9 +6,9 @@ Issue #23 asks for schedules to carry an optional brightness value that overwrit
 
 ## What Changes
 
-- **A schedule can carry an optional brightness.** `Config::TimerEntry` gains an optional brightness value with a distinct "not set" state. When a schedule with a brightness set fires, the device sets its global brightness to that value (the same change a control-page slider edit makes, persisted to the device config); when no brightness is set, the current brightness is left untouched. The value applies alongside the schedule's action, whether it loads a preset or turns the LEDs off.
-- **The schedule HTTP API carries it.** `POST /api/timers/schedule` (and its `/api/timers/alarm` alias) accepts an optional integer `brightness` in the range 0–255; omitting it stores no brightness (including on an in-place update, which already replaces the whole schedule). A value outside 0–255 is rejected with 400. `GET /api/timers` reports `brightness` for every occupied schedule — the integer when set, `null` when not.
-- **The timers page exposes it.** The schedule form gets a staged control: a "Set brightness" checkbox plus a 0–255 numeric input, enabled only while checked. Submitting sends `brightness` only when checked; Edit pre-fills it from the schedule; the schedule card shows the value when one is set.
+- **A schedule can carry an optional brightness.** `Config::TimerEntry` gains an optional brightness value with a distinct "not set" state. When a schedule whose action is "Load preset" fires with a brightness set, the device sets its global brightness to that value (the same change a control-page slider edit makes, persisted to the device config); when no brightness is set, the current brightness is left untouched. A schedule whose action is "Turn off LEDs" ignores any brightness value and never changes the global brightness. Updating a schedule in place without a `brightness` field stores "not set", so the updated schedule no longer changes brightness when it fires.
+- **The schedule HTTP API carries it.** `POST /api/timers/schedule` (and its `/api/timers/alarm` alias) accepts an optional integer `brightness` in the range 0–255; omitting it stores no brightness, replacing any value already on the schedule (an in-place update already replaces the whole schedule). A value outside 0–255 is rejected with 400. `GET /api/timers` reports `brightness` for every occupied schedule — the integer when set, `null` when not.
+- **The timers page exposes it.** The schedule form gets a staged control: a "Set brightness" checkbox plus a 0–255 numeric input, enabled only while checked and shown only for the "Load preset" action (mirroring the preset selector). Submitting sends `brightness` only when checked; Edit pre-fills it from a preset-loading schedule; the schedule card shows the value when one is set.
 - **Persistence is additive.** One new NVS key per slot, `timer_%u_bright`, defaulting to "not set". A schedule written by the previous firmware loads with no brightness and behaves exactly as before. No migration step.
 
 Nothing here is **BREAKING**: the new request field is optional, the new response field is additive, and a stored schedule from older firmware keeps its behaviour.
@@ -19,16 +19,16 @@ Nothing here is **BREAKING**: the new request field is optional, the new respons
 - *(none)*
 
 ### Modified Capabilities
-- `timer-scheduling`: A schedule gains an optional brightness value that is applied to the global brightness when the schedule fires, and a new requirement exposes that value over `POST /api/timers/schedule` and `GET /api/timers`. The existing "A schedule can be updated in place" requirement is extended so an in-place update replaces the brightness along with the other settings.
-- `web-ui-controls`: New requirements for the schedule form's staged brightness control (a checkbox plus a numeric input, deliberately not a toggle switch) and for the brightness indicator on a schedule card. The existing "Schedule cards expose pause, edit and cancel" requirement is extended so Edit also loads the brightness and the card shows it.
+- `timer-scheduling`: A schedule gains an optional brightness value that is applied to the global brightness when a "Load preset" schedule fires; a "Turn off LEDs" schedule ignores it. A new requirement exposes that value over `POST /api/timers/schedule` and `GET /api/timers`. The existing "A schedule can be updated in place" requirement is extended so an in-place update replaces the brightness along with the other settings (omitting it stores "not set").
+- `web-ui-controls`: New requirements for the schedule form's staged brightness control (a checkbox plus a numeric input, deliberately not a toggle switch, shown only for the "Load preset" action) and for the brightness indicator on a schedule card. The existing "Schedule cards expose pause, edit and cancel" requirement is extended so Edit also loads the brightness and the card shows it.
 
 ## Impact
 
 - `src/Config.h` — `TimerEntry` gains an optional brightness value and its "not set" constant
 - `src/Config.cpp` — `loadTimersConfig`/`saveTimersConfig` read and write `timer_%u_bright` with the "not set" default
-- `src/TimerScheduler.{h,cpp}` — `setSchedule` gains a brightness parameter and `setCountdown` clears the field so a reuse of the slot cannot inherit it; `executeTimer` queues a brightness change when one is set
-- `src/WebServerManager.cpp` — optional `brightness` on `POST /api/timers/schedule`; `brightness` on `GET /api/timers`
-- `data/timers.html` — brightness checkbox/input in the schedule form, edit pre-fill, card indicator; `data/common.css` if any new style is needed
+- `src/TimerScheduler.{h,cpp}` — `setSchedule` gains a brightness parameter and stores it unconditionally (an omitted value becomes the "not set" sentinel); `setCountdown` clears the field so a reuse of the slot cannot inherit it; `executeTimer` queues a brightness change only in the `LOAD_PRESET` branch when one is set
+- `src/WebServerManager.cpp` — optional `brightness` on `POST /api/timers/schedule` (defaults to the "not set" sentinel); `brightness` on `GET /api/timers`
+- `data/timers.html` — brightness checkbox/input in the schedule form (shown for the "Load preset" action), edit pre-fill, card indicator; `data/common.css` if any new style is needed
 - `src/generated/timers_gz.h` — regenerated by `scripts/compress_web.py` in the pre-build step
 - `openspec/specs/timer-scheduling/spec.md`, `openspec/specs/web-ui-controls/spec.md` — delta specs
 
