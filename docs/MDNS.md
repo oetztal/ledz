@@ -160,8 +160,8 @@ avahi-browse -r _http._tcp
 ## Implementation Details
 
 ### Code Location
-- **Header**: `src/Network.h` - ESPmDNS include
-- **Implementation**: `src/Network.cpp` - `startAP()` and `startSTA()` methods
+- **Header**: `src/NetworkController.h` - ESPmDNS include
+- **Implementation**: `src/NetworkController.cpp` - `startAP()` and `startSTA()` methods
 
 ### Memory Usage
 - ESPmDNS library adds ~2KB to flash
@@ -178,10 +178,10 @@ avahi-browse -r _http._tcp
 
 ### Custom Hostname
 
-If you want to change the hostname format, modify `src/Network.cpp`:
+If you want to change the hostname format, modify `src/NetworkController.cpp`:
 
 ```cpp
-// Custom implementation (example): Network::generateHostname()
+// Custom implementation (example): NetworkController::generateHostname()
 // returns a prefix derived from DeviceId::getDeviceId().
 hostname = "myled";  // All devices would be "myled.local"
 ```
@@ -191,7 +191,7 @@ hostname = "myled";  // All devices would be "myled.local"
 You can advertise additional services:
 
 ```cpp
-// In Network.cpp after MDNS.begin()
+// In NetworkController.cpp after MDNS.begin()
 MDNS.addService("http", "tcp", 80);
 MDNS.addService("led-control", "tcp", 80);  // Custom service
 ```

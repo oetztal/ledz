@@ -29,7 +29,7 @@ The project has been renamed from "LED Controller" to "ledz" throughout the code
 2. **`src/Config.cpp`**
    - Updated `getDeviceId()` method to return `AABBCC` format
 
-3. **`src/Network.cpp`**
+3. **`src/NetworkController.cpp`**
    - Updated hostname generation: `"ledz-" + deviceId`
    - Updated Serial output messages to use "ledz"
 

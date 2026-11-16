@@ -25,7 +25,7 @@ Debug logs are compiled out by default (`CORE_DEBUG_LEVEL=0`); enable with `pio 
 
 ### Threading (critical)
 
-- **Core 0** runs `Network::task()` (WiFi, NTP, mDNS, webserver).
+- **Core 0** runs `NetworkController::task()` (WiFi, NTP, mDNS, webserver).
 - **Core 1** runs `ledShowTask()` (~100Hz LED rendering) and owns `currentShow`.
 - `WebServerManager` must **never** touch shows or LED state directly — it calls `ShowController::queueShowChange()`, which enqueues a `ShowCommand`.
 - The LED task processes commands each iteration via `ShowController::processCommands()`.
@@ -40,9 +40,9 @@ main.cpp
 ├─ ShowController (owns currentShow, baseStrip, layout)
 │   ├─ ShowFactory&   (creates shows)
 │   └─ Config&        (NVS persistence)
-└─ Network (owns webServer)
+└─ NetworkController (owns webServer)
     ├─ Status&, Config&
-    └─ WebServerManager (moved in; refs Config, Network, ShowController)
+    └─ WebServerManager (moved in; refs Config, NetworkController, ShowController)
 ```
 
 **Strip**: `baseStrip` wraps `Adafruit_NeoPixel`; `layout` decorates it (reverse, mirror, dead-LED masking). Layout is recreated at runtime via `layout.reset(new Strip::Layout(*baseStrip, ...))`.
@@ -115,7 +115,7 @@ See README's "Static Analysis (SonarCloud)" section for the full query parameter
 
 ## File Locations
 
-- Core: `src/` (main.cpp, Config, Network, ShowController, ShowFactory, WebServerManager)
+- Core: `src/` (main.cpp, Config, NetworkController, ShowController, ShowFactory, WebServerManager)
 - Shows: `src/show/` (one .h/.cpp pair each)
 - Strip: `src/strip/` (Strip.h, Base, Layout)
 - Utilities: `src/support/`

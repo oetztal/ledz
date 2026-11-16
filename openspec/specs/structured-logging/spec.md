@@ -86,6 +86,6 @@ Each `.cpp` file that logs SHALL declare `static const char* TAG = "<shorttag>";
 - **THEN** it uses the file-scope `TAG`, not a new ad-hoc string
 - **THEN** if the file does not yet have a `TAG`, one is added at file scope
 
-#### Scenario: CaptivePortal shares Network's tag
+#### Scenario: CaptivePortal shares NetworkController.s tag
 - **WHEN** code in `src/CaptivePortal.cpp` logs
-- **THEN** it uses the same `net` tag as `src/Network.cpp` (one logical module)
+- **THEN** it uses the same `net` tag as `src/NetworkController.cpp` (one logical module)

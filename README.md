@@ -150,7 +150,7 @@ pio run -e adafruit_qtpy_esp32s3_nopsram -t upload
 src/
   main.cpp              # Entry point
   Config.h/cpp          # NVS persistence
-  Network.h/cpp         # WiFi, mDNS, NTP
+  NetworkController.h/cpp # WiFi, mDNS, NTP
   CaptivePortal.cpp     # AP-mode captive portal
   WebServerManager.cpp  # Web interface & API
   ShowController.cpp    # Show management
