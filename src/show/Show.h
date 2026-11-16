@@ -1,7 +1,9 @@
 #ifndef LEDZ_SHOW_H
 #define LEDZ_SHOW_H
 
+#include <cstdint>
 #include <memory>
+
 #include "strip/Strip.h"
 
 namespace Show {
