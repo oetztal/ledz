@@ -141,6 +141,14 @@ void TimerScheduler::executeTimer(uint8_t index) {
                     showController.queuePresetLoad(presetsConfig.presets[timer.preset_index]);
                     ESP_LOGI(TAG, "Loaded preset %d (%s)", timer.preset_index,
                              presetsConfig.presets[timer.preset_index].name.data());
+                    // A schedule may carry an optional brightness. It is
+                    // applied only for a preset load (a turn-off schedule
+                    // never reads it) and uses the same command as the
+                    // control page, so it also persists the value.
+                    if (timer.brightness >= 0 &&
+                        showController.queueBrightnessChange(static_cast<uint8_t>(timer.brightness))) {
+                        ESP_LOGI(TAG, "Schedule brightness -> %d", timer.brightness);
+                    }
                 } else {
                     ESP_LOGW(TAG, "Preset %d is invalid, cancelling timer", timer.preset_index);
                 }
@@ -163,6 +171,9 @@ bool TimerScheduler::setCountdown(uint8_t index, uint32_t durationSeconds, Confi
     timer.preset_index = presetIndex;
     timer.target_time = currentEpoch + durationSeconds;
     timer.duration_seconds = durationSeconds;
+    // A countdown has no brightness. Clear it so a slot reused from a
+    // schedule cannot inherit a stale value it would never use or display.
+    timer.brightness = -1;
 
     config.saveTimersConfig(timersConfig);
 
@@ -174,7 +185,7 @@ bool TimerScheduler::setCountdown(uint8_t index, uint32_t durationSeconds, Confi
 }
 
 bool TimerScheduler::setSchedule(uint8_t index, uint32_t secondsSinceMidnight, Config::TimerAction action,
-                                 uint8_t presetIndex, uint8_t daysMask) {
+                                 uint8_t presetIndex, uint8_t daysMask, int16_t brightness) {
     if (index >= Config::TimersConfig::MAX_TIMERS) {
         return false;
     }
@@ -203,6 +214,9 @@ bool TimerScheduler::setSchedule(uint8_t index, uint32_t secondsSinceMidnight, C
     timer.target_time = secondsSinceMidnight;
     timer.duration_seconds = 0; // Unused by schedules
     timer.days_mask = daysMask;
+    // Stored unconditionally: the request is the whole schedule, so an
+    // update that omits a brightness clears any previously stored value.
+    timer.brightness = brightness;
     // A freshly set schedule has never fired, so it is eligible today.
     timer.last_fired_yday = Config::SCHEDULE_NEVER_FIRED;
 
@@ -211,8 +225,8 @@ bool TimerScheduler::setSchedule(uint8_t index, uint32_t secondsSinceMidnight, C
 #ifdef ARDUINO
     auto hours = static_cast<uint8_t>(secondsSinceMidnight / 3600);
     auto minutes = static_cast<uint8_t>((secondsSinceMidnight % 3600) / 60);
-    ESP_LOGI(TAG, "Set schedule %d for %02d:%02d, days=0x%02X%s", index, hours, minutes, daysMask,
-             timer.paused ? " (paused)" : "");
+    ESP_LOGI(TAG, "Set schedule %d for %02d:%02d, days=0x%02X, brightness=%d%s", index, hours, minutes, daysMask,
+             brightness, timer.paused ? " (paused)" : "");
 #endif
 
     return true;

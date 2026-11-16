@@ -176,6 +176,15 @@
                     </select>
                 </div>
 
+                <div class="form-group" id="scheduleBrightnessGroup" hidden>
+                    <label class="checkbox-row">
+                        <input type="checkbox" id="scheduleBrightnessEnabled">
+                        <span>Set brightness</span>
+                    </label>
+                    <input type="number" id="scheduleBrightness" min="0" max="255" aria-label="Brightness value"
+                           value="128" disabled>
+                </div>
+
                 <button class="btn btn-primary" id="scheduleSubmit" onclick="setSchedule()">Add Schedule</button>
                 <button type="button" class="btn-link" id="scheduleCancelEdit" onclick="cancelEdit()" hidden>Cancel edit</button>
             </div>
@@ -362,6 +371,11 @@
                         const preset = presets.find(p => p.index === timer.preset_index);
                         actionText = preset ? `Load "${preset.name}"` : `Load preset #${timer.preset_index}`;
                     }
+                    // Optional brightness: shown only when the schedule
+                    // carries a value, so an unset schedule adds nothing.
+                    if (timer.brightness !== null && timer.brightness !== undefined) {
+                        actionText += ` &middot; Brightness ${timer.brightness}`;
+                    }
 
                     let timeDisplay = '';
                     let typeLabel = '';
@@ -513,6 +527,16 @@
                 }
                 requestBody.action = 0; // LOAD_PRESET
                 requestBody.preset_index = presetIndex;
+                // Optional brightness, sent only when staged by the checkbox.
+                // Unchecking is how a user clears an existing value on Edit.
+                if (document.getElementById('scheduleBrightnessEnabled').checked) {
+                    const brightness = parseInt(document.getElementById('scheduleBrightness').value, 10);
+                    if (isNaN(brightness) || brightness < 0 || brightness > 255) {
+                        alert('Please enter a brightness between 0 and 255');
+                        return;
+                    }
+                    requestBody.brightness = brightness;
+                }
             } else {
                 requestBody.action = 1; // TURN_OFF
             }
@@ -555,6 +579,15 @@
                 document.getElementById('schedulePreset').value = String(timer.preset_index);
             }
 
+            // Brightness is offered only for a preset load, and is pre-filled
+            // only when the schedule carries a value: 0 is a value, while
+            // null / undefined is "not set" (shown hidden, unchecked, empty).
+            const hasBrightness = isPreset && Number.isInteger(timer.brightness);
+            document.getElementById('scheduleBrightnessGroup').hidden = !isPreset;
+            document.getElementById('scheduleBrightnessEnabled').checked = hasBrightness;
+            document.getElementById('scheduleBrightness').value = hasBrightness ? String(timer.brightness) : '';
+            document.getElementById('scheduleBrightness').disabled = !hasBrightness;
+
             maskToDays(timer.days_mask ?? EVERY_DAY);
 
             document.getElementById('scheduleSubmit').textContent = 'Update Schedule';
@@ -569,9 +602,31 @@
             document.getElementById('scheduleAction').value = 'off';
             document.getElementById('schedulePresetGroup').style.display = 'none';
             document.getElementById('schedulePreset').value = '';
+            document.getElementById('scheduleBrightnessGroup').hidden = true;
+            document.getElementById('scheduleBrightnessEnabled').checked = false;
+            document.getElementById('scheduleBrightness').value = '';
+            document.getElementById('scheduleBrightness').disabled = true;
             maskToDays(EVERY_DAY);
             document.getElementById('scheduleSubmit').textContent = 'Add Schedule';
             document.getElementById('scheduleCancelEdit').hidden = true;
+        }
+
+        // Show/hide the staged brightness control with the action, mirroring
+        // the preset selector: a turn-off schedule has no brightness.
+        function updateScheduleBrightnessVisibility() {
+            const isPreset = document.getElementById('scheduleAction').value === 'preset';
+            document.getElementById('scheduleBrightnessGroup').hidden = !isPreset;
+        }
+
+        // The checkbox stages the value; enable the numeric input while it is
+        // checked, and clear and disable it when it is unchecked.
+        function updateScheduleBrightnessState() {
+            const enabled = document.getElementById('scheduleBrightnessEnabled').checked;
+            const input = document.getElementById('scheduleBrightness');
+            input.disabled = !enabled;
+            if (!enabled) {
+                input.value = '';
+            }
         }
 
         // Card toggle: checked = armed. Acts immediately; on failure the
@@ -763,7 +818,11 @@
         document.getElementById('scheduleAction').addEventListener('change', (e) => {
             document.getElementById('schedulePresetGroup').style.display =
                 e.target.value === 'preset' ? 'block' : 'none';
+            updateScheduleBrightnessVisibility();
         });
+
+        document.getElementById('scheduleBrightnessEnabled')
+            .addEventListener('change', updateScheduleBrightnessState);
 
         // Day picker: flip the pressed state, nothing is sent until submit
         document.getElementById('scheduleDays').addEventListener('click', (e) => {

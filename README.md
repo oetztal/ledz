@@ -15,7 +15,7 @@ with web interface for WS2812B/NeoPixel LED strips.
 - **Web interface** - Control from any device on your network
 - **Presets** - Save and recall up to 8 complete configurations
 - **Touch control** - Capacitive touch pins to load presets without WiFi
-- **Timers & Schedules** - Countdown timers, plus schedules that switch shows at a set time on chosen weekdays and can be paused
+- **Timers & Schedules** - Countdown timers, plus schedules that switch shows at a set time on chosen weekdays, can set brightness, and can be paused
 - **OTA updates** - Update firmware over WiFi from GitHub releases
 - **Easy setup** - Captive portal for WiFi configuration
 

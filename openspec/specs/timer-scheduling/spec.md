@@ -2,7 +2,9 @@
 
 ## Purpose
 Defines how the device keeps local time and evaluates scheduled actions: the POSIX timezone representation that drives all local-time values, the behaviour of countdown timers and schedules across daylight-saving transitions, the HTTP surface for reading and writing the timezone, the timers page controls for picking a timezone by place, and the one-time migration of legacy offset and alarm state.
+
 ## Requirements
+
 ### Requirement: Local time is derived from a POSIX TZ string
 The device SHALL store its timezone as a POSIX `TZ` string and SHALL derive all local-time values from it using the C library's timezone handling, so that daylight-saving transitions and sub-hour offsets are applied without further configuration. The string SHALL be at most 63 characters. The device SHALL NOT store a bare UTC offset as its timezone representation.
 
@@ -207,7 +209,7 @@ A schedule SHALL have a paused state. A paused schedule SHALL retain its time, a
 - **THEN** the schedule loads as not paused
 
 ### Requirement: A schedule can be updated in place
-Setting a schedule at the index of an occupied schedule slot SHALL replace that schedule's time, action, preset and weekday mask while keeping the slot and the schedule's paused state. The updated schedule SHALL be eligible to fire at its next occurrence, including later the same day.
+Setting a schedule at the index of an occupied schedule slot SHALL replace the schedule's time, action, preset, weekday mask and optional brightness while keeping the slot and the schedule's paused state. An update that supplies no brightness SHALL store no brightness value, replacing any value the schedule previously carried, so the updated schedule leaves the brightness unchanged when it fires. The updated schedule SHALL be eligible to fire at its next occurrence, including later the same day.
 
 #### Scenario: Update keeps the slot
 - **WHEN** slot 2 holds a schedule for 07:00 and a schedule request for 08:00 names index 2
@@ -220,6 +222,15 @@ Setting a schedule at the index of an occupied schedule slot SHALL replace that 
 #### Scenario: Update is eligible today
 - **WHEN** a schedule that fired at 07:00 today is updated at 09:00 to 10:00
 - **THEN** it triggers at 10:00 today
+
+#### Scenario: Update replaces the brightness
+- **WHEN** a schedule with brightness 64 is updated by a request that supplies brightness 200
+- **THEN** the updated schedule fires at brightness 200
+
+#### Scenario: Update without a brightness clears it
+- **WHEN** a schedule with brightness 64 is updated in place by a request that supplies no brightness
+- **THEN** the updated schedule has no brightness value set
+- **THEN** firing it does not change the device's brightness
 
 ### Requirement: Schedule weekday mask is exposed over HTTP
 `POST /api/timers/schedule` (with `POST /api/timers/alarm` accepted as an alias for existing clients) SHALL accept an optional integer `days` in the range 1 to 127 as the weekday mask, defaulting to 127 when omitted, and SHALL reject a value of 0 or above 127.
@@ -329,3 +340,83 @@ Submitting the Countdown timer section's form, regardless of whether the duratio
 #### Scenario: Submit with edited preset duration
 - **WHEN** the user activates the "30 min" preset, changes the duration input to 45, and clicks "Set Countdown Timer"
 - **THEN** a countdown with duration 45 minutes and action "Turn Off LEDs" is created
+
+### Requirement: A schedule can carry an optional brightness value
+Each schedule SHALL carry a brightness value with a distinct "not set" state, separate from the value 0.
+
+#### Scenario: Zero is a valid brightness
+- **WHEN** the current brightness is 200 and a schedule with the action "Load preset" and brightness 0 fires
+- **THEN** the device's brightness becomes 0
+
+### Requirement: A firing preset schedule applies its brightness
+When a schedule whose action is "Load preset" fires and a brightness value is set, the device SHALL set its global brightness to that value, exactly as a brightness change from the control page would, and SHALL persist it as the device's current brightness.
+
+#### Scenario: Firing with a brightness set overrides the current brightness
+- **WHEN** the current brightness is 200 and a schedule with the action "Load preset" and brightness 64 fires
+- **THEN** the device's brightness becomes 64
+
+#### Scenario: Brightness applies alongside a preset load
+- **WHEN** a schedule with brightness 64 and the action "Load preset" fires
+- **THEN** the preset is loaded and the device's brightness becomes 64
+
+### Requirement: A firing schedule without a brightness leaves it unchanged
+When a schedule fires with no brightness value set, the device SHALL leave the current brightness unchanged.
+
+#### Scenario: Firing without a brightness leaves it unchanged
+- **WHEN** the current brightness is 200 and a schedule with no brightness value fires
+- **THEN** the device's brightness remains 200
+
+### Requirement: A turn-off schedule ignores its brightness
+A schedule whose action is "Turn off LEDs" SHALL ignore any brightness value it carries and SHALL NOT change the global brightness.
+
+#### Scenario: Turn-off schedule ignores the brightness
+- **WHEN** the current brightness is 200 and a schedule with the action "Turn off LEDs" and brightness 64 fires
+- **THEN** the LEDs are turned off and the device's brightness remains 200
+
+### Requirement: A legacy schedule without a brightness leaves it unchanged
+A schedule stored by firmware that predates the brightness value SHALL load with no brightness value set and, when it fires, SHALL leave the current brightness unchanged.
+
+#### Scenario: Legacy schedule leaves brightness unchanged
+- **WHEN** the device boots with a stored schedule that has no brightness value
+- **THEN** the schedule loads with no brightness value set
+- **THEN** firing it does not change the device's brightness
+
+### Requirement: Schedule brightness is accepted by the schedule endpoint
+`POST /api/timers/schedule` (with `POST /api/timers/alarm` accepted as an alias for existing clients) SHALL accept an optional integer `brightness` in the range 0 to 255. When `brightness` is present and valid it SHALL become the schedule's brightness value; when it is absent or `null` the schedule SHALL be stored with no brightness value set, replacing any value previously stored on that schedule, including when an existing schedule is updated in place.
+
+#### Scenario: Create with a brightness
+- **WHEN** `POST /api/timers/schedule` is called with `{"hour":7,"minute":0,"brightness":64}`
+- **THEN** the response has `success: true`
+- **THEN** `GET /api/timers` reports that schedule with `brightness: 64`
+
+#### Scenario: Create without a brightness
+- **WHEN** `POST /api/timers/schedule` is called without `brightness`
+- **THEN** `GET /api/timers` reports that schedule with `brightness: null`
+
+#### Scenario: Update clears the brightness when it is omitted
+- **WHEN** a schedule with brightness 64 is updated through `POST /api/timers/schedule` without `brightness`
+- **THEN** `GET /api/timers` reports that schedule with `brightness: null`
+
+### Requirement: An invalid schedule brightness is rejected
+A `brightness` that is not an integer in the range 0 to 255 SHALL be rejected with status 400, and no slot SHALL be changed.
+
+#### Scenario: Out-of-range brightness rejected
+- **WHEN** `POST /api/timers/schedule` is called with `"brightness": 256`
+- **THEN** the response status is 400 and the body has `success: false`
+- **THEN** no slot is changed
+
+#### Scenario: Negative brightness rejected
+- **WHEN** `POST /api/timers/schedule` is called with `"brightness": -1`
+- **THEN** the response status is 400 and the body has `success: false`
+- **THEN** no slot is changed
+
+### Requirement: Schedule brightness is reported by the timers endpoint
+`GET /api/timers` SHALL report `brightness` for every occupied schedule as an integer from 0 to 255 when set, and as `null` when no brightness value is set. Countdown timers SHALL NOT report a brightness.
+
+#### Scenario: Unset schedule brightness is reported as null
+- **WHEN** a schedule is stored without a brightness value
+- **THEN** `GET /api/timers` reports that schedule with `brightness: null`
+
+#### Scenario: Countdown timers report no brightness
+- **WHEN** a countdown timer is active
+- **THEN** `GET /api/timers` reports its entry without a `brightness` field
