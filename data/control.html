@@ -255,7 +255,7 @@
                     </div>
                     <div class="param-row">
                         <label class="param-label" for="tunnelDecay">Decay</label>
-                        <input type="number" id="tunnelDecay" step="0.01" min="0" max="1" value="0.93">
+                        <input type="number" id="tunnelDecay" step="0.01" min="0" max="1" value="0.97">
                         <small style="display:block; margin-top:4px; color:#666;">Higher = longer-lasting rings (0–1)</small>
                     </div>
                     <div class="param-row">
@@ -277,6 +277,11 @@
                         <label class="param-label" for="tunnelPulse">Pulse</label>
                         <input type="number" id="tunnelPulse" step="1" min="0" max="200" value="20">
                         <small style="display:block; margin-top:4px; color:#666;">Frames between ring flashes; 0 emits continuously (0–200)</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="tunnelSway">Sway</label>
+                        <input type="number" id="tunnelSway" step="0.05" min="0" max="1" value="0.4">
+                        <small style="display:block; margin-top:4px; color:#666;">How far the tunnel centre drifts, as a fraction of half the strip; 0 keeps it fixed (0–1)</small>
                     </div>
                     <button class="apply-button" onclick="applyTunnelParams()">Apply Parameters</button>
                 </div>
@@ -809,6 +814,7 @@
             const warp = parseFloat(document.getElementById('tunnelWarp').value);
             const push = parseFloat(document.getElementById('tunnelPush').value);
             const pulse = parseInt(document.getElementById('tunnelPulse').value);
+            const sway = parseFloat(document.getElementById('tunnelSway').value);
 
             try {
                 pendingParameterConfig = true;
@@ -817,7 +823,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         name: 'Tunnel',
-                        params: { zoom, decay, hue_speed, warp, push, pulse }
+                        params: { zoom, decay, hue_speed, warp, push, pulse, sway }
                     })
                 });
                 pendingParameterConfig = false;  // Applied successfully
@@ -1069,6 +1075,7 @@
                     if (params.warp !== undefined) document.getElementById('tunnelWarp').value = params.warp;
                     if (params.push !== undefined) document.getElementById('tunnelPush').value = params.push;
                     if (params.pulse !== undefined) document.getElementById('tunnelPulse').value = params.pulse;
+                    if (params.sway !== undefined) document.getElementById('tunnelSway').value = params.sway;
                     break;
 
                 case 'Echo':

@@ -448,11 +448,12 @@ void test_tunnel_defaults_from_empty_params() {
     auto show = factory->createShow("Tunnel", "{}");
     const auto& tunnel = asTunnel(show);
     TEST_ASSERT_EQUAL_FLOAT(0.97f, tunnel.zoom());
-    TEST_ASSERT_EQUAL_FLOAT(0.93f, tunnel.decay());
+    TEST_ASSERT_EQUAL_FLOAT(0.97f, tunnel.decay());
     TEST_ASSERT_EQUAL_FLOAT(2.5f, tunnel.hueSpeed());
     TEST_ASSERT_EQUAL_FLOAT(0.0f, tunnel.warp());
     TEST_ASSERT_EQUAL_FLOAT(1.0f, tunnel.push());
     TEST_ASSERT_EQUAL(20, tunnel.pulse());
+    TEST_ASSERT_EQUAL_FLOAT(0.4f, tunnel.sway());
 }
 
 void test_tunnel_out_of_range_values_are_clamped() {
@@ -474,6 +475,9 @@ void test_tunnel_out_of_range_values_are_clamped() {
     auto fast = factory->createShow("Tunnel", R"({"push":9,"pulse":-4})");
     TEST_ASSERT_EQUAL_FLOAT(4.0f, asTunnel(fast).push());
     TEST_ASSERT_EQUAL(0, asTunnel(fast).pulse());
+
+    TEST_ASSERT_EQUAL_FLOAT(1.0f, asTunnel(factory->createShow("Tunnel", R"({"sway":3})")).sway());
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, asTunnel(factory->createShow("Tunnel", R"({"sway":-1})")).sway());
 }
 
 // --- Echo parameter parsing -------------------------------------------------

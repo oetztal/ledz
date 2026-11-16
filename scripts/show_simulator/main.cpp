@@ -41,7 +41,7 @@ const std::map<std::string, std::vector<std::string>> &parameterKeysByShow() {
         {"Jump",         {}},
         {"Rainbow",      {"time_step", "pixel_step"}},
         {"Wave",         {"mode", "decay_rate", "brightness_frequency"}},
-        {"Tunnel",       {"zoom", "decay", "hue_speed", "warp", "push", "pulse"}},
+        {"Tunnel",       {"zoom", "decay", "hue_speed", "warp", "push", "pulse", "sway"}},
         {"Echo",         {"particles", "speed", "decay", "hue_speed"}},
         {"TheaterChase", {"num_steps_per_cycle"}},
         {"MorseCode",    {"message", "speed", "dot_length", "dash_length", "symbol_space", "letter_space", "word_space"}},

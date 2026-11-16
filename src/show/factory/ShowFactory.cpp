@@ -112,14 +112,17 @@ namespace Show::Factory {
             "Tunnel", "Pulsing rings of colour fly outward from the centre of the strip, like flying through a tunnel",
             [](const JsonDocument& doc) {
                 float zoom = doc["zoom"] | 0.97f;
-                float decay = doc["decay"] | 0.93f;
+                float decay = doc["decay"] | 0.97f;
                 float hue_speed = doc["hue_speed"] | 2.5f;
                 float warp = doc["warp"] | 0.0f;
                 float push = doc["push"] | 1.0f;
                 int pulse = doc["pulse"] | 20;
-                ESP_LOGI(TAG, "Creating Tunnel zoom=%.2f, decay=%.2f, hue_speed=%.2f, warp=%.2f, push=%.2f, pulse=%d",
-                         zoom, decay, hue_speed, warp, push, pulse);
-                return std::make_unique<Tunnel>(zoom, decay, hue_speed, warp, push, pulse);
+                float sway = doc["sway"] | 0.4f;
+                ESP_LOGI(TAG,
+                         "Creating Tunnel zoom=%.2f, decay=%.2f, hue_speed=%.2f, warp=%.2f, push=%.2f, pulse=%d, "
+                         "sway=%.2f",
+                         zoom, decay, hue_speed, warp, push, pulse, sway);
+                return std::make_unique<Tunnel>(zoom, decay, hue_speed, warp, push, pulse, sway);
             });
 
         registerShow("Echo",

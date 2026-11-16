@@ -12,7 +12,9 @@ namespace Show {
      * previous frame is pushed and zoomed outward through Support::Feedback,
      * so earlier emissions travel toward both ends while they decay. The
      * emission pulses, so each flash becomes a distinct ring. An optional sine
-     * warp bends the rings for a liquid wobble.
+     * warp bends the rings for a liquid wobble, and an optional sway drifts the
+     * vanishing point back and forth, so the rings curve as if the tunnel
+     * turned.
      */
     class Tunnel : public Show {
         float zoom_;
@@ -21,6 +23,7 @@ namespace Show {
         float warp_;
         float push_;
         int pulse_;
+        float sway_;
 
         float hue_ = 0.0f;
         uint32_t frame_ = 0; // drives the pulse; counts this show's iterations
@@ -34,8 +37,9 @@ namespace Show {
          * @param warp warp amplitude in pixels, clamped to [0.0, 8.0]
          * @param push outward push in pixels per iteration, clamped to [0.0, 4.0]
          * @param pulse iterations between flashes, clamped to [0, 200]; 0 emits continuously
+         * @param sway vanishing-point drift as a fraction of the half strip length, clamped to [0.0, 1.0]
          */
-        Tunnel(float zoom, float decay, float hue_speed, float warp, float push, int pulse);
+        Tunnel(float zoom, float decay, float hue_speed, float warp, float push, int pulse, float sway);
 
         void execute(Strip::Strip& strip, Iteration iteration) override;
 
@@ -45,9 +49,13 @@ namespace Show {
         [[nodiscard]] float warp() const { return warp_; }
         [[nodiscard]] float push() const { return push_; }
         [[nodiscard]] int pulse() const { return pulse_; }
+        [[nodiscard]] float sway() const { return sway_; }
 
         /** Emission intensity for the show's frame @p frame, per the pulse shape. */
         [[nodiscard]] float pulseIntensity(uint32_t frame) const;
+
+        /** Vanishing-point offset in pixels from the strip middle at frame @p frame, for length @p n. */
+        [[nodiscard]] float swayOffset(uint32_t frame, Strip::PixelIndex n) const;
     };
 } // namespace Show
 

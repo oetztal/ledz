@@ -238,7 +238,7 @@ static bool isSymmetric(const MockStrip& strip) {
 
 void test_tunnel_centre_lit_on_first_iteration() {
     for (Strip::PixelIndex n : {1, 2, 7, 60, 61}) {
-        Show::Tunnel show(0.97f, 0.93f, 2.5f, 0.0f, 1.0f, 20);
+        Show::Tunnel show(0.97f, 0.93f, 2.5f, 0.0f, 1.0f, 20, 0.0f);
         MockStrip strip(n);
         show.execute(strip, 0);
         TEST_ASSERT_NOT_EQUAL_MESSAGE(0, strip.getPixelColor((n - 1) / 2), "centre pixel is black");
@@ -247,7 +247,7 @@ void test_tunnel_centre_lit_on_first_iteration() {
 }
 
 void test_tunnel_hue_changes_over_time() {
-    Show::Tunnel show(0.97f, 0.93f, 2.5f, 0.0f, 1.0f, 20);
+    Show::Tunnel show(0.97f, 0.93f, 2.5f, 0.0f, 1.0f, 20, 0.0f);
     MockStrip strip(60);
     show.execute(strip, 0);
     const Strip::Color first = strip.getPixelColor(30);
@@ -258,7 +258,7 @@ void test_tunnel_hue_changes_over_time() {
 }
 
 void test_tunnel_reaches_both_ends_with_defaults() {
-    Show::Tunnel show(0.97f, 0.93f, 2.5f, 0.0f, 1.0f, 20);
+    Show::Tunnel show(0.97f, 0.93f, 2.5f, 0.0f, 1.0f, 20, 0.0f);
     MockStrip strip(60);
     bool first_lit = false;
     bool last_lit = false;
@@ -271,19 +271,19 @@ void test_tunnel_reaches_both_ends_with_defaults() {
     TEST_ASSERT_TRUE_MESSAGE(last_lit, "pixel 59 never lit");
 }
 
-void test_tunnel_symmetric_without_warp() {
+void test_tunnel_symmetric_without_warp_or_sway() {
     for (Strip::PixelIndex n : {60, 61}) {
-        Show::Tunnel show(0.9f, 0.97f, 2.0f, 0.0f, 1.5f, 7);
+        Show::Tunnel show(0.9f, 0.97f, 2.0f, 0.0f, 1.5f, 7, 0.0f);
         MockStrip strip(n);
         for (Show::Iteration t = 0; t < 200; t++) {
             show.execute(strip, t);
-            TEST_ASSERT_TRUE_MESSAGE(isSymmetric(strip), "asymmetric frame without warp");
+            TEST_ASSERT_TRUE_MESSAGE(isSymmetric(strip), "asymmetric frame without warp or sway");
         }
     }
 }
 
 void test_tunnel_warp_breaks_symmetry() {
-    Show::Tunnel show(0.97f, 0.93f, 2.5f, 2.0f, 1.0f, 20);
+    Show::Tunnel show(0.97f, 0.93f, 2.5f, 2.0f, 1.0f, 20, 0.0f);
     MockStrip strip(60);
     bool asymmetric = false;
     for (Show::Iteration t = 0; t < 100; t++) {
@@ -294,7 +294,7 @@ void test_tunnel_warp_breaks_symmetry() {
 }
 
 void test_tunnel_pulses_form_rings() {
-    Show::Tunnel show(0.97f, 0.93f, 0.0f, 0.0f, 1.0f, 20);
+    Show::Tunnel show(0.97f, 0.93f, 0.0f, 0.0f, 1.0f, 20, 0.0f);
     MockStrip strip(61);
     int centre[21];
     for (Show::Iteration t = 0; t <= 20; t++) {
@@ -308,7 +308,7 @@ void test_tunnel_pulses_form_rings() {
 }
 
 void test_tunnel_continuous_without_pulse() {
-    Show::Tunnel show(0.97f, 0.93f, 0.0f, 0.0f, 1.0f, 0);
+    Show::Tunnel show(0.97f, 0.93f, 0.0f, 0.0f, 1.0f, 0, 0.0f);
     MockStrip strip(61);
     for (Show::Iteration t = 0; t < 50; t++) {
         show.execute(strip, t);
@@ -318,7 +318,7 @@ void test_tunnel_continuous_without_pulse() {
 }
 
 void test_tunnel_even_length_centre_pair_does_not_accumulate() {
-    Show::Tunnel show(0.97f, 0.93f, 0.0f, 0.0f, 1.0f, 20);
+    Show::Tunnel show(0.97f, 0.93f, 0.0f, 0.0f, 1.0f, 20, 0.0f);
     MockStrip strip(60);
     for (Show::Iteration t = 0; t <= 10; t++) {
         show.execute(strip, t);
@@ -329,6 +329,44 @@ void test_tunnel_even_length_centre_pair_does_not_accumulate() {
     for (Strip::PixelIndex i : {29, 30}) {
         TEST_ASSERT_INT_WITHIN(1, 20, Support::Color::red(strip.getPixelColor(i)));
         TEST_ASSERT_EQUAL_UINT8(0, Support::Color::green(strip.getPixelColor(i)));
+    }
+}
+
+void test_tunnel_sway_breaks_symmetry() {
+    Show::Tunnel show(0.97f, 0.93f, 2.5f, 0.0f, 1.0f, 20, 0.4f);
+    MockStrip strip(60);
+    bool asymmetric = false;
+    for (Show::Iteration t = 0; t < 100; t++) {
+        show.execute(strip, t);
+        asymmetric = asymmetric || !isSymmetric(strip);
+    }
+    TEST_ASSERT_TRUE(asymmetric);
+}
+
+void test_tunnel_sway_moves_the_brightest_pixel() {
+    Show::Tunnel show(0.97f, 0.93f, 0.0f, 0.0f, 1.0f, 0, 1.0f);
+    MockStrip strip(61);
+    bool left = false;
+    bool right = false;
+    for (Show::Iteration t = 0; t < 300; t++) {
+        show.execute(strip, t);
+        Strip::PixelIndex brightest = 0;
+        for (Strip::PixelIndex i = 1; i < strip.length(); i++) {
+            if (brightness(strip.getPixelColor(i)) > brightness(strip.getPixelColor(brightest))) brightest = i;
+        }
+        left = left || brightest < 28;
+        right = right || brightest > 32;
+    }
+    TEST_ASSERT_TRUE_MESSAGE(left, "centre never drifted left");
+    TEST_ASSERT_TRUE_MESSAGE(right, "centre never drifted right");
+}
+
+void test_tunnel_sway_offset_stays_within_bounds() {
+    Show::Tunnel fixed(0.97f, 0.93f, 2.5f, 0.0f, 1.0f, 20, 0.0f);
+    Show::Tunnel swaying(0.97f, 0.93f, 2.5f, 0.0f, 1.0f, 20, 0.5f);
+    for (uint32_t f = 0; f < 5000; f += 7) {
+        TEST_ASSERT_EQUAL_FLOAT(0.0f, fixed.swayOffset(f, 61));
+        TEST_ASSERT_TRUE(std::fabs(swaying.swayOffset(f, 61)) <= 0.5f * 30.0f + 1e-4f);
     }
 }
 
@@ -498,8 +536,11 @@ int runUnityTests() {
     RUN_TEST(test_tunnel_centre_lit_on_first_iteration);
     RUN_TEST(test_tunnel_hue_changes_over_time);
     RUN_TEST(test_tunnel_reaches_both_ends_with_defaults);
-    RUN_TEST(test_tunnel_symmetric_without_warp);
+    RUN_TEST(test_tunnel_symmetric_without_warp_or_sway);
     RUN_TEST(test_tunnel_warp_breaks_symmetry);
+    RUN_TEST(test_tunnel_sway_breaks_symmetry);
+    RUN_TEST(test_tunnel_sway_moves_the_brightest_pixel);
+    RUN_TEST(test_tunnel_sway_offset_stays_within_bounds);
     RUN_TEST(test_tunnel_pulses_form_rings);
     RUN_TEST(test_tunnel_continuous_without_pulse);
     RUN_TEST(test_tunnel_even_length_centre_pair_does_not_accumulate);

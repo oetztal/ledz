@@ -439,11 +439,12 @@
     "default": {
       "params": {
         "zoom": 0.97,
-        "decay": 0.93,
+        "decay": 0.97,
         "hue_speed": 2.5,
         "warp": 0.0,
         "push": 1.0,
-        "pulse": 20
+        "pulse": 20,
+        "sway": 0.4
       }
     },
     "variants": [
@@ -452,11 +453,12 @@
         "label": "Hyperspace",
         "params": {
           "zoom": 0.98,
-          "decay": 0.92,
+          "decay": 0.96,
           "hue_speed": 4.0,
           "warp": 0.0,
           "push": 2.0,
-          "pulse": 12
+          "pulse": 12,
+          "sway": 0.5
         }
       },
       {
@@ -468,7 +470,8 @@
           "hue_speed": 1.3,
           "warp": 1.0,
           "push": 1.0,
-          "pulse": 0
+          "pulse": 0,
+          "sway": 0.3
         }
       }
     ]
