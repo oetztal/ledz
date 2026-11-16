@@ -5,12 +5,7 @@
 ## Requirements
 ### Requirement: Variants manifest is the canonical source for show defaults and presets
 
-`scripts/show_variants.json` SHALL be the canonical source for two roles, both expressed as a single JSON object keyed by show name:
-
-1. **Factory default** — the parameter set the runtime uses when a show is requested without explicit parameters.
-2. **Curated preset** — a parameter set the user can pick from a dropdown or that the gallery can preview.
-
-Both roles SHALL be present in the file. A show that has only one interesting parameter set (its default) SHALL still declare the default explicitly.
+`scripts/show_variants.json` SHALL be the canonical source for two roles, expressed as a single JSON object keyed by show name: the **factory default** (the parameter set used when a show is requested without explicit parameters) and the **curated preset** (a parameter set the user can pick from a dropdown or preview in the gallery). Both roles SHALL be present for every show, even when a show has only one interesting parameter set.
 
 #### Scenario: File declares both roles per show
 - **WHEN** the manifest is parsed
@@ -71,24 +66,11 @@ The `params` object of `default` and every entry in `variants` SHALL list every 
 
 ### Requirement: Default.params for MorseCode uses "HELLO WORLD"
 
-The MorseCode default message SHALL be the string `"HELLO WORLD"` and SHALL be declared identically in all four locations:
+The MorseCode default message SHALL be the string `"HELLO WORLD"`, declared in the manifest as `MorseCode.default.params.message`.
 
-1. `scripts/show_variants.json` `MorseCode.default.params.message`
-2. `src/show/factory/ShowFactory.cpp` factory fallback (the literal on the right-hand side of `|` for the `"message"` key in `MorseCode`'s lambda)
-3. `src/show/MorseCode.h` `MorseCode` constructor default argument for the `message` parameter
-4. `data/control.html` `<input type="text" id="morseMessage">` element's `value` attribute
-
-A drift between any pair of these locations is a defect in `canonical-show-config`. The four locations form a single contract: there is one canonical default message, and every surface that names it names the same string.
-
-#### Scenario: All four locations declare "HELLO WORLD"
+#### Scenario: Manifest declares the default message
 - **WHEN** the manifest is parsed
 - **THEN** `MorseCode.default.params["message"]` equals `"HELLO WORLD"`
-- **WHEN** `src/show/factory/ShowFactory.cpp` parses `{"name":"MorseCode","params":{}}`
-- **THEN** the factory fallback for the `"message"` key returns the string `"HELLO WORLD"`
-- **WHEN** `src/show/MorseCode.h` `MorseCode` constructor is inspected
-- **THEN** the default value of the `message` parameter equals `"HELLO WORLD"`
-- **WHEN** `data/control.html` is rendered
-- **THEN** the `<input type="text" id="morseMessage">` element has `value="HELLO WORLD"`
 
 #### Scenario: Empty-params API call scrolls "HELLO WORLD"
 - **WHEN** the firmware receives `POST /api/show {"name":"MorseCode","params":{}}`
@@ -100,9 +82,21 @@ A drift between any pair of these locations is a defect in `canonical-show-confi
 - **THEN** the strip scrolls the message `"SOS"` regardless of any of the four default locations
 - **THEN** the empty-params path is unaffected by this rule
 
-### Requirement: Schema is consumable by Python and by future C++ / JS consumers
+### Requirement: The MorseCode default message is identical in every surface that names it
 
-The manifest SHALL be parseable by Python's stdlib `json.load()` with no preprocessing. It SHALL NOT contain JSON5 features, comments other than the top-of-file `_comment`, trailing commas, or non-string keys. The manifest SHALL be consumed by a Python build script that emits a `constexpr` C++ header (`src/generated/show_variants.h`) included by the firmware, and the firmware's runtime default parameters SHALL come from that header. The manifest SHALL also be consumed by a Python build script that emits a JS payload (`src/generated/show_variants.js`) inlined into `data/control.html` by `scripts/compress_web.py` before gzip compression, and the rendered HTML's generic preset selector and flag buttons SHALL read from that payload. Neither generated artifact SHALL be tracked in git — both live under the gitignored `src/generated/` directory and are regenerated on every PlatformIO build by a `pre:` script (`scripts/gen_show_variants.py`). This matches the existing `*_gz.h` pattern: every web payload is generated, never committed. The `_comment` is the only non-data field; show entries carry only `description`, optional `iterations`, `default`, and `variants`; `default` carries only `params` and optional `iterations`; `variants[]` entries carry only `name`, `label`, `params`, and optional `iterations`.
+The `src/show/factory/ShowFactory.cpp` factory fallback (the literal on the right-hand side of `|` for `"message"`), the `message` default argument of the `MorseCode` constructor in `src/show/MorseCode.h`, and the `value` attribute of `data/control.html`'s `<input type="text" id="morseMessage">` SHALL all declare `"HELLO WORLD"`. A drift between any of these surfaces and the manifest SHALL be treated as a defect in `canonical-show-config`.
+
+#### Scenario: All four locations declare "HELLO WORLD"
+- **WHEN** `src/show/factory/ShowFactory.cpp` parses `{"name":"MorseCode","params":{}}`
+- **THEN** the factory fallback for the `"message"` key returns the string `"HELLO WORLD"`
+- **WHEN** `src/show/MorseCode.h` `MorseCode` constructor is inspected
+- **THEN** the default value of the `message` parameter equals `"HELLO WORLD"`
+- **WHEN** `data/control.html` is rendered
+- **THEN** the `<input type="text" id="morseMessage">` element has `value="HELLO WORLD"`
+
+### Requirement: The manifest parses as strict JSON with a fixed schema
+
+The manifest SHALL be parseable by Python's stdlib `json.load()` with no preprocessing. It SHALL NOT contain JSON5 features, comments other than the top-of-file `_comment`, trailing commas, or non-string keys. `_comment` SHALL be the only non-data field: show entries carry only `description`, optional `iterations`, `default`, and `variants`; `default` carries only `params` and optional `iterations`; `variants[]` entries carry only `name`, `label`, `params`, and optional `iterations`.
 
 #### Scenario: Manifest parses as stdlib JSON
 - **WHEN** the file is read with `python3 -c "import json; json.load(open('scripts/show_variants.json'))"`
@@ -114,6 +108,10 @@ The manifest SHALL be parseable by Python's stdlib `json.load()` with no preproc
 - **THEN** show entries carry only `description`, optional `iterations`, `default`, and `variants`
 - **THEN** `default` carries only `params` and optional `iterations`
 - **THEN** `variants[]` entries carry only `name`, `label`, `params`, and optional `iterations`
+
+### Requirement: Firmware runtime defaults come from a generated header
+
+A Python build script SHALL consume the manifest to emit a `constexpr` C++ header (`src/generated/show_variants.h`) included by the firmware, and the firmware's runtime default parameters SHALL come from that header. The header SHALL be regenerated on every PlatformIO build by a `pre:` script (`scripts/gen_show_variants.py`) and SHALL NOT be tracked in git.
 
 #### Scenario: A Python build script emits a C++ header and a JS payload
 - **WHEN** `python3 scripts/gen_show_variants.py` is run (manually or as a PlatformIO `pre:` script)
@@ -132,6 +130,10 @@ The manifest SHALL be parseable by Python's stdlib `json.load()` with no preproc
 - **THEN** the merged `JsonDocument` is passed to the registered factory lambda
 - **WHEN** the lookup fails (show not in the header)
 - **THEN** the factory passes the user's `paramsJson` directly to the lambda (existing behaviour; defensive escape hatch)
+
+### Requirement: The generated JS payload is inlined into the control page
+
+The same build script SHALL emit a JS payload (`src/generated/show_variants.js`) that `scripts/compress_web.py` inlines into `data/control.html` before gzip compression, and the rendered HTML's generic preset selector and flag buttons SHALL read from that payload. The payload SHALL NOT be tracked in git; both artifacts live under the gitignored `src/generated/` directory, matching the existing `*_gz.h` pattern where every web payload is generated, never committed.
 
 #### Scenario: Web UI consumes the JS payload from the inlined HTML
 - **WHEN** the browser receives the rendered `data/control.html` (gzipped and decompressed by the firmware)
@@ -166,16 +168,11 @@ A maintainer SHALL be able to add a new show to the gallery by adding an entry t
 
 ### Requirement: Firmware runtime default parameters equal the JSON default.params
 
-For every show whose `default.params` is non-empty in the manifest, the firmware's runtime path `ShowFactory::createShow(name, "{}")` SHALL produce a `JsonDocument` whose serialised form is byte-equal to the JSON's `default.params` for that show. The exception is `Mandelbrot`, where ArduinoJson 7's parser rounds `-0.3616` and `-0.3156` to float bit patterns one ULP away from the literal `0xbeb923a3` and `0xbea19653` (respectively the parser emits `0xbeb923a2` and `0xbea19652`). This divergence is documented in the prior `canonical-show-config-file` change's `design.md` and SHALL be permitted by the runtime parity test. No other show SHALL exhibit any drift between the JSON default and the firmware's empty-params output.
+For every show whose `default.params` is non-empty in the manifest, `ShowFactory::createShow(name, "{}")` SHALL produce a `JsonDocument` whose serialised form is byte-equal to the JSON's `default.params` for that show. No show other than the documented `Mandelbrot` exception SHALL exhibit drift between the JSON default and the firmware's empty-params output.
 
 #### Scenario: Eleven shows have byte-equal empty-params and JSON default
 - **WHEN** `factory.createShow(name, "{}")` is called for `Solid`, `Fire`, `Starlight`, `Stroboscope`, `Rainbow`, `Wave`, `TheaterChase`, `MorseCode`, `Chaos`, `ColorRun`, or `Jump`
 - **THEN** the merged `JsonDocument` serialises byte-equal to the show's `default.params` in the manifest
-
-#### Scenario: Mandelbrot has documented 1-ULP drift
-- **WHEN** `factory.createShow("Mandelbrot", "{}")` is called
-- **THEN** the merged `JsonDocument` differs from `Mandelbrot.default.params` in the float bit patterns of `Cim0` and `Cim1` by at most 1 ULP
-- **THEN** no other key in the Mandelbrot default differs from the manifest
 
 #### Scenario: User-supplied params overlay the JSON default
 - **WHEN** `factory.createShow(name, paramsJson)` is called with non-empty `paramsJson`
@@ -184,12 +181,14 @@ For every show whose `default.params` is non-empty in the manifest, the firmware
 - **THEN** the JSON default's value for that key is preserved in the merged doc
 - **THEN** the merged doc is passed to the factory lambda
 
-#### Scenario: Touch controller Solid variants come from the JSON
-- **WHEN** the touch controller's entry 0 in `SHOW_VARIANTS[]` (Solid single-colour presets) is enumerated
-- **THEN** the variant list is sourced from the generated header's `ShowVariants::kShows[0].variants[]` for show name `Solid`
-- **THEN** the 10 Solid single-colour entries in the JSON (`warm-white`, `pure-white`, `red`, `orange`, `yellow`, `green`, `cyan`, `sky-blue`, `blue`, `magenta`) are the touch controller's Solid variants
-- **THEN** the touch controller's `src/TouchController.cpp` no longer declares a hand-coded `SOLID_VARIANTS[]` array for those 10 entries
-- **THEN** the touch controller's other entries (Solid color-ranges, Solid two-color-blends, ColorRun, Jump, Rainbow, Wave, Fire, Starlight, TheaterChase, MorseCode) remain hand-coded as touch-UX-curated presets
+### Requirement: Mandelbrot's parser drift is documented and permitted
+
+`Mandelbrot` SHALL be the only show allowed to diverge: ArduinoJson 7's parser rounds `-0.3616` and `-0.3156` to float bit patterns one ULP away from the literals `0xbeb923a3` and `0xbea19653` (the parser emits `0xbeb923a2` and `0xbea19652`). This divergence, documented in the prior `canonical-show-config-file` change's `design.md`, SHALL be permitted by the runtime parity test.
+
+#### Scenario: Mandelbrot has documented 1-ULP drift
+- **WHEN** `factory.createShow("Mandelbrot", "{}")` is called
+- **THEN** the merged `JsonDocument` differs from `Mandelbrot.default.params` in the float bit patterns of `Cim0` and `Cim1` by at most 1 ULP
+- **THEN** no other key in the Mandelbrot default differs from the manifest
 
 #### Scenario: Native parity test asserts byte-equality
 - **WHEN** `pio test -e native` runs the parity test
@@ -198,13 +197,20 @@ For every show whose `default.params` is non-empty in the manifest, the firmware
 - **THEN** the test asserts the documented ULP tolerance on `Cim0` and `Cim1` and passes
 - **THEN** the test fails on any other divergence between the JSON default and the firmware output
 
+### Requirement: Touch controller Solid variants come from the JSON
+
+The touch controller's entry 0 in `SHOW_VARIANTS[]` (Solid single-colour presets) SHALL be enumerated from the generated header's `ShowVariants::kShows[0].variants[]` for show name `Solid`, and `src/TouchController.cpp` SHALL NOT declare a hand-coded `SOLID_VARIANTS[]` array for those entries. The touch controller's other entries SHALL remain hand-coded as touch-UX-curated presets.
+
+#### Scenario: Touch controller Solid variants come from the JSON
+- **WHEN** the touch controller's entry 0 in `SHOW_VARIANTS[]` (Solid single-colour presets) is enumerated
+- **THEN** the variant list is sourced from the generated header's `ShowVariants::kShows[0].variants[]` for show name `Solid`
+- **THEN** the 10 Solid single-colour entries in the JSON (`warm-white`, `pure-white`, `red`, `orange`, `yellow`, `green`, `cyan`, `sky-blue`, `blue`, `magenta`) are the touch controller's Solid variants
+- **THEN** the touch controller's `src/TouchController.cpp` no longer declares a hand-coded `SOLID_VARIANTS[]` array for those 10 entries
+- **THEN** the touch controller's other entries (Solid color-ranges, Solid two-color-blends, ColorRun, Jump, Rainbow, Wave, Fire, Starlight, TheaterChase, MorseCode) remain hand-coded as touch-UX-curated presets
+
 ### Requirement: Constructors in src/show/*.h SHALL NOT carry default arguments for parameters the JSON declares defaults for
 
-For every show class in `src/show/*.h`, every constructor parameter that the JSON's `default.params` declares SHALL be a required parameter in C++ — no `= value` default argument. The C++ header becomes a pure signature; the values live in `scripts/show_variants.json` and are read at runtime via the generated header. A drift between the constructor signature's defaults (now nonexistent) and the JSON's defaults is therefore structurally impossible: there are no defaults in C++ to drift from.
-
-The change applies to every parameterised constructor: `MorseCode`, `Starlight`, `Wave`, `Fire`, `Mandelbrot`, `TheaterChase`, `Stroboscope`, `Rainbow`. Parameterless constructors (`ColorRun`, `Jump`) are unaffected.
-
-The `|` fallback chain in `src/show/factory/ShowFactory.cpp` factory lambdas is unchanged. Those fallbacks remain as defense-in-depth for any key the JSON does not declare; this requirement governs only the C++ header signatures.
+For every show class in `src/show/*.h`, every constructor parameter that the JSON's `default.params` declares SHALL be a required parameter in C++ — no `= value` default argument. The C++ header becomes a pure signature, with values read at runtime via the generated header, so a drift between C++ defaults and JSON defaults becomes structurally impossible. This applies to every parameterised constructor; parameterless constructors (`ColorRun`, `Jump`) are unaffected.
 
 #### Scenario: Every parameterised constructor has zero default arguments
 - **WHEN** `src/show/*.h` is searched with `grep -nE '=\s*[0-9]+(\.[0-9]+)?[fL]?\s*[,)]' src/show/*.h | grep -v '//'`
@@ -218,6 +224,10 @@ The `|` fallback chain in `src/show/factory/ShowFactory.cpp` factory lambdas is 
 - **THEN** `TheaterChase`'s constructor's `num_steps_per_cycle` parameter has no default argument
 - **THEN** `Stroboscope`'s constructor's `r`, `g`, `b`, `on_cycles`, `off_cycles` parameters have no default arguments
 - **THEN** `Rainbow`'s constructor's `time_step`, `pixel_step` parameters have no default arguments
+
+### Requirement: Every construction site supplies explicit arguments
+
+The `|` fallback chain in `src/show/factory/ShowFactory.cpp` factory lambdas SHALL remain unchanged as defense-in-depth for any key the JSON does not declare. Every call site that constructs a parameterised show SHALL supply an explicit value for every parameter, so removing the constructor defaults SHALL NOT break any caller.
 
 #### Scenario: Every caller supplies explicit values for every parameter
 - **WHEN** the codebase is searched with `grep -r 'new\s\+\(MorseCode\|Starlight\|Wave\|Fire\|Mandelbrot\|TheaterChase\|Stroboscope\|Rainbow\|Solid\|ColorRanges\)' src/ test/`
@@ -234,11 +244,9 @@ The `|` fallback chain in `src/show/factory/ShowFactory.cpp` factory lambdas is 
 - **WHEN** `src/show/*.h` is searched for any literal value that appears in `scripts/show_variants.json` (e.g. `"HELLO WORLD"`, `0.1f`, `21`, `50`)
 - **THEN** matches occur only inside function bodies or comments — never as a constructor parameter default
 
-### Requirement: data/control.html preset dropdowns and flag buttons SHALL source values from the JSON via the generated JS payload
+### Requirement: Preset values are sourced from the generated JS payload
 
-The `data/control.html` web interface sources its preset values from a JS payload generated from `scripts/show_variants.json` by `scripts/gen_show_variants.py`. The JS payload SHALL be inlined into the rendered HTML by `scripts/compress_web.py` before gzip compression, and SHALL be reachable as `SHOW_VARIANTS_BY_SHOW.<ShowName>` for the per-show preset dictionaries and `FLAG_PRESETS.<name>` for the three flag entries.
-
-The per-show preset dictionaries SHALL carry `{ label, params }` per entry, so the generic preset selector renders the manifest's label and applies the entry's params. The three flag entries SHALL be declared in `scripts/show_variants.json` as `Solid.variants[ukraine]`, `Solid.variants[italy]`, and `Solid.variants[france]`, and the flag buttons SHALL read their params from `FLAG_PRESETS`. The previous hand-coded `mandelbrotPresets` and `wavePresets` JavaScript objects, the `mandelbrotPreset` and `wavePreset` `<select>` elements, and the `loadMandelbrotPreset()` / `loadWavePreset()` functions SHALL be removed; the generic preset selector SHALL serve those shows instead.
+The `data/control.html` web interface SHALL source its preset values from a JS payload generated from `scripts/show_variants.json` by `scripts/gen_show_variants.py` and inlined into the rendered HTML by `scripts/compress_web.py` before gzip compression. Per-show preset dictionaries SHALL be reachable as `SHOW_VARIANTS_BY_SHOW.<ShowName>` and SHALL carry `{ label, params }` per entry, so the generic preset selector renders the manifest's label and applies the entry's params.
 
 #### Scenario: Generic preset selector reads from SHOW_VARIANTS_BY_SHOW
 - **WHEN** the user selects the `Mandelbrot` or `Wave` show, or any other show with curated variants
@@ -247,18 +255,6 @@ The per-show preset dictionaries SHALL carry `{ label, params }` per entry, so t
 - **THEN** selecting an option applies its `params` object via `POST /api/show`
 - **THEN** no `mandelbrotPreset` or `wavePreset` `<select>` element exists in `data/control.html` after this capability is in force
 - **THEN** no `loadMandelbrotPreset` or `loadWavePreset` function exists in `data/control.html` after this capability is in force
-
-#### Scenario: Flag buttons read from FLAG_PRESETS
-- **WHEN** the user clicks the Ukraine, Italy, or France flag button in `data/control.html`
-- **THEN** `loadUkraineFlag()`, `loadItalianFlag()`, or `loadFrenchFlag()` reads the corresponding entry from `FLAG_PRESETS`
-- **THEN** the Solid colour form fields are populated from `FLAG_PRESETS.ukraine`, `FLAG_PRESETS.italy`, or `FLAG_PRESETS.france`
-- **THEN** `FLAG_PRESETS.france` exists because `scripts/show_variants.json` `Solid.variants[]` declares a `france` entry
-- **THEN** no hand-coded colour literals exist in the three `load*Flag()` functions after this capability is in force
-
-#### Scenario: France variant is in Solid.variants[]
-- **WHEN** `scripts/show_variants.json` is parsed
-- **THEN** `Solid.variants[]` contains an entry with `name: "france"` and a `label` describing the French flag
-- **THEN** the `france` entry's `params` declares `colors` as a 3-element array (blue, white, red) and `gradient: false`
 
 #### Scenario: gen_show_variants.py emits a JS payload
 - **WHEN** `python3 scripts/gen_show_variants.py` is run (manually or as a PlatformIO `pre:` script)
@@ -276,3 +272,28 @@ The per-show preset dictionaries SHALL carry `{ label, params }` per entry, so t
 - **THEN** the rendered HTML (after minification+gzip) carries the inlined JS payload
 - **WHEN** the firmware serves the page
 - **THEN** the browser receives a single HTML payload that contains both the page structure and the `SHOW_VARIANTS_BY_SHOW` / `FLAG_PRESETS` objects
+
+### Requirement: Legacy hand-coded preset controls are removed
+
+The hand-coded `mandelbrotPresets` and `wavePresets` JavaScript objects, the `mandelbrotPreset` and `wavePreset` `<select>` elements, and the `loadMandelbrotPreset()` / `loadWavePreset()` functions SHALL be removed from `data/control.html`; the generic preset selector SHALL serve those shows instead.
+
+#### Scenario: Legacy preset controls are gone
+- **WHEN** `data/control.html` is inspected
+- **THEN** no `mandelbrotPreset` or `wavePreset` `<select>` element exists
+- **THEN** no `loadMandelbrotPreset` or `loadWavePreset` function exists
+
+### Requirement: Flag buttons read their colours from FLAG_PRESETS
+
+The three flag entries SHALL be declared in `scripts/show_variants.json` as `Solid.variants[ukraine]`, `Solid.variants[italy]`, and `Solid.variants[france]`, and the flag buttons SHALL read their params from `FLAG_PRESETS.<name>` rather than hand-coded colour literals.
+
+#### Scenario: Flag buttons read from FLAG_PRESETS
+- **WHEN** the user clicks the Ukraine, Italy, or France flag button in `data/control.html`
+- **THEN** `loadUkraineFlag()`, `loadItalianFlag()`, or `loadFrenchFlag()` reads the corresponding entry from `FLAG_PRESETS`
+- **THEN** the Solid colour form fields are populated from `FLAG_PRESETS.ukraine`, `FLAG_PRESETS.italy`, or `FLAG_PRESETS.france`
+- **THEN** `FLAG_PRESETS.france` exists because `scripts/show_variants.json` `Solid.variants[]` declares a `france` entry
+- **THEN** no hand-coded colour literals exist in the three `load*Flag()` functions after this capability is in force
+
+#### Scenario: France variant is in Solid.variants[]
+- **WHEN** `scripts/show_variants.json` is parsed
+- **THEN** `Solid.variants[]` contains an entry with `name: "france"` and a `label` describing the French flag
+- **THEN** the `france` entry's `params` declares `colors` as a 3-element array (blue, white, red) and `gradient: false`

@@ -4,9 +4,17 @@
 
 The show simulator is a host-side CLI binary that drives any registered show against a `MockStrip` for `N` iterations and emits the resulting strip state as a raw RGB stream on stdout. It exists so that the same C++ source that runs on the device can be used to preview show parameter sets and to populate the GitHub Pages gallery of show previews, without maintaining a parallel Python port.
 ## Requirements
+### Requirement: Simulator build composes the shared show sources
+
+The show simulator binary SHALL be built by `[env:native_show_sim]` from `scripts/show_simulator/main.cpp`, `src/show/**`, `src/show/factory/**`, `src/strip/**`, `src/support/**`, `src/color.cpp`, and `src/Timer.cpp`, so it runs the same C++ that runs on the device.
+
+#### Scenario: Binary is built from the shared sources
+- **WHEN** `pio run -e native_show_sim` is run
+- **THEN** it produces `.pio/build/native_show_sim/program` from `scripts/show_simulator/main.cpp` and the shared `src/` show, strip and support sources
+
 ### Requirement: Host CLI drives every registered show
 
-The show simulator binary SHALL be built by `[env:native_show_sim]` from `scripts/show_simulator/main.cpp`, `src/show/**`, `src/show/factory/**`, `src/strip/**`, `src/support/**`, `src/color.cpp`, and `src/Timer.cpp`. Given a show name on argv, it SHALL construct that show through `Show::Factory::ShowFactory::createShow(name, params_json)`, drive it against a `MockStrip` of the requested length for the requested number of iterations, and write the resulting pixels to stdout. On a malformed or unknown show name the binary SHALL exit non-zero with a message naming the offending argument.
+Given a show name on argv, the binary SHALL construct that show through `Show::Factory::ShowFactory::createShow(name, params_json)`, drive it against a `MockStrip` of the requested length for the requested number of iterations, and write the resulting pixels to stdout. On a malformed or unknown show name the binary SHALL exit non-zero with a message naming the offending argument.
 
 #### Scenario: Rendering Wave with default parameters
 
@@ -87,7 +95,7 @@ The binary SHALL accept a `--list-params <show>` flag that prints the JSON keys 
 
 ### Requirement: Renderer script wraps the binary
 
-`scripts/build_pages.py` SHALL replace its hand-written Python simulation with a call to the simulator binary. The script SHALL auto-build the binary via `pio run -e native_show_sim` if `.pio/build/native_show_sim/program` is missing. The script SHALL keep its existing CLI surface (`-n`/`--iterations`, `-W`/`--width`, `-o`/`--output`, `--wave`, `--decay-rate`, `--brightness-frequency`, `--mode`, `-v`, `--list`) and SHALL add `--seed N`, `--show <name>`, `--params <json>`, `--simulator-binary <path>`, and `--all <output-dir>`.
+`scripts/build_pages.py` SHALL replace its hand-written Python simulation with a call to the simulator binary, and SHALL auto-build the binary via `pio run -e native_show_sim` if `.pio/build/native_show_sim/program` is missing.
 
 #### Scenario: Default invocation builds and runs
 
@@ -101,21 +109,56 @@ The binary SHALL accept a `--list-params <show>` flag that prints the JSON keys 
 - **WHEN** the user runs `python3 scripts/build_pages.py --decay-rate 1.5 --brightness-frequency 0.2 -o preview.png`
 - **THEN** the output PNG matches the Wave show with those parameters, byte-for-byte across runs
 
+### Requirement: Renderer script keeps its CLI surface and adds show selection
+
+`scripts/build_pages.py` SHALL keep its existing CLI surface (`-n`/`--iterations`, `-W`/`--width`, `-o`/`--output`, `--wave`, `--decay-rate`, `--brightness-frequency`, `--mode`, `-v`, `--list`) and SHALL add `--seed N`, `--show <name>`, `--params <json>`, `--simulator-binary <path>`, and `--all <output-dir>`.
+
 #### Scenario: --all renders every show
 
 - **WHEN** the user runs `python3 scripts/build_pages.py --all ./previews --seed 42`
 - **THEN** the directory `./previews/` contains one PNG per show currently registered in `ShowFactory`
 - **THEN** every PNG is byte-for-byte identical to a fresh render with the same args
 
-### Requirement: Variants manifest drives the gallery
+### Requirement: Renderer consults the variants manifest
 
-`scripts/build_pages.py --all` SHALL consult a variants manifest at `scripts/show_variants.json` to decide which parameter sets to render for each registered show. The manifest SHALL be a JSON object keyed by show name, where each value carries a `description`, an optional `iterations` override (positive integer), a `default` object, and a `variants` array.
+`scripts/build_pages.py --all` SHALL consult a variants manifest at `scripts/show_variants.json` to decide which parameter sets to render for each registered show. The manifest SHALL be a JSON object keyed by show name, where each value carries a `description`, an optional positive-integer `iterations`, a `default` object, and a `variants` array.
 
-The `default` object SHALL carry a `params` object (the factory default parameters, fully materialised — see [canonical-show-config]) and an optional `iterations` override (positive integer) that takes precedence over the show-level value.
+#### Scenario: Adding a variant changes only the gallery output
 
-Each entry in `variants` SHALL have a unique `name`, a human-readable `label`, an optional `iterations` override (positive integer) that takes precedence over the show-level value, and a `params` object that is passed verbatim to the simulator via `--params`. When neither the variant entry, the `default` object, nor the show body specifies `iterations`, the renderer SHALL fall back to the `--iterations` CLI flag's value (default 1000). A show that is omitted from the manifest SHALL still render a single default variant with empty parameters so the gallery stays complete.
+- **WHEN** a new variant entry is added to `scripts/show_variants.json`
+- **THEN** the next `--all` run produces one additional PNG and an updated `index.html`
+- **THEN** no source-code change to the simulator, the firmware, or the workflow is required
 
-The renderer SHALL prepend a synthetic variant derived from the show's `default` object — `name="default"`, `label="Factory default"`, `params=default.params`, `iterations=default.iterations or show.iterations` — to the list of `variants` entries before producing PNGs, so the default appears first under each show's section in `docs/show_previews/index.html`.
+### Requirement: Iteration precedence resolves variant, default, show and CLI value
+
+Each entry in `variants` SHALL have a unique `name`, a human-readable `label`, an optional positive-integer `iterations` that takes precedence over the show-level value, and a `params` object passed verbatim to the simulator via `--params`. The `default` object SHALL carry `params` (fully materialised — see [canonical-show-config]) and an optional `iterations` override that takes precedence over the show-level value.
+
+#### Scenario: Show-level iterations overrides the CLI default
+
+- **WHEN** the manifest defines `Solid` with `"iterations": 300` at the show body
+- **THEN** every `Solid_*` preview is written as a 300×300 PNG
+- **THEN** the simulator is invoked with `--iterations 300` for each of those variants
+- **THEN** the global `--iterations` CLI flag's value is ignored for those variants
+
+#### Scenario: Variant-level iterations overrides the show body
+
+- **WHEN** a variant entry of show `Solid` carries its own `"iterations": 50`
+- **THEN** that single variant renders at 50 rows
+- **THEN** other variants of `Solid` (without the field) still inherit the show body's `iterations` value
+
+### Requirement: Missing iterations falls back to the CLI flag
+
+When neither the variant entry, the `default` object, nor the show body specifies `iterations`, the renderer SHALL fall back to the `--iterations` CLI flag's value (default 1000).
+
+#### Scenario: Absent iterations falls through to the CLI default
+
+- **WHEN** neither the variant entry, the `default` object, nor the show body specifies `iterations`
+- **THEN** the renderer uses the value passed to `--iterations` on the CLI (default 1000)
+- **THEN** behavior is identical to a manifest without the new field
+
+### Requirement: The factory default variant is prepended to every show
+
+The renderer SHALL prepend a synthetic variant derived from the show's `default` object — `name="default"`, `label="Factory default"`, `params=default.params`, `iterations=default.iterations or show.iterations` — to the list of `variants` entries before producing PNGs, so the default appears first under each show's section in `docs/show_previews/index.html`. A show that is omitted from the manifest SHALL still render a single default variant with empty parameters so the gallery stays complete.
 
 #### Scenario: Default is rendered first under each show
 
@@ -135,31 +178,6 @@ The renderer SHALL prepend a synthetic variant derived from the show's `default`
 - **WHEN** the renderer is asked for a show that is not in `scripts/show_variants.json`
 - **THEN** it writes `{show}_default.png` produced by `--params "{}"`
 - **THEN** the gallery still lists that show with a "Default" label
-
-#### Scenario: Adding a variant changes only the gallery output
-
-- **WHEN** a new variant entry is added to `scripts/show_variants.json`
-- **THEN** the next `--all` run produces one additional PNG and an updated `index.html`
-- **THEN** no source-code change to the simulator, the firmware, or the workflow is required
-
-#### Scenario: Show-level iterations overrides the CLI default
-
-- **WHEN** the manifest defines `Solid` with `"iterations": 300` at the show body
-- **THEN** every `Solid_*` preview is written as a 300×300 PNG
-- **THEN** the simulator is invoked with `--iterations 300` for each of those variants
-- **THEN** the global `--iterations` CLI flag's value is ignored for those variants
-
-#### Scenario: Variant-level iterations overrides the show body
-
-- **WHEN** a variant entry of show `Solid` carries its own `"iterations": 50`
-- **THEN** that single variant renders at 50 rows
-- **THEN** other variants of `Solid` (without the field) still inherit the show body's `iterations` value
-
-#### Scenario: Absent iterations falls through to the CLI default
-
-- **WHEN** neither the variant entry, the `default` object, nor the show body specifies `iterations`
-- **THEN** the renderer uses the value passed to `--iterations` on the CLI (default 1000)
-- **THEN** behavior is identical to a manifest without the new field
 
 ### Requirement: Gallery page embeds every preview inline
 

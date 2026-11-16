@@ -5,7 +5,7 @@ Shows that declare curated presets in the canonical manifest get a preset select
 ## Requirements
 ### Requirement: A preset selector is rendered for every show with curated variants
 
-The control page SHALL render a preset selector in the currently selected show's parameter section whenever that show has at least one curated variant in `SHOW_VARIANTS_BY_SHOW`, except for the Solid show. The selector SHALL be populated from `SHOW_VARIANTS_BY_SHOW[<ShowName>]` and SHALL be inserted as the first element of the show's parameter section. Shows with no curated variants SHALL render no selector. The Solid show SHALL render no generic preset selector; its bespoke preset buttons SHALL remain.
+The control page SHALL render a preset selector in the currently selected show's parameter section whenever that show has at least one curated variant in `SHOW_VARIANTS_BY_SHOW`. The selector SHALL be populated from `SHOW_VARIANTS_BY_SHOW[<ShowName>]`, SHALL be inserted as the first element of the show's parameter section, and SHALL be absent for shows with no curated variants.
 
 #### Scenario: A show with variants gets a selector
 - **WHEN** the user selects `Fire` (which has one curated variant) on the control page
@@ -15,6 +15,10 @@ The control page SHALL render a preset selector in the currently selected show's
 #### Scenario: A show without variants gets no selector
 - **WHEN** the user selects `Jump` (which has no curated variants)
 - **THEN** no preset selector is rendered in its parameter section
+
+### Requirement: The Solid show keeps its bespoke preset buttons
+
+`Solid` SHALL render no generic preset selector; its bespoke flag, warm-white and gradient preset buttons SHALL remain.
 
 #### Scenario: Solid is excluded
 - **WHEN** the user selects `Solid`

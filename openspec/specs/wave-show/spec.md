@@ -138,21 +138,33 @@ The Wave show's `execute()` SHALL perform at most one `exp`, one `fabs`, and one
 
 ### Requirement: Web UI exposes the Wave parameters
 
-The Wave parameter section of the control page SHALL include a `Mode` selector with options `Bounce` and `Traveling`, a `Decay Rate` input, and a `Brightness Frequency` input. Selecting a mode and clicking Apply SHALL POST `{name: "Wave", params: {mode, decay_rate, brightness_frequency}}` to `/api/show`. The page SHALL NOT include a `Wavelength` (or `wavelength`) input. The page SHALL NOT include a `Wave Speed` (or `wave_speed`) input. The parameter section SHALL also include a `Preset` dropdown listing the variants `default`, `tight`, and `calm` from `scripts/show_variants.json`. Selecting a preset SHALL set the `Decay Rate` and `Brightness Frequency` inputs to the variant's `decay_rate` and `brightness_frequency` values and SHALL set the `Mode` selector to `Bounce`. Selecting a preset SHALL NOT send a request to the device.
+The Wave parameter section of the control page SHALL include a `Mode` selector with options `Bounce` and `Traveling`, a `Decay Rate` input, and a `Brightness Frequency` input. Selecting a mode and clicking Apply SHALL POST `{name: "Wave", params: {mode, decay_rate, brightness_frequency}}` to `/api/show`.
 
 #### Scenario: Parameter section is shown when Wave is selected
 
 - **WHEN** the user selects `Wave` from the show dropdown
 - **THEN** the parameter section contains a `Mode` selector with `Bounce` and `Traveling` options visible
 - **THEN** the parameter section contains a `Decay Rate` input and a `Brightness Frequency` input
-- **THEN** the parameter section does not contain a `Wavelength` (or `wavelength`) input
-- **THEN** the parameter section does not contain a `Wave Speed` (or `wave_speed`) input
 
 #### Scenario: Apply Parameters sends the three-param payload
 
 - **WHEN** the user selects `Traveling`, adjusts decay/frequency, and clicks Apply Parameters
 - **THEN** a `POST /api/show` request is sent with body `{"name":"Wave","params":{"mode":"traveling", "decay_rate":..., "brightness_frequency":...}}`
 - **THEN** the request body does not contain a `wavelength` field
+
+### Requirement: The Wave parameter section omits retired inputs
+
+The page SHALL NOT include a `Wavelength` (or `wavelength`) input and SHALL NOT include a `Wave Speed` (or `wave_speed`) input.
+
+#### Scenario: Retired inputs are absent
+
+- **WHEN** the user selects `Wave` from the show dropdown
+- **THEN** the parameter section does not contain a `Wavelength` (or `wavelength`) input
+- **THEN** the parameter section does not contain a `Wave Speed` (or `wave_speed`) input
+
+### Requirement: The Wave preset dropdown fills inputs without sending a request
+
+The parameter section SHALL include a `Preset` dropdown listing the variants `default`, `tight`, and `calm` from `scripts/show_variants.json`. Selecting a preset SHALL set the `Decay Rate` and `Brightness Frequency` inputs to the variant's `decay_rate` and `brightness_frequency` values and SHALL set the `Mode` selector to `Bounce`. Selecting a preset SHALL NOT send a request to the device.
 
 #### Scenario: Selecting a preset fills decay and frequency and resets Mode
 
