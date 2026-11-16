@@ -11,16 +11,26 @@ namespace Show {
           hue_speed_(std::clamp(hue_speed, 0.0f, 16.0f)), warp_(std::clamp(warp, 0.0f, 8.0f)),
           push_(std::clamp(push, 0.0f, 4.0f)), pulse_(std::clamp(pulse, 0, 200)), sway_(std::clamp(sway, 0.0f, 1.0f)) {}
 
-    float Tunnel::pulseIntensity(uint32_t frame) const {
+    float Tunnel::pulseIntensity(float travel) const {
         if (pulse_ == 0) {
             return 1.0f;
         }
         // A raised cosine sharpened by the 6th power: a short flash once per
-        // period and a dim glow in between, so each flash becomes a ring.
+        // period and a dim glow in between, so each flash becomes a ring. The
+        // phase is taken from distance travelled, not frames, so the flash has
+        // the same spatial thickness at any push.
         constexpr float kTwoPi = 6.28318530718f;
-        const float phase = static_cast<float>(frame % static_cast<uint32_t>(pulse_)) / static_cast<float>(pulse_);
+        const float phase = std::fmod(travel, static_cast<float>(pulse_)) / static_cast<float>(pulse_);
         const float wave = 0.5f + 0.5f * std::cos(kTwoPi * phase);
         return 0.08f + 0.92f * std::pow(wave, 6.0f);
+    }
+
+    float Tunnel::frameDecay() const {
+        // decay is per pixel of outward travel, so a frame that moves push
+        // pixels attenuates by decay^push. With push == 0 a strict per-pixel
+        // decay would be 1 and the centre would accumulate light forever, so
+        // fall back to the per-frame factor that gives a fading glow.
+        return push_ > 0.0f ? std::pow(decay_, push_) : decay_;
     }
 
     float Tunnel::swayOffset(uint32_t frame, Strip::PixelIndex n) const {
@@ -47,11 +57,15 @@ namespace Show {
         // Without warp or sway the remap is symmetric anyway; folding makes that
         // exact instead of leaving it to float rounding in the interpolation.
         transform.mirror = warp_ == 0.0f && sway_ == 0.0f;
-        feedback_.begin(n, transform, decay_, iteration);
+        feedback_.begin(n, transform, frameDecay(), iteration);
 
         if (n > 0) {
             const Strip::Color color = Support::Color::wheel(hue_);
-            const float intensity = pulseIntensity(frame_);
+            // Pulse pacing is in pixels, so use accumulated travel rather than
+            // frames. With no push the distance never grows, so fall back to
+            // the frame count.
+            const float travel = push_ > 0.0f ? emission_distance_ : static_cast<float>(frame_);
+            const float intensity = pulseIntensity(travel);
             if (transform.center == 0.0f) {
                 // One centre pixel for odd lengths, the two middle pixels for
                 // even ones, so the emission itself is symmetric.
@@ -69,6 +83,7 @@ namespace Show {
         feedback_.render(strip);
 
         hue_ = std::fmod(hue_ + hue_speed_, 256.0f);
+        emission_distance_ += push_;
         frame_++;
     }
 } // namespace Show

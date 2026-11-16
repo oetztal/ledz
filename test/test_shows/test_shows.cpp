@@ -271,6 +271,91 @@ void test_tunnel_reaches_both_ends_with_defaults() {
     TEST_ASSERT_TRUE_MESSAGE(last_lit, "pixel 59 never lit");
 }
 
+void test_tunnel_slow_push_still_reaches_both_ends() {
+    Show::Tunnel show(0.97f, 0.97f, 2.5f, 0.0f, 0.25f, 20, 0.0f);
+    MockStrip strip(60);
+    bool first_lit = false;
+    bool last_lit = false;
+    for (Show::Iteration t = 0; t < 400; t++) {
+        show.execute(strip, t);
+        first_lit = first_lit || strip.getPixelColor(0) != 0;
+        last_lit = last_lit || strip.getPixelColor(59) != 0;
+    }
+    TEST_ASSERT_TRUE_MESSAGE(first_lit, "pixel 0 never lit with slow push");
+    TEST_ASSERT_TRUE_MESSAGE(last_lit, "pixel 59 never lit with slow push");
+}
+
+void test_tunnel_decay_is_per_pixel() {
+    Show::Tunnel show(0.97f, 0.97f, 2.5f, 0.0f, 0.5f, 20, 0.0f);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, std::pow(0.97f, 0.5f), show.frameDecay());
+}
+
+void test_tunnel_zero_push_keeps_per_frame_decay() {
+    Show::Tunnel show(0.97f, 0.9f, 2.5f, 0.0f, 0.0f, 20, 0.0f);
+    TEST_ASSERT_EQUAL_FLOAT(0.9f, show.frameDecay());
+}
+
+void test_tunnel_pulse_phase_follows_distance() {
+    Show::Tunnel show(0.97f, 0.97f, 2.5f, 0.0f, 0.5f, 20, 0.0f);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 1.0f, show.pulseIntensity(0.0f));
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 1.0f, show.pulseIntensity(20.0f));
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 1.0f, show.pulseIntensity(40.0f));
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.08f, show.pulseIntensity(10.0f));
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.08f, show.pulseIntensity(30.0f));
+}
+
+void test_tunnel_emission_distance_accumulates_push() {
+    Show::Tunnel show(0.97f, 0.97f, 2.5f, 0.0f, 0.25f, 20, 0.0f);
+    MockStrip strip(61);
+    for (Show::Iteration t = 0; t < 400; t++) {
+        show.execute(strip, t);
+    }
+    TEST_ASSERT_FLOAT_WITHIN(1e-3f, 100.0f, show.emissionDistance());
+}
+
+void test_tunnel_slow_push_keeps_ring_spacing() {
+    Show::Tunnel fast(1.0f, 0.97f, 0.0f, 0.0f, 1.0f, 20, 0.0f);
+    Show::Tunnel slow(1.0f, 0.97f, 0.0f, 0.0f, 0.25f, 20, 0.0f);
+    MockStrip fast_strip(121);
+    MockStrip slow_strip(121);
+    // Stop at 110 px of travel, the pulse trough, so the fresh flash does not
+    // drown out the rings emitted earlier.
+    for (Show::Iteration t = 0; t < 110; t++) {
+        fast.execute(fast_strip, t);
+    }
+    for (Show::Iteration t = 0; t < 440; t++) {
+        slow.execute(slow_strip, t);
+    }
+
+    // After 110 px of travel the ring emitted at 80 px sits at radius 30. Both
+    // tunnels should have a local maximum near there; the fresh flash sits too
+    // close to the centre to search from.
+    auto ringRadius = [](const MockStrip& strip) {
+        const Strip::PixelIndex centre = strip.length() / 2;
+        Strip::PixelIndex best = 25;
+        for (Strip::PixelIndex r = 26; r <= 35; r++) {
+            if (brightness(strip.getPixelColor(centre - r)) > brightness(strip.getPixelColor(centre - best))) {
+                best = r;
+            }
+        }
+        return best;
+    };
+    TEST_ASSERT_INT_WITHIN(2, 30, ringRadius(fast_strip));
+    TEST_ASSERT_INT_WITHIN(2, 30, ringRadius(slow_strip));
+}
+
+void test_tunnel_zero_push_pulses_over_time() {
+    Show::Tunnel show(0.97f, 0.9f, 0.0f, 0.0f, 0.0f, 20, 0.0f);
+    MockStrip strip(61);
+    int centre[21];
+    for (Show::Iteration t = 0; t <= 20; t++) {
+        show.execute(strip, t);
+        centre[t] = brightness(strip.getPixelColor(30));
+    }
+    TEST_ASSERT_GREATER_THAN(centre[10], centre[0]);
+    TEST_ASSERT_GREATER_THAN(centre[10], centre[20]);
+}
+
 void test_tunnel_symmetric_without_warp_or_sway() {
     for (Strip::PixelIndex n : {60, 61}) {
         Show::Tunnel show(0.9f, 0.97f, 2.0f, 0.0f, 1.5f, 7, 0.0f);
@@ -536,6 +621,13 @@ int runUnityTests() {
     RUN_TEST(test_tunnel_centre_lit_on_first_iteration);
     RUN_TEST(test_tunnel_hue_changes_over_time);
     RUN_TEST(test_tunnel_reaches_both_ends_with_defaults);
+    RUN_TEST(test_tunnel_slow_push_still_reaches_both_ends);
+    RUN_TEST(test_tunnel_decay_is_per_pixel);
+    RUN_TEST(test_tunnel_zero_push_keeps_per_frame_decay);
+    RUN_TEST(test_tunnel_pulse_phase_follows_distance);
+    RUN_TEST(test_tunnel_emission_distance_accumulates_push);
+    RUN_TEST(test_tunnel_slow_push_keeps_ring_spacing);
+    RUN_TEST(test_tunnel_zero_push_pulses_over_time);
     RUN_TEST(test_tunnel_symmetric_without_warp_or_sway);
     RUN_TEST(test_tunnel_warp_breaks_symmetry);
     RUN_TEST(test_tunnel_sway_breaks_symmetry);

@@ -26,17 +26,18 @@ namespace Show {
         float sway_;
 
         float hue_ = 0.0f;
-        uint32_t frame_ = 0; // drives the pulse; counts this show's iterations
+        uint32_t frame_ = 0;             // drives sway and the pulse fallback when push is zero
+        float emission_distance_ = 0.0f; // px of push travel; drives the pulse
         Support::Feedback feedback_;
 
     public:
         /**
          * @param zoom feedback zoom about the centre, clamped to [0.5, 1.0]
-         * @param decay per-iteration decay, clamped to [0.0, 1.0]
+         * @param decay brightness kept per pixel of push travel, clamped to [0.0, 1.0]
          * @param hue_speed wheel steps per iteration, clamped to [0.0, 16.0]
          * @param warp warp amplitude in pixels, clamped to [0.0, 8.0]
          * @param push outward push in pixels per iteration, clamped to [0.0, 4.0]
-         * @param pulse iterations between flashes, clamped to [0, 200]; 0 emits continuously
+         * @param pulse pixels of travel between flashes, clamped to [0, 200]; 0 emits continuously
          * @param sway vanishing-point drift as a fraction of the half strip length, clamped to [0.0, 1.0]
          */
         Tunnel(float zoom, float decay, float hue_speed, float warp, float push, int pulse, float sway);
@@ -51,8 +52,14 @@ namespace Show {
         [[nodiscard]] int pulse() const { return pulse_; }
         [[nodiscard]] float sway() const { return sway_; }
 
-        /** Emission intensity for the show's frame @p frame, per the pulse shape. */
-        [[nodiscard]] float pulseIntensity(uint32_t frame) const;
+        /** Emission intensity at outward travel distance @p travel, per the pulse shape. */
+        [[nodiscard]] float pulseIntensity(float travel) const;
+
+        /** Per-iteration decay: `decay ^ push`, or `decay` when push is zero. */
+        [[nodiscard]] float frameDecay() const;
+
+        /** Accumulated outward travel in pixels since the show started. */
+        [[nodiscard]] float emissionDistance() const { return emission_distance_; }
 
         /** Vanishing-point offset in pixels from the strip middle at frame @p frame, for length @p n. */
         [[nodiscard]] float swayOffset(uint32_t frame, Strip::PixelIndex n) const;

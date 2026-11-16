@@ -457,7 +457,7 @@
           "hue_speed": 4.0,
           "warp": 0.0,
           "push": 2.0,
-          "pulse": 12,
+          "pulse": 24,
           "sway": 0.5
         }
       },
