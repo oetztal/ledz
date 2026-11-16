@@ -19,8 +19,8 @@ Nothing here is **BREAKING**: the new request field is optional, the new respons
 - *(none)*
 
 ### Modified Capabilities
-- `timer-scheduling`: A schedule gains an optional brightness value that is applied to the global brightness when a "Load preset" schedule fires; a "Turn off LEDs" schedule ignores it. A new requirement exposes that value over `POST /api/timers/schedule` and `GET /api/timers`. The existing "A schedule can be updated in place" requirement is extended so an in-place update replaces the brightness along with the other settings (omitting it stores "not set").
-- `web-ui-controls`: New requirements for the schedule form's staged brightness control (a checkbox plus a numeric input, deliberately not a toggle switch, shown only for the "Load preset" action) and for the brightness indicator on a schedule card. The existing "Schedule cards expose pause, edit and cancel" requirement is extended so Edit also loads the brightness and the card shows it.
+- `timer-scheduling`: A schedule gains an optional brightness value that is applied to the global brightness when a "Load preset" schedule fires; a "Turn off LEDs" schedule ignores it. New requirements expose that value over `POST /api/timers/schedule` and `GET /api/timers`. The existing "A schedule can be updated in place" requirement is extended so an in-place update replaces the brightness along with the other settings (omitting it stores "not set").
+- `web-ui-controls`: New requirements for the schedule form's staged brightness control (a checkbox plus a numeric input, deliberately not a toggle switch, shown only for the "Load preset" action) and for the brightness indicator on a schedule card. The existing "Edit mode loads a schedule into the form and updates it in place" requirement is extended so Edit also loads the brightness.
 
 ## Impact
 
