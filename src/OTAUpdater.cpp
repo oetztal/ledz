@@ -707,7 +707,7 @@ namespace {
         // 1700000000 = 2023-11-14. Anything past 2023 is the modern web's floor.
         {
             // Wait for lwip SNTP (started by configTime() in
-            // Network::setupUsingSTAMode) to deliver a time. SNTP's first
+            // NetworkController::startSTA) to deliver a time. SNTP's first
             // round-trip on a cold boot can easily take 20-30 s while DNS
             // resolves and the UDP/123 packet makes its way out, so we give it
             // generous headroom. If it still hasn't arrived we force a fresh

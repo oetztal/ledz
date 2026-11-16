@@ -5,6 +5,7 @@
 #include <random>
 
 #ifdef ARDUINO
+#include <esp_random.h>
 #include <esp_system.h>
 #else
 #include <chrono>

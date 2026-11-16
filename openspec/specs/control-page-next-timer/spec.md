@@ -36,14 +36,25 @@ The banner SHALL display, at most, one timer: the one that will fire next across
 - **WHEN** `GET /api/timers` reports only paused schedules
 - **THEN** the banner still displays one of them, with a `PAUSED` badge
 
-### Requirement: Banner displays type badge, mono time, action description, and day dots
+### Requirement: Banner displays a type badge and monospaced time
 
-The banner SHALL contain: a type label badge reading `TIMER`, `SCHEDULE` or `PAUSED` according to the timer's type and paused state; a monospaced time string that reads the countdown remaining time (formatted as `H:MM:SS` or `M:SS`) for countdowns and the time of day (`HH:MM`) for schedules; an action description line that reads `Turn off` or `Load "<preset name>"` (or `Load preset #<n>` when the named preset is not available locally); for schedules with a weekday mask, a Monday-first row of seven day dots, filled for each selected weekday, with the day initials beneath.
+The banner SHALL contain a type label badge reading `TIMER`, `SCHEDULE` or `PAUSED` according to the timer's type and paused state, and a monospaced time string reading the countdown remaining time (`H:MM:SS` or `M:SS`) for countdowns and the time of day (`HH:MM`) for schedules.
+
+#### Scenario: Countdown badge and time
+- **WHEN** a countdown timer with remaining time 14:23 is displayed in the banner
+- **THEN** the badge reads `TIMER`
+- **THEN** the mono time reads `14:23`
+
+#### Scenario: Paused schedule banner
+- **WHEN** a schedule is displayed in the banner with `paused=true`
+- **THEN** the badge reads `PAUSED`
+
+### Requirement: Banner describes the action and shows the weekday mask
+
+The banner SHALL contain an action description line reading `Turn off` or `Load "<preset name>"` (or `Load preset #<n>` when the named preset is not available locally). For a schedule with a weekday mask it SHALL show a Monday-first row of seven day dots, filled for each selected weekday, with the day initials beneath.
 
 #### Scenario: Countdown banner
 - **WHEN** a countdown timer with action `TURN_OFF` and remaining time 14:23 is displayed in the banner
-- **THEN** the badge reads `TIMER`
-- **THEN** the mono time reads `14:23`
 - **THEN** the action description reads `Turn off`
 - **THEN** no day-dots row is shown (countdowns do not have a weekday mask)
 
@@ -53,10 +64,6 @@ The banner SHALL contain: a type label badge reading `TIMER`, `SCHEDULE` or `PAU
 - **THEN** the mono time reads `07:00`
 - **THEN** the action description reads `Load "Morning"`
 - **THEN** the day-dots row shows five filled dots over `M T W T F` and two empty dots over `S S`
-
-#### Scenario: Paused schedule banner
-- **WHEN** a schedule is displayed in the banner with `paused=true`
-- **THEN** the badge reads `PAUSED`
 
 ### Requirement: Banner includes a Manage link to the timers page
 

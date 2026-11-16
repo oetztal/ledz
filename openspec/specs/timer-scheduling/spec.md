@@ -221,8 +221,8 @@ Setting a schedule at the index of an occupied schedule slot SHALL replace that 
 - **WHEN** a schedule that fired at 07:00 today is updated at 09:00 to 10:00
 - **THEN** it triggers at 10:00 today
 
-### Requirement: Schedule weekday mask and paused state are exposed over HTTP
-`POST /api/timers/schedule` (with `POST /api/timers/alarm` accepted as an alias for existing clients) SHALL accept an optional integer `days` in the range 1 to 127 as the weekday mask, defaulting to 127 when omitted, and SHALL reject a value of 0 or a value above 127. `POST /api/timers/pause` SHALL accept `{"index": n, "paused": bool}` and SHALL set the paused state of the schedule in slot *n*, rejecting an index that is out of range, an empty slot, or a countdown timer. `GET /api/timers` SHALL report `paused` and `days_mask` for every occupied slot.
+### Requirement: Schedule weekday mask is exposed over HTTP
+`POST /api/timers/schedule` (with `POST /api/timers/alarm` accepted as an alias for existing clients) SHALL accept an optional integer `days` in the range 1 to 127 as the weekday mask, defaulting to 127 when omitted, and SHALL reject a value of 0 or above 127.
 
 #### Scenario: Create with weekday mask
 - **WHEN** `POST /api/timers/schedule` is called with `{"hour":7,"minute":0,"days":62}`
@@ -237,6 +237,9 @@ Setting a schedule at the index of an occupied schedule slot SHALL replace that 
 - **WHEN** `POST /api/timers/schedule` is called with `"days": 0`
 - **THEN** the response status is 400 and the body has `success: false`
 - **THEN** no slot is changed
+
+### Requirement: Schedule pause state is exposed over HTTP
+`POST /api/timers/pause` SHALL accept `{"index": n, "paused": bool}` and SHALL set the paused state of the schedule in slot *n*, rejecting an index that is out of range, an empty slot, or a countdown timer. `GET /api/timers` SHALL report `paused` and `days_mask` for every occupied slot.
 
 #### Scenario: Pause a schedule
 - **WHEN** `POST /api/timers/pause` is called with `{"index":1,"paused":true}` and slot 1 holds a schedule
@@ -278,15 +281,19 @@ The remaining-seconds value reported for a schedule SHALL be the wall-clock seco
 - **WHEN** a schedule is paused
 - **THEN** its reported remaining time is 0
 
-### Requirement: The timers page shows a single Countdown timer section with preset shortcuts
+### Requirement: The timers page shows a single Countdown timer section
 
-The timers page SHALL present a countdown timer control as a single section whose heading reads "Countdown timer". The section SHALL contain a row of four preset duration shortcuts above the duration input, labelled "15 min", "30 min", "1 hour" and "2 hours", and SHALL contain a form for arbitrary durations and actions below the preset row. The form SHALL expose a duration input in minutes, an action select with options "Turn Off LEDs" and "Load preset", a conditional preset selector shown only when the action is "Load preset", and a submit button labelled "Set Countdown Timer". The submit button SHALL be the only path that creates a countdown timer. No separate "Quick Off Timer" section SHALL be present.
+The timers page SHALL present a countdown timer control as a single section whose heading reads "Countdown timer". No separate "Quick Off Timer" section SHALL be present, and the section's submit button SHALL be the only path that creates a countdown timer.
 
 #### Scenario: Page layout
 - **WHEN** the timers page is displayed
 - **THEN** the page shows one Countdown timer section, not two
 - **THEN** the section's heading reads "Countdown timer"
 - **THEN** the section contains a preset row of four buttons and a form, in that order
+
+### Requirement: The Countdown timer section offers preset shortcuts and a duration form
+
+The section SHALL contain a row of four preset duration shortcuts above the duration input, labelled "15 min", "30 min", "1 hour" and "2 hours", and SHALL contain a form for arbitrary durations and actions below the preset row. The form SHALL expose a duration input in minutes, an action select with options "Turn Off LEDs" and "Load preset", a conditional preset selector shown only when the action is "Load preset", and a submit button labelled "Set Countdown Timer".
 
 #### Scenario: Preset buttons styled as secondary shortcuts
 - **WHEN** the preset row is rendered

@@ -1,5 +1,5 @@
-#ifndef LEDZ_WIFI_H
-#define LEDZ_WIFI_H
+#ifndef LEDZ_NETWORK_CONTROLLER_H
+#define LEDZ_NETWORK_CONTROLLER_H
 
 #ifdef ARDUINO
 #include <WiFiUdp.h>
@@ -31,7 +31,7 @@ enum class NetworkMode {
     NONE // Network disabled
 };
 
-class Network {
+class NetworkController {
 private:
     NetworkMode mode = NetworkMode::NONE;
 
@@ -74,10 +74,10 @@ public:
      * @param config Configuration manager reference
      * @param showController Show controller reference
      */
-    Network(Config::ConfigManager& config, ShowController& showController);
+    NetworkController(Config::ConfigManager& config, ShowController& showController);
 
     // disable copy constructor
-    Network(const Network&) = delete;
+    NetworkController(const NetworkController&) = delete;
 
     /**
      * Network task (runs on Core 1)

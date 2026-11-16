@@ -2,7 +2,7 @@
 #include <new>
 
 #include "Log.h"
-#include "Network.h"
+#include "NetworkController.h"
 #include "Config.h"
 #include "WebServerManager.h"
 #include "show/factory/ShowFactory.h"
@@ -20,7 +20,7 @@ namespace {
         Show::Factory::ShowFactory showFactory;
         ShowController showController{showFactory, config};
         Task::LedShow ledShow{showController};
-        Network network{config, showController};
+        NetworkController network{config, showController};
     };
 
     App& app() {

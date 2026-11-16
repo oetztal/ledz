@@ -7,7 +7,7 @@
 #include <lwip/dns.h> // dns_setserver() — install fallback resolvers
 #endif
 
-#include "Network.h"
+#include "NetworkController.h"
 #include "Config.h"
 #include "Log.h"
 #include "DeviceId.h"
@@ -21,7 +21,7 @@
 
 static const char* const TAG = "net";
 
-Network::Network(Config::ConfigManager& config, ShowController& showController)
+NetworkController::NetworkController(Config::ConfigManager& config, ShowController& showController)
     :
 #ifdef ARDUINO
       ntpClient(wifiUdp),
@@ -29,7 +29,7 @@ Network::Network(Config::ConfigManager& config, ShowController& showController)
       config(config), showController(showController) {
 }
 
-String Network::generateHostname() const {
+String NetworkController::generateHostname() const {
 #ifdef ARDUINO
     String deviceId = DeviceId::getDeviceId();
     String hostname = "ledz-" + deviceId;
@@ -40,7 +40,7 @@ String Network::generateHostname() const {
 #endif
 }
 
-void Network::startAP() {
+void NetworkController::startAP() {
 #ifdef ARDUINO
     mode = NetworkMode::AP;
 
@@ -86,7 +86,7 @@ void Network::startAP() {
 #endif
 }
 
-void Network::startSTA(const char* ssid, const char* password) {
+void NetworkController::startSTA(const char* ssid, const char* password) {
 #ifdef ARDUINO
     mode = NetworkMode::STA;
 
@@ -221,7 +221,7 @@ void Network::startSTA(const char* ssid, const char* password) {
 #endif
 }
 
-[[noreturn]] void Network::configureUsingAPMode() {
+[[noreturn]] void NetworkController::configureUsingAPMode() {
     // Start Access Point mode
     startAP();
 
@@ -250,7 +250,7 @@ void Network::startSTA(const char* ssid, const char* password) {
     }
 }
 
-[[noreturn]] void Network::task() {
+[[noreturn]] void NetworkController::task() {
 #ifdef ARDUINO
     ESP_LOGI(TAG, "Network task started");
 
@@ -376,7 +376,7 @@ void Network::startSTA(const char* ssid, const char* password) {
 #endif
 }
 
-void Network::startTask() {
+void NetworkController::startTask() {
     xTaskCreatePinnedToCore(taskWrapper, // Task Function
                             "Network",   // Task Name
                             10000,       // Stack Size
@@ -387,8 +387,8 @@ void Network::startTask() {
     );
 }
 
-[[noreturn]] void Network::taskWrapper(void* pvParameters) {
+[[noreturn]] void NetworkController::taskWrapper(void* pvParameters) {
     ESP_LOGI(TAG, "taskWrapper()");
-    auto* instance = static_cast<Network*>(pvParameters);
+    auto* instance = static_cast<NetworkController*>(pvParameters);
     instance->task();
 }

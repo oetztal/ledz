@@ -16,7 +16,7 @@ namespace Config {
     class ConfigManager;
 }
 
-class Network;
+class NetworkController;
 class ShowController;
 
 class AccessLogger : public AsyncMiddleware {
@@ -42,7 +42,7 @@ protected:
 #endif
 
     Config::ConfigManager& config;
-    Network& network;
+    NetworkController& network;
     ShowController& showController;
 
     // Set true the first time any HTTP handler runs. The Network task reads
@@ -83,7 +83,7 @@ public:
      * @param network Network manager reference
      * @param showController ShowController reference
      */
-    WebServerManager(Config::ConfigManager& config, Network& network, ShowController& showController);
+    WebServerManager(Config::ConfigManager& config, NetworkController& network, ShowController& showController);
 
     /**
      * Virtual destructor
@@ -123,7 +123,7 @@ protected:
     void setupRoutes() override;
 
 public:
-    ConfigWebServerManager(Config::ConfigManager& config, Network& network, ShowController& showController);
+    ConfigWebServerManager(Config::ConfigManager& config, NetworkController& network, ShowController& showController);
 };
 
 /**
@@ -135,7 +135,8 @@ protected:
     void setupRoutes() override;
 
 public:
-    OperationalWebServerManager(Config::ConfigManager& config, Network& network, ShowController& showController);
+    OperationalWebServerManager(Config::ConfigManager& config, NetworkController& network,
+                                ShowController& showController);
 };
 
 #endif // LEDZ_WEBSERVERMANAGER_H

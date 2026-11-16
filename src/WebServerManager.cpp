@@ -5,7 +5,7 @@
 
 #include "Config.h"
 #include "Log.h"
-#include "Network.h"
+#include "NetworkController.h"
 #include "ShowController.h"
 #include "show/factory/ShowFactory.h"
 #include "DeviceId.h"
@@ -191,8 +191,8 @@ void WebServerManager::setupAPIRoutes() {
         }
 
         // Network info
-        doc["wifi_connected"] = WiFiClass::status() == WL_CONNECTED;
-        if (WiFiClass::status() == WL_CONNECTED) {
+        doc["wifi_connected"] = WiFi.status() == WL_CONNECTED;
+        if (WiFi.status() == WL_CONNECTED) {
             doc["ip_address"] = WiFi.localIP().toString();
             doc["wifi_ssid"] = WiFi.SSID();
         }
@@ -717,14 +717,14 @@ void WebServerManager::setupAPIRoutes() {
         doc["uptime_ms"] = millis();
 
         // Network info
-        if (WiFiClass::status() == WL_CONNECTED) {
+        if (WiFi.status() == WL_CONNECTED) {
             doc["wifi_ssid"] = WiFi.SSID();
             doc["wifi_rssi"] = WiFi.RSSI();
             doc["ip_address"] = WiFi.localIP().toString();
             doc["mac_address"] = WiFi.macAddress();
             doc["wifi_tx_power"] = WiFi.getTxPower();
             doc["wifi_sleep_mode"] = WiFi.getSleep();
-        } else if (WiFiClass::getMode() == WIFI_AP) {
+        } else if (WiFi.getMode() == WIFI_AP) {
             doc["ap_ssid"] = WiFi.softAPgetHostname();
             doc["ap_ip"] = WiFi.softAPIP().toString();
             doc["ap_clients"] = WiFi.softAPgetStationNum();
@@ -1292,7 +1292,8 @@ void WebServerManager::setupAPIRoutes() {
 
 WebServerManager* WebServerManager::activeInstance = nullptr;
 
-WebServerManager::WebServerManager(Config::ConfigManager& config, Network& network, ShowController& show_controller)
+WebServerManager::WebServerManager(Config::ConfigManager& config, NetworkController& network,
+                                   ShowController& show_controller)
     : config(config), network(network), showController(show_controller) {}
 
 #ifdef ARDUINO
@@ -1375,7 +1376,7 @@ void WebServerManager::end() {
 }
 
 // ConfigWebServerManager implementation
-ConfigWebServerManager::ConfigWebServerManager(Config::ConfigManager& config, Network& network,
+ConfigWebServerManager::ConfigWebServerManager(Config::ConfigManager& config, NetworkController& network,
                                                ShowController& showController)
     : WebServerManager(config, network, showController) {}
 
@@ -1394,7 +1395,7 @@ void ConfigWebServerManager::setupRoutes() {
 }
 
 // OperationalWebServerManager implementation
-OperationalWebServerManager::OperationalWebServerManager(Config::ConfigManager& config, Network& network,
+OperationalWebServerManager::OperationalWebServerManager(Config::ConfigManager& config, NetworkController& network,
                                                          ShowController& showController)
     : WebServerManager(config, network, showController) {}
 

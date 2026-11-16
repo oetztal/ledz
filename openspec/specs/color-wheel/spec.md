@@ -17,7 +17,7 @@
 
 ### Requirement: wheel() accepts a float hue index
 
-`Support::Color::wheel()` SHALL accept a `float` hue index `h` and return a `Strip::Color`. Finite inputs SHALL be wrapped continuously into `[0, 255)` via `fmodf` so callers can pass any finite float (including values outside `[0, 254]` and negative values) without their own modulo arithmetic. The existing six-sector cube-walk body SHALL be generalized to use `pos = h * 6 / 255`, `section = (int)pos`, `frac = pos - section`, with the channel computed as `255 * frac`, `255 * (1 - frac)`, or `0` depending on which two of the three channels are transitioning in that sector.
+`Support::Color::wheel()` SHALL accept a `float` hue index `h` and return a `Strip::Color`. Finite inputs SHALL be wrapped continuously into `[0, 255)` via `fmodf` so callers can pass any finite float — including values outside `[0, 254]` and negative values — without their own modulo arithmetic.
 
 #### Scenario: Pure red at h=0
 - **WHEN** `Support::Color::wheel(0.0f)` is called
@@ -30,6 +30,15 @@
 #### Scenario: Pure blue at h=170
 - **WHEN** `Support::Color::wheel(170.0f)` is called
 - **THEN** it returns `0x0000FF`
+
+### Requirement: wheel() generalises the cube-walk to fractional sectors
+
+The six-sector cube-walk body SHALL use `pos = h * 6 / 255`, `section = (int)pos`, and `frac = pos - section`, with each channel computed as `255 * frac`, `255 * (1 - frac)`, or `0` depending on which two of the three channels are transitioning in that sector.
+
+#### Scenario: Fractional hue inside a sector interpolates
+- **WHEN** `Support::Color::wheel(10.0f)` is called
+- **THEN** red is at full intensity, green is between 0 and full intensity, and blue is 0
+- **THEN** the green channel differs from the value returned for `Support::Color::wheel(11.0f)`
 
 ### Requirement: wheel() reaches the pure primary and secondary colours
 

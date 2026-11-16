@@ -106,20 +106,26 @@ Restyling a boolean control SHALL NOT change its element `id`, its `type`, or th
 - **THEN** the toggle switch returns to its previous position
 
 ### Requirement: A weekday picker is a group of seven toggle buttons
-A control for choosing a set of weekdays SHALL be rendered as a row of seven `button` elements of `type="button"`, one per day, each carrying `aria-pressed` reflecting its selected state, labelled with the day's initial and carrying an accessible full day name. The row SHALL be ordered Monday first. The picker SHALL stage its state and SHALL NOT send a request until the enclosing form's submit button is pressed. Each button SHALL meet the 44-pixel minimum touch target and SHALL show a visible focus indicator when focused by keyboard. The picker SHALL NOT rely on inline `style` attributes for its layout.
+A control for choosing a set of weekdays SHALL be rendered as a row of seven `button` elements of `type="button"`, one per day, each carrying `aria-pressed` reflecting its selected state, labelled with the day's initial and carrying an accessible full day name. The row SHALL be ordered Monday first, and the picker SHALL NOT rely on inline `style` attributes for its layout.
+
+#### Scenario: Default selection
+- **WHEN** the schedule form is displayed in create mode
+- **THEN** all seven days are selected
 
 #### Scenario: Toggling a day
 - **WHEN** the user activates the "W" button in the schedule form's weekday picker
 - **THEN** its `aria-pressed` state flips and its appearance changes to match
+
+### Requirement: The weekday picker stages state and is keyboard accessible
+The picker SHALL stage its state and SHALL NOT send a request until the enclosing form's submit button is pressed. Each button SHALL meet the 44-pixel minimum touch target and SHALL show a visible focus indicator when focused by keyboard.
+
+#### Scenario: Toggling a day sends no request
+- **WHEN** the user activates a weekday button
 - **THEN** no request is sent to the device
 
 #### Scenario: Keyboard use
 - **WHEN** the user tabs to a weekday button and presses Space or Enter
 - **THEN** the day toggles and a visible focus indicator is shown on that button
-
-#### Scenario: Default selection
-- **WHEN** the schedule form is displayed in create mode
-- **THEN** all seven days are selected
 
 ### Requirement: A schedule card shows its weekdays as a row of seven dots
 Each schedule entry in the Active Timers list SHALL show a Monday-first row of seven dots beneath its time, a filled dot for each selected weekday and a hollow dot for each unselected one, with the day initials shown beneath the dots. The dots SHALL be a read-only indicator.
@@ -133,8 +139,8 @@ Each schedule entry in the Active Timers list SHALL show a Monday-first row of s
 - **WHEN** a schedule with mask `0x7F` is listed
 - **THEN** all seven dots are filled
 
-### Requirement: Schedule cards expose pause, edit and cancel
-Each schedule entry in the Active Timers list SHALL show a toggle switch for its armed state, an Edit button and a Cancel button. Because the armed state acts on the device immediately, it SHALL be a toggle switch per the existing rule for boolean controls, and a failed request SHALL restore its previous position. A paused schedule's card SHALL be visually dimmed and labelled `PAUSED`; an armed schedule's card SHALL be labelled `SCHEDULE`. Activating Edit SHALL load the schedule's time, action, preset and weekdays into the schedule form, switch the form's submit label to indicate an update, show a cancel-edit control, and SHALL NOT send a request. Submitting the form in edit mode SHALL update that schedule in place and return the form to create mode.
+### Requirement: Schedule cards expose pause, edit and cancel controls
+Each schedule entry in the Active Timers list SHALL show a toggle switch for its armed state, an Edit button and a Cancel button. Because the armed state acts on the device immediately, it SHALL be a toggle switch per the existing rule for boolean controls, and a failed request SHALL restore its previous position.
 
 #### Scenario: Pausing from the card
 - **WHEN** the user switches an armed schedule's toggle off
@@ -144,6 +150,16 @@ Each schedule entry in the Active Timers list SHALL show a toggle switch for its
 #### Scenario: Pause request fails
 - **WHEN** the pause request fails
 - **THEN** the toggle returns to its previous position and the card is unchanged
+
+### Requirement: Schedule card labels reflect paused and armed state
+A paused schedule's card SHALL be visually dimmed and labelled `PAUSED`; an armed schedule's card SHALL be labelled `SCHEDULE`.
+
+#### Scenario: Armed card is labelled
+- **WHEN** an armed schedule is displayed in the Active Timers list
+- **THEN** its card is labelled `SCHEDULE`
+
+### Requirement: Edit mode loads a schedule into the form and updates it in place
+Activating Edit SHALL load the schedule's time, action, preset and weekdays into the schedule form, switch the form's submit label to indicate an update, show a cancel-edit control, and SHALL NOT send a request. Submitting the form in edit mode SHALL update that schedule in place and return the form to create mode.
 
 #### Scenario: Editing a schedule
 - **WHEN** the user activates Edit on a schedule set for 07:00, Monday to Friday, loading preset "Morning"
