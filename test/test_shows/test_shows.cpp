@@ -1,8 +1,14 @@
+#include <cmath>
+
 #include "unity.h"
 #include "../MockStrip.h"
 #include "show/Fire.h"
 #include "show/Rainbow.h"
 #include "show/Wave.h"
+#include "show/Tunnel.h"
+#include "show/Echo.h"
+#include "support/Random.h"
+#include "support/Color.h"
 
 Show::FireState* state;
 
@@ -217,6 +223,250 @@ void test_wave_bounce_and_traveling_modes_are_identical() {
     }
 }
 
+// Tunnel show tests
+static int brightness(Strip::Color c) {
+    return Support::Color::red(c) + Support::Color::green(c) + Support::Color::blue(c);
+}
+
+static bool isSymmetric(const MockStrip& strip) {
+    const Strip::PixelIndex n = strip.length();
+    for (Strip::PixelIndex i = 0; i < n / 2; i++) {
+        if (strip.getPixelColor(i) != strip.getPixelColor(n - 1 - i)) return false;
+    }
+    return true;
+}
+
+void test_tunnel_centre_lit_on_first_iteration() {
+    for (Strip::PixelIndex n : {1, 2, 7, 60, 61}) {
+        Show::Tunnel show(0.97f, 0.93f, 2.5f, 0.0f, 1.0f, 20);
+        MockStrip strip(n);
+        show.execute(strip, 0);
+        TEST_ASSERT_NOT_EQUAL_MESSAGE(0, strip.getPixelColor((n - 1) / 2), "centre pixel is black");
+        TEST_ASSERT_NOT_EQUAL_MESSAGE(0, strip.getPixelColor(n / 2), "centre pixel is black");
+    }
+}
+
+void test_tunnel_hue_changes_over_time() {
+    Show::Tunnel show(0.97f, 0.93f, 2.5f, 0.0f, 1.0f, 20);
+    MockStrip strip(60);
+    show.execute(strip, 0);
+    const Strip::Color first = strip.getPixelColor(30);
+    for (Show::Iteration t = 1; t <= 32; t++) {
+        show.execute(strip, t);
+    }
+    TEST_ASSERT_NOT_EQUAL(first, strip.getPixelColor(30));
+}
+
+void test_tunnel_reaches_both_ends_with_defaults() {
+    Show::Tunnel show(0.97f, 0.93f, 2.5f, 0.0f, 1.0f, 20);
+    MockStrip strip(60);
+    bool first_lit = false;
+    bool last_lit = false;
+    for (Show::Iteration t = 0; t < 200; t++) {
+        show.execute(strip, t);
+        first_lit = first_lit || strip.getPixelColor(0) != 0;
+        last_lit = last_lit || strip.getPixelColor(59) != 0;
+    }
+    TEST_ASSERT_TRUE_MESSAGE(first_lit, "pixel 0 never lit");
+    TEST_ASSERT_TRUE_MESSAGE(last_lit, "pixel 59 never lit");
+}
+
+void test_tunnel_symmetric_without_warp() {
+    for (Strip::PixelIndex n : {60, 61}) {
+        Show::Tunnel show(0.9f, 0.97f, 2.0f, 0.0f, 1.5f, 7);
+        MockStrip strip(n);
+        for (Show::Iteration t = 0; t < 200; t++) {
+            show.execute(strip, t);
+            TEST_ASSERT_TRUE_MESSAGE(isSymmetric(strip), "asymmetric frame without warp");
+        }
+    }
+}
+
+void test_tunnel_warp_breaks_symmetry() {
+    Show::Tunnel show(0.97f, 0.93f, 2.5f, 2.0f, 1.0f, 20);
+    MockStrip strip(60);
+    bool asymmetric = false;
+    for (Show::Iteration t = 0; t < 100; t++) {
+        show.execute(strip, t);
+        asymmetric = asymmetric || !isSymmetric(strip);
+    }
+    TEST_ASSERT_TRUE(asymmetric);
+}
+
+void test_tunnel_pulses_form_rings() {
+    Show::Tunnel show(0.97f, 0.93f, 0.0f, 0.0f, 1.0f, 20);
+    MockStrip strip(61);
+    int centre[21];
+    for (Show::Iteration t = 0; t <= 20; t++) {
+        show.execute(strip, t);
+        centre[t] = brightness(strip.getPixelColor(30));
+    }
+    TEST_ASSERT_GREATER_THAN(centre[10], centre[0]);
+    TEST_ASSERT_GREATER_THAN(centre[10], centre[20]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 1.0f, show.pulseIntensity(0));
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.08f, show.pulseIntensity(10));
+}
+
+void test_tunnel_continuous_without_pulse() {
+    Show::Tunnel show(0.97f, 0.93f, 0.0f, 0.0f, 1.0f, 0);
+    MockStrip strip(61);
+    for (Show::Iteration t = 0; t < 50; t++) {
+        show.execute(strip, t);
+        TEST_ASSERT_EQUAL_FLOAT(1.0f, show.pulseIntensity(static_cast<uint32_t>(t)));
+        TEST_ASSERT_EQUAL_HEX32(Support::Color::wheel(0.0f), strip.getPixelColor(30));
+    }
+}
+
+void test_tunnel_even_length_centre_pair_does_not_accumulate() {
+    Show::Tunnel show(0.97f, 0.93f, 0.0f, 0.0f, 1.0f, 20);
+    MockStrip strip(60);
+    for (Show::Iteration t = 0; t <= 10; t++) {
+        show.execute(strip, t);
+    }
+    // Frame 10 is the pulse trough. With hue_speed 0 the emission is
+    // wheel(0) at 0.08 intensity, so each centre pixel's red channel should
+    // be about 20 rather than the saturated glow an accumulating pair gives.
+    for (Strip::PixelIndex i : {29, 30}) {
+        TEST_ASSERT_INT_WITHIN(1, 20, Support::Color::red(strip.getPixelColor(i)));
+        TEST_ASSERT_EQUAL_UINT8(0, Support::Color::green(strip.getPixelColor(i)));
+    }
+}
+
+// Echo show tests
+void test_echo_particles_stay_on_the_strip() {
+    struct Case {
+        int particles;
+        float speed;
+        Strip::PixelIndex n;
+    };
+    for (const Case& c :
+         {Case{3, 0.5f, 60}, Case{8, 4.0f, 60}, Case{8, 4.0f, 3}, Case{2, 3.7f, 1}, Case{1, 0.05f, 10}}) {
+        Show::Echo show(c.particles, c.speed, 0.92f, 0.2f);
+        MockStrip strip(c.n);
+        for (Show::Iteration t = 0; t < 1000; t++) {
+            show.execute(strip, t);
+            TEST_ASSERT_EQUAL(c.particles, show.particles().size());
+            for (const auto& p : show.particles()) {
+                TEST_ASSERT_TRUE(p.pos >= 0.0f);
+                TEST_ASSERT_TRUE(p.pos <= static_cast<float>(c.n - 1));
+            }
+        }
+    }
+}
+
+void test_echo_is_deterministic_with_a_seed() {
+    MockStrip a(60);
+    MockStrip b(60);
+    Support::setRandomSeedOverride(1234);
+    Show::Echo first(3, 0.5f, 0.92f, 0.2f);
+    Show::Echo second(3, 0.5f, 0.92f, 0.2f);
+    for (Show::Iteration t = 0; t < 300; t++) {
+        first.execute(a, t);
+        second.execute(b, t);
+        for (Strip::PixelIndex i = 0; i < 60; i++) {
+            TEST_ASSERT_EQUAL_HEX32(a.getPixelColor(i), b.getPixelColor(i));
+        }
+    }
+    Support::clearRandomSeedOverride();
+}
+
+void test_echo_two_particles_have_opposite_hues() {
+    Show::Echo show(2, 0.5f, 0.92f, 0.0f);
+    MockStrip strip(60);
+    for (Show::Iteration t = 0; t < 10; t++) {
+        show.execute(strip, t);
+        TEST_ASSERT_EQUAL_HEX32(Support::Color::wheel(0.0f), show.particleColor(0));
+        TEST_ASSERT_EQUAL_HEX32(Support::Color::wheel(128.0f), show.particleColor(1));
+    }
+}
+
+void test_echo_leaves_a_decaying_trail() {
+    Support::setRandomSeedOverride(7);
+    Show::Echo show(1, 1.0f, 0.9f, 0.2f);
+    MockStrip strip(60);
+    Show::Iteration t = 0;
+    // Run 20 iterations, continuing until the particle is far enough from an
+    // end that the trail behind it has not been folded by a recent bounce.
+    const auto clear_of_ends = [&] {
+        const auto& p = show.particles()[0];
+        return p.pos >= 8.0f && p.pos <= 51.0f;
+    };
+    while (t < 20 || !clear_of_ends()) {
+        show.execute(strip, t++);
+        TEST_ASSERT_LESS_THAN(200, t);
+    }
+    Support::clearRandomSeedOverride();
+
+    int lit = 0;
+    for (Strip::PixelIndex i = 0; i < 60; i++) {
+        lit += strip.getPixelColor(i) != 0 ? 1 : 0;
+    }
+    TEST_ASSERT_GREATER_OR_EQUAL(5, lit);
+
+    // Walk backwards from the first pixel fully behind the particle (the one
+    // under it has only received part of this frame's light): brightness
+    // must fall off with distance.
+    const auto& p = show.particles()[0];
+    const auto step = static_cast<Strip::PixelIndex>(-p.dir);
+    auto i = static_cast<Strip::PixelIndex>((p.dir > 0 ? std::floor(p.pos) : std::ceil(p.pos)) + step);
+    int previous = brightness(strip.getPixelColor(i));
+    for (int k = 1; k <= 5; k++) {
+        i = static_cast<Strip::PixelIndex>(i + step);
+        const int current = brightness(strip.getPixelColor(i));
+        TEST_ASSERT_GREATER_THAN(0, current);
+        TEST_ASSERT_LESS_THAN(previous, current);
+        previous = current;
+    }
+}
+
+void test_echo_particles_move_at_different_speeds() {
+    Show::Echo show(3, 1.0f, 0.92f, 0.2f);
+    MockStrip strip(300);
+    show.execute(strip, 0);
+    const float expected[] = {0.6f, 1.0f, 1.4f};
+    for (int k = 0; k < 20; k++) {
+        const auto before = show.particles();
+        show.execute(strip, k + 1);
+        for (std::size_t j = 0; j < 3; j++) {
+            TEST_ASSERT_FLOAT_WITHIN(1e-6f, expected[j], show.particles()[j].speed);
+            const float travelled = std::fabs(show.particles()[j].pos - before[j].pos);
+            const bool bounced = show.particles()[j].dir != before[j].dir;
+            if (!bounced) {
+                TEST_ASSERT_FLOAT_WITHIN(1e-3f, expected[j], travelled);
+            }
+        }
+    }
+}
+
+void test_echo_trail_has_no_stripes_at_fractional_speed() {
+    Support::setRandomSeedOverride(42);
+    Show::Echo show(1, 0.8f, 1.0f, 0.0f);
+    MockStrip strip(300);
+    show.execute(strip, 0);
+    Support::clearRandomSeedOverride();
+
+    const float start = show.particles()[0].pos;
+    const float dir = show.particles()[0].dir;
+    // Precondition: 20 px of travel stay clear of both ends.
+    TEST_ASSERT_TRUE(start + dir * 21.0f > 1.0f && start + dir * 21.0f < 298.0f);
+    Show::Iteration t = 1;
+    while (std::fabs(show.particles()[0].pos - start) < 20.0f) {
+        show.execute(strip, t++);
+    }
+    const float end = show.particles()[0].pos;
+    // Pixels strictly inside the travelled path, more than one pixel behind
+    // the particle and clear of the partially lit starting pixel.
+    const float lo = std::min(start, end - dir) + 1.0f;
+    const float hi = std::max(start, end - dir) - 1.0f;
+    int checked = 0;
+    for (auto i = static_cast<Strip::PixelIndex>(std::ceil(lo)); i <= static_cast<Strip::PixelIndex>(hi); i++) {
+        TEST_ASSERT_GREATER_OR_EQUAL(250, Support::Color::red(strip.getPixelColor(i)));
+        TEST_ASSERT_EQUAL_UINT8(0, Support::Color::green(strip.getPixelColor(i)));
+        checked++;
+    }
+    TEST_ASSERT_GREATER_OR_EQUAL(15, checked);
+}
+
 int runUnityTests() {
     UNITY_BEGIN();
 
@@ -243,6 +493,24 @@ int runUnityTests() {
     RUN_TEST(test_wave_explicit_constructor_does_not_crash);
     RUN_TEST(test_wave_symmetric_lighting_around_mid_source);
     RUN_TEST(test_wave_bounce_and_traveling_modes_are_identical);
+
+    // Tunnel show
+    RUN_TEST(test_tunnel_centre_lit_on_first_iteration);
+    RUN_TEST(test_tunnel_hue_changes_over_time);
+    RUN_TEST(test_tunnel_reaches_both_ends_with_defaults);
+    RUN_TEST(test_tunnel_symmetric_without_warp);
+    RUN_TEST(test_tunnel_warp_breaks_symmetry);
+    RUN_TEST(test_tunnel_pulses_form_rings);
+    RUN_TEST(test_tunnel_continuous_without_pulse);
+    RUN_TEST(test_tunnel_even_length_centre_pair_does_not_accumulate);
+
+    // Echo show
+    RUN_TEST(test_echo_particles_stay_on_the_strip);
+    RUN_TEST(test_echo_is_deterministic_with_a_seed);
+    RUN_TEST(test_echo_two_particles_have_opposite_hues);
+    RUN_TEST(test_echo_leaves_a_decaying_trail);
+    RUN_TEST(test_echo_particles_move_at_different_speeds);
+    RUN_TEST(test_echo_trail_has_no_stripes_at_fractional_speed);
 
     return UNITY_END();
 }

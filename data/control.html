@@ -247,6 +247,64 @@
                     <button class="apply-button" onclick="applyWaveParams()">Apply Parameters</button>
                 </div>
 
+                <div id="tunnelParams" class="params-section" data-variants-for="Tunnel">
+                    <div class="param-row">
+                        <label class="param-label" for="tunnelZoom">Zoom</label>
+                        <input type="number" id="tunnelZoom" step="0.01" min="0.5" max="1" value="0.97">
+                        <small style="display:block; margin-top:4px; color:#666;">Lower = rings speed up more toward the ends (0.5–1.0)</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="tunnelDecay">Decay</label>
+                        <input type="number" id="tunnelDecay" step="0.01" min="0" max="1" value="0.93">
+                        <small style="display:block; margin-top:4px; color:#666;">Higher = longer-lasting rings (0–1)</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="tunnelHueSpeed">Hue Speed</label>
+                        <input type="number" id="tunnelHueSpeed" step="0.1" min="0" max="16" value="2.5">
+                        <small style="display:block; margin-top:4px; color:#666;">Colour wheel steps per frame (0–16)</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="tunnelWarp">Warp</label>
+                        <input type="number" id="tunnelWarp" step="0.1" min="0" max="8" value="0.0">
+                        <small style="display:block; margin-top:4px; color:#666;">Wobble amplitude in pixels; 0 keeps the rings straight (0–8)</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="tunnelPush">Push</label>
+                        <input type="number" id="tunnelPush" step="0.1" min="0" max="4" value="1.0">
+                        <small style="display:block; margin-top:4px; color:#666;">Pixels per frame the rings move outward, on top of the zoom (0–4)</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="tunnelPulse">Pulse</label>
+                        <input type="number" id="tunnelPulse" step="1" min="0" max="200" value="20">
+                        <small style="display:block; margin-top:4px; color:#666;">Frames between ring flashes; 0 emits continuously (0–200)</small>
+                    </div>
+                    <button class="apply-button" onclick="applyTunnelParams()">Apply Parameters</button>
+                </div>
+
+                <div id="echoParams" class="params-section" data-variants-for="Echo">
+                    <div class="param-row">
+                        <label class="param-label" for="echoParticles">Particles</label>
+                        <input type="number" id="echoParticles" step="1" min="1" max="8" value="4">
+                        <small style="display:block; margin-top:4px; color:#666;">Number of bouncing particles (1–8)</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="echoSpeed">Speed</label>
+                        <input type="number" id="echoSpeed" step="0.05" min="0.05" max="4" value="1.0">
+                        <small style="display:block; margin-top:4px; color:#666;">Base pixels per frame; particles move at 0.6–1.4× this (0.05–4)</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="echoDecay">Decay</label>
+                        <input type="number" id="echoDecay" step="0.01" min="0" max="1" value="0.96">
+                        <small style="display:block; margin-top:4px; color:#666;">Higher = longer trails (0–1)</small>
+                    </div>
+                    <div class="param-row">
+                        <label class="param-label" for="echoHueSpeed">Hue Speed</label>
+                        <input type="number" id="echoHueSpeed" step="0.1" min="0" max="16" value="0.5">
+                        <small style="display:block; margin-top:4px; color:#666;">Colour wheel steps per frame (0–16)</small>
+                    </div>
+                    <button class="apply-button" onclick="applyEchoParams()">Apply Parameters</button>
+                </div>
+
                 <div id="morseCodeParams" class="params-section" data-variants-for="MorseCode">
                     <div class="param-row">
                         <label class="param-label" for="morseMessage">Message</label>
@@ -370,6 +428,8 @@
             document.getElementById('fireParams').classList.remove('visible');
             document.getElementById('starlightParams').classList.remove('visible');
             document.getElementById('waveParams').classList.remove('visible');
+            document.getElementById('tunnelParams').classList.remove('visible');
+            document.getElementById('echoParams').classList.remove('visible');
             document.getElementById('morseCodeParams').classList.remove('visible');
             document.getElementById('theaterChaseParams').classList.remove('visible');
             document.getElementById('stroboscopeParams').classList.remove('visible');
@@ -387,6 +447,10 @@
                 document.getElementById('starlightParams').classList.add('visible');
             } else if (showName === 'Wave') {
                 document.getElementById('waveParams').classList.add('visible');
+            } else if (showName === 'Tunnel') {
+                document.getElementById('tunnelParams').classList.add('visible');
+            } else if (showName === 'Echo') {
+                document.getElementById('echoParams').classList.add('visible');
             } else if (showName === 'MorseCode') {
                 document.getElementById('morseCodeParams').classList.add('visible');
             } else if (showName === 'TheaterChase') {
@@ -737,6 +801,54 @@
             }
         }
 
+        // Apply Tunnel parameters
+        async function applyTunnelParams() {
+            const zoom = parseFloat(document.getElementById('tunnelZoom').value);
+            const decay = parseFloat(document.getElementById('tunnelDecay').value);
+            const hue_speed = parseFloat(document.getElementById('tunnelHueSpeed').value);
+            const warp = parseFloat(document.getElementById('tunnelWarp').value);
+            const push = parseFloat(document.getElementById('tunnelPush').value);
+            const pulse = parseInt(document.getElementById('tunnelPulse').value);
+
+            try {
+                pendingParameterConfig = true;
+                await fetch('/api/show', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: 'Tunnel',
+                        params: { zoom, decay, hue_speed, warp, push, pulse }
+                    })
+                });
+                pendingParameterConfig = false;  // Applied successfully
+            } catch (error) {
+                console.error('Failed to apply Tunnel parameters:', error);
+            }
+        }
+
+        // Apply Echo parameters
+        async function applyEchoParams() {
+            const particles = parseInt(document.getElementById('echoParticles').value);
+            const speed = parseFloat(document.getElementById('echoSpeed').value);
+            const decay = parseFloat(document.getElementById('echoDecay').value);
+            const hue_speed = parseFloat(document.getElementById('echoHueSpeed').value);
+
+            try {
+                pendingParameterConfig = true;
+                await fetch('/api/show', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: 'Echo',
+                        params: { particles, speed, decay, hue_speed }
+                    })
+                });
+                pendingParameterConfig = false;  // Applied successfully
+            } catch (error) {
+                console.error('Failed to apply Echo parameters:', error);
+            }
+        }
+
         // Apply MorseCode parameters
         async function applyMorseCodeParams() {
             const message = document.getElementById('morseMessage').value;
@@ -950,6 +1062,22 @@
                     if (params.brightness_frequency !== undefined) document.getElementById('waveBrightnessFreq').value = params.brightness_frequency;
                     break;
 
+                case 'Tunnel':
+                    if (params.zoom !== undefined) document.getElementById('tunnelZoom').value = params.zoom;
+                    if (params.decay !== undefined) document.getElementById('tunnelDecay').value = params.decay;
+                    if (params.hue_speed !== undefined) document.getElementById('tunnelHueSpeed').value = params.hue_speed;
+                    if (params.warp !== undefined) document.getElementById('tunnelWarp').value = params.warp;
+                    if (params.push !== undefined) document.getElementById('tunnelPush').value = params.push;
+                    if (params.pulse !== undefined) document.getElementById('tunnelPulse').value = params.pulse;
+                    break;
+
+                case 'Echo':
+                    if (params.particles !== undefined) document.getElementById('echoParticles').value = params.particles;
+                    if (params.speed !== undefined) document.getElementById('echoSpeed').value = params.speed;
+                    if (params.decay !== undefined) document.getElementById('echoDecay').value = params.decay;
+                    if (params.hue_speed !== undefined) document.getElementById('echoHueSpeed').value = params.hue_speed;
+                    break;
+
                 case 'MorseCode':
                     if (params.message !== undefined) document.getElementById('morseMessage').value = params.message;
                     if (params.speed !== undefined) document.getElementById('morseSpeed').value = params.speed;
@@ -1039,8 +1167,8 @@
 
             // Don't auto-apply for shows with parameters - wait for user to click Apply button
             const showsWithParams = ['Solid', 'Mandelbrot', 'Chaos', 'Fire',
-                                     'Starlight', 'Wave', 'MorseCode', 'TheaterChase', 'Stroboscope',
-                                     'Rainbow'];
+                                     'Starlight', 'Wave', 'Tunnel', 'Echo', 'MorseCode', 'TheaterChase',
+                                     'Stroboscope', 'Rainbow'];
 
             if (showsWithParams.includes(showName)) {
                 pendingParameterConfig = true;  // User is now configuring parameters

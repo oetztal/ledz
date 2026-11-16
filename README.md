@@ -11,7 +11,7 @@ with web interface for WS2812B/NeoPixel LED strips.
 
 ## Features
 
-- **12 LED shows** - Rainbow, Fire, Wave, Starlight, Mandelbrot, and more
+- **14 LED shows** - Rainbow, Fire, Wave, Tunnel, Starlight, Mandelbrot, and more
 - **Web interface** - Control from any device on your network
 - **Presets** - Save and recall up to 8 complete configurations
 - **Touch control** - Capacitive touch pins to load presets without WiFi
@@ -110,6 +110,8 @@ pio run -e adafruit_qtpy_esp32s3_nopsram -t upload
 | Rainbow | Cycling rainbow spectrum |
 | Fire | Realistic fire simulation |
 | Wave | Propagating sine-wave patterns |
+| Tunnel | Pulsing rings of colour flying outward from the centre |
+| Echo | Bouncing particles trailing fading comet tails |
 | Starlight | Twinkling star effect |
 | ColorRun | Running color animation |
 | Jump | Bouncing light effects |

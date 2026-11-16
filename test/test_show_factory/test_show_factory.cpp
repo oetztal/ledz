@@ -2,6 +2,8 @@
 #include "show/factory/ShowFactory.h"
 #include "generated/show_variants.h"
 #include "support/Color.h"
+#include "show/Tunnel.h"
+#include "show/Echo.h"
 #include "../MockStrip.h"
 #include <chrono>
 #include <cstring>
@@ -166,8 +168,8 @@ void tearDown() {
 // --- registration -----------------------------------------------------------
 
 void test_all_shows_are_registered() {
-    const char* expected[] = {"Solid",   "Fire", "Starlight",    "Stroboscope", "ColorRun", "Jump",
-                              "Rainbow", "Wave", "TheaterChase", "MorseCode",   "Chaos",    "Mandelbrot"};
+    const char* expected[] = {"Solid", "Fire",   "Starlight", "Stroboscope",  "ColorRun",  "Jump",  "Rainbow",
+                              "Wave",  "Tunnel", "Echo",      "TheaterChase", "MorseCode", "Chaos", "Mandelbrot"};
     const size_t count = sizeof(expected) / sizeof(expected[0]);
 
     TEST_ASSERT_EQUAL(count, factory->listShows().size());
@@ -433,6 +435,76 @@ void test_wave_unknown_mode_falls_back_to_bounce() {
     }
 }
 
+// --- Tunnel parameter parsing -----------------------------------------------
+
+static const Show::Tunnel& asTunnel(const std::unique_ptr<Show::Show>& show) {
+    TEST_ASSERT_NOT_NULL(show.get());
+    const auto* tunnel = dynamic_cast<const Show::Tunnel*>(show.get());
+    TEST_ASSERT_NOT_NULL_MESSAGE(tunnel, "not a Tunnel");
+    return *tunnel;
+}
+
+void test_tunnel_defaults_from_empty_params() {
+    auto show = factory->createShow("Tunnel", "{}");
+    const auto& tunnel = asTunnel(show);
+    TEST_ASSERT_EQUAL_FLOAT(0.97f, tunnel.zoom());
+    TEST_ASSERT_EQUAL_FLOAT(0.93f, tunnel.decay());
+    TEST_ASSERT_EQUAL_FLOAT(2.5f, tunnel.hueSpeed());
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, tunnel.warp());
+    TEST_ASSERT_EQUAL_FLOAT(1.0f, tunnel.push());
+    TEST_ASSERT_EQUAL(20, tunnel.pulse());
+}
+
+void test_tunnel_out_of_range_values_are_clamped() {
+    auto show = factory->createShow("Tunnel", R"({"zoom":3.0,"decay":-1})");
+    const auto& tunnel = asTunnel(show);
+    TEST_ASSERT_EQUAL_FLOAT(1.0f, tunnel.zoom());
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, tunnel.decay());
+
+    auto low =
+        factory->createShow("Tunnel", R"({"zoom":0.1,"decay":2,"hue_speed":-3,"warp":20,"push":-1,"pulse":1000})");
+    const auto& clamped = asTunnel(low);
+    TEST_ASSERT_EQUAL_FLOAT(0.5f, clamped.zoom());
+    TEST_ASSERT_EQUAL_FLOAT(1.0f, clamped.decay());
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, clamped.hueSpeed());
+    TEST_ASSERT_EQUAL_FLOAT(8.0f, clamped.warp());
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, clamped.push());
+    TEST_ASSERT_EQUAL(200, clamped.pulse());
+
+    auto fast = factory->createShow("Tunnel", R"({"push":9,"pulse":-4})");
+    TEST_ASSERT_EQUAL_FLOAT(4.0f, asTunnel(fast).push());
+    TEST_ASSERT_EQUAL(0, asTunnel(fast).pulse());
+}
+
+// --- Echo parameter parsing -------------------------------------------------
+
+static const Show::Echo& asEcho(const std::unique_ptr<Show::Show>& show) {
+    TEST_ASSERT_NOT_NULL(show.get());
+    const auto* echo = dynamic_cast<const Show::Echo*>(show.get());
+    TEST_ASSERT_NOT_NULL_MESSAGE(echo, "not an Echo");
+    return *echo;
+}
+
+void test_echo_defaults_from_empty_params() {
+    auto show = factory->createShow("Echo", "{}");
+    const auto& echo = asEcho(show);
+    TEST_ASSERT_EQUAL(4, echo.particleCount());
+    TEST_ASSERT_EQUAL_FLOAT(1.0f, echo.speed());
+    TEST_ASSERT_EQUAL_FLOAT(0.96f, echo.decay());
+    TEST_ASSERT_EQUAL_FLOAT(0.5f, echo.hueSpeed());
+}
+
+void test_echo_particle_count_is_clamped() {
+    auto many = factory->createShow("Echo", R"({"particles":50})");
+    TEST_ASSERT_EQUAL(8, asEcho(many).particleCount());
+    auto none = factory->createShow("Echo", R"({"particles":0,"speed":100,"decay":3,"hue_speed":-1})");
+    const auto& clamped = asEcho(none);
+    TEST_ASSERT_EQUAL(1, clamped.particleCount());
+    TEST_ASSERT_EQUAL_FLOAT(4.0f, clamped.speed());
+    TEST_ASSERT_EQUAL_FLOAT(1.0f, clamped.decay());
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, clamped.hueSpeed());
+}
+
 int runUnityTests() {
     renderAll();
 
@@ -463,6 +535,12 @@ int runUnityTests() {
     RUN_TEST(test_wave_ignores_legacy_fields);
     RUN_TEST(test_wave_bounce_and_traveling_modes_are_identical);
     RUN_TEST(test_wave_unknown_mode_falls_back_to_bounce);
+
+    RUN_TEST(test_tunnel_defaults_from_empty_params);
+    RUN_TEST(test_tunnel_out_of_range_values_are_clamped);
+
+    RUN_TEST(test_echo_defaults_from_empty_params);
+    RUN_TEST(test_echo_particle_count_is_clamped);
 
     return UNITY_END();
 }

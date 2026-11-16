@@ -14,6 +14,8 @@ ledz now supports configurable parameters for shows. Parameters are passed as JS
 - **TheaterChase Show**: `num_steps_per_cycle`
 - **MorseCode Show**: Message text and timing (speed, dot/dash lengths, spacing)
 - **Rainbow Show**: `time_step` and `pixel_step` sliders
+- **Tunnel Show**: Zoom, decay, hue speed, warp, push, and pulse
+- **Echo Show**: Particles, speed, trail decay, and hue drift
 
 Each parameterized show also exposes a **preset selector** populated from
 `scripts/show_variants.json` (see `docs/SHOW_PREVIEWS.md`).
@@ -308,6 +310,54 @@ Two modes are accepted by the JSON contract (`bounce` and `traveling`) but curre
 {"mode": "traveling", "decay_rate": 2.0, "brightness_frequency": 0.1}
 ```
 
+### Tunnel
+**Behavior**: A hue-cycling light flashes at the centre of the strip, and every frame the previous frame is pushed and zoomed outward and faded, so each flash becomes a ring of colour flying from the middle toward both ends, like flying through a tunnel. The push moves the rings at a steady speed right from the centre; the zoom speeds them up toward the ends. Without warp the strip is exactly symmetric about its centre; a non-zero warp bends the rings with a slow sine wobble.
+
+**Parameters**:
+- `zoom` (float, default: `0.97`, range `0.5`–`1.0`): How far the previous frame is stretched outward each frame. Lower values make the rings accelerate more toward the ends; `1.0` adds no acceleration.
+- `decay` (float, default: `0.93`, range `0.0`–`1.0`): Brightness kept from one frame to the next. Higher values make longer-lasting rings.
+- `hue_speed` (float, default: `2.5`, range `0.0`–`16.0`): Colour-wheel steps per frame for the centre light. Higher values make consecutive rings differ more in colour.
+- `warp` (float, default: `0.0`, range `0.0`–`8.0`): Wobble amplitude in pixels. `0` keeps the rings straight.
+- `push` (float, default: `1.0`, range `0.0`–`4.0`): Pixels per frame the content moves outward, on top of the zoom. Without push, light near the centre barely moves and smears into a glow.
+- `pulse` (int, default: `20`, range `0`–`200`): Frames between ring flashes. `0` emits continuously, which gives smooth colour bands instead of rings.
+
+Out-of-range values are clamped.
+
+**Example JSON**:
+```json
+// Default
+{"zoom": 0.97, "decay": 0.93, "hue_speed": 2.5, "warp": 0.0, "push": 1.0, "pulse": 20}
+
+// Hyperspace: fast, dense rings
+{"zoom": 0.98, "decay": 0.92, "hue_speed": 4.0, "warp": 0.0, "push": 2.0, "pulse": 12}
+
+// Liquid: continuous, gently wobbling flow
+{"zoom": 0.97, "decay": 0.96, "hue_speed": 1.3, "warp": 1.0, "push": 1.0, "pulse": 0}
+```
+
+### Echo
+**Behavior**: Several particles bounce back and forth between the ends of the strip at different speeds, each leaving a long comet trail that fades over time, so the trails cross at varying angles. The particles' colours are spread evenly around the colour wheel and drift together. Starting positions and directions are random.
+
+**Parameters**:
+- `particles` (int, default: `4`, range `1`–`8`): Number of particles.
+- `speed` (float, default: `1.0`, range `0.05`–`4.0`): Base pixels per frame. The particles' speeds are spread evenly from `0.6` to `1.4` times this value (a single particle moves at exactly `speed`).
+- `decay` (float, default: `0.96`, range `0.0`–`1.0`): Brightness kept from one frame to the next. Higher values make longer trails.
+- `hue_speed` (float, default: `0.5`, range `0.0`–`16.0`): Colour-wheel steps per frame for the shared hue drift.
+
+Out-of-range values are clamped.
+
+**Example JSON**:
+```json
+// Default
+{"particles": 4, "speed": 1.0, "decay": 0.96, "hue_speed": 0.5}
+
+// Swarm: many particles with shorter trails
+{"particles": 8, "speed": 1.0, "decay": 0.9, "hue_speed": 0.5}
+
+// Ghost: one slow particle with a very long trail
+{"particles": 1, "speed": 0.5, "decay": 0.99, "hue_speed": 0.3}
+```
+
 ### Fire
 **Behavior**: Simulates a flame. Each frame the strip cools, sparks are injected near one end, and heat spreads upward. Pixels are colored along a black→red→orange→yellow→white ramp by temperature.
 
@@ -558,6 +608,7 @@ Parameters are automatically saved to NVS when a show is changed. On restart:
 
 - **ShowCommand**: `char *show_name` and `char *params_json` are heap-allocated with `strdup()` when the command is queued and freed by the LED task after it is processed. The struct itself is fixed-size; the JSON length is unbounded.
 - **ShowConfig**: `params_json[256]` is the one fixed buffer — the NVS-persisted parameter string is truncated to 255 characters.
+- **Feedback shows** (Tunnel, Echo): keep two float RGB frame buffers, 24 bytes per LED (7.2 KB at 300 LEDs, 24 KB at 1000). They are allocated on the show's first frame and freed when the show is replaced.
 - **Heap usage**: ArduinoJson 7 `JsonDocument` grows on demand, so parsing allocates roughly what the payload needs rather than a fixed buffer. There is no compile-time capacity to tune and no silent truncation when a payload outgrows one.
 
 The command queue holds at most `SHOW_COMMAND_QUEUE_SIZE` (5) commands; because

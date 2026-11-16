@@ -433,6 +433,80 @@
       }
     ]
   },
+  "Tunnel": {
+    "description": "Pulsing rings of colour fly outward from the centre of the strip, like flying through a tunnel",
+    "iterations": 300,
+    "default": {
+      "params": {
+        "zoom": 0.97,
+        "decay": 0.93,
+        "hue_speed": 2.5,
+        "warp": 0.0,
+        "push": 1.0,
+        "pulse": 20
+      }
+    },
+    "variants": [
+      {
+        "name": "hyperspace",
+        "label": "Hyperspace",
+        "params": {
+          "zoom": 0.98,
+          "decay": 0.92,
+          "hue_speed": 4.0,
+          "warp": 0.0,
+          "push": 2.0,
+          "pulse": 12
+        }
+      },
+      {
+        "name": "liquid",
+        "label": "Liquid wobble",
+        "params": {
+          "zoom": 0.97,
+          "decay": 0.96,
+          "hue_speed": 1.3,
+          "warp": 1.0,
+          "push": 1.0,
+          "pulse": 0
+        }
+      }
+    ]
+  },
+  "Echo": {
+    "description": "Coloured particles bounce between the ends of the strip, each trailing a long fading comet tail",
+    "iterations": 300,
+    "default": {
+      "params": {
+        "particles": 4,
+        "speed": 1.0,
+        "decay": 0.96,
+        "hue_speed": 0.5
+      }
+    },
+    "variants": [
+      {
+        "name": "swarm",
+        "label": "Swarm",
+        "params": {
+          "particles": 8,
+          "speed": 1.0,
+          "decay": 0.9,
+          "hue_speed": 0.5
+        }
+      },
+      {
+        "name": "ghost",
+        "label": "Ghost",
+        "params": {
+          "particles": 1,
+          "speed": 0.5,
+          "decay": 0.99,
+          "hue_speed": 0.3
+        }
+      }
+    ]
+  },
   "TheaterChase": {
     "description": "Evenly spaced rainbow dots march along the strip, like lights around a theater marquee",
     "iterations": 300,

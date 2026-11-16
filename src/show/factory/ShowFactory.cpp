@@ -9,6 +9,8 @@
 #include "show/Jump.h"
 #include "show/Starlight.h"
 #include "show/Wave.h"
+#include "show/Tunnel.h"
+#include "show/Echo.h"
 #include "show/MorseCode.h"
 #include "show/TheaterChase.h"
 #include "show/Stroboscope.h"
@@ -104,6 +106,32 @@ namespace Show::Factory {
                          ESP_LOGI(TAG, "Creating Wave mode=%s, decay=%.2f, freq=%.2f", mode_str, decay_rate,
                                   brightness_frequency);
                          return std::make_unique<Wave>(decay_rate, brightness_frequency, mode);
+                     });
+
+        registerShow(
+            "Tunnel", "Pulsing rings of colour fly outward from the centre of the strip, like flying through a tunnel",
+            [](const JsonDocument& doc) {
+                float zoom = doc["zoom"] | 0.97f;
+                float decay = doc["decay"] | 0.93f;
+                float hue_speed = doc["hue_speed"] | 2.5f;
+                float warp = doc["warp"] | 0.0f;
+                float push = doc["push"] | 1.0f;
+                int pulse = doc["pulse"] | 20;
+                ESP_LOGI(TAG, "Creating Tunnel zoom=%.2f, decay=%.2f, hue_speed=%.2f, warp=%.2f, push=%.2f, pulse=%d",
+                         zoom, decay, hue_speed, warp, push, pulse);
+                return std::make_unique<Tunnel>(zoom, decay, hue_speed, warp, push, pulse);
+            });
+
+        registerShow("Echo",
+                     "Coloured particles bounce between the ends of the strip, each trailing a long fading comet tail",
+                     [](const JsonDocument& doc) {
+                         int particles = doc["particles"] | 4;
+                         float speed = doc["speed"] | 1.0f;
+                         float decay = doc["decay"] | 0.96f;
+                         float hue_speed = doc["hue_speed"] | 0.5f;
+                         ESP_LOGI(TAG, "Creating Echo particles=%d, speed=%.2f, decay=%.2f, hue_speed=%.2f", particles,
+                                  speed, decay, hue_speed);
+                         return std::make_unique<Echo>(particles, speed, decay, hue_speed);
                      });
 
         registerShow("TheaterChase",

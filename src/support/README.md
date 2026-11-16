@@ -72,3 +72,29 @@ blended_value = start_value * fade_progress + end_value * (1 - fade_progress)
 ```
 
 Where `fade_progress` goes from 1.0 (at start) to 0.0 (at end).
+
+## Feedback
+
+`Support::Feedback` keeps a per-pixel float RGB frame between iterations, remaps
+and decays it, lets a show add new light on top, and renders it to the strip. It
+is the shared engine behind feedback-based shows such as Tunnel and Echo.
+
+```cpp
+#include "support/Feedback.h"
+
+Support::Feedback feedback;
+
+// Each frame:
+Support::FeedbackTransform transform;
+transform.zoom = 0.97f;   // < 1 pushes content outward from the centre
+transform.push = 1.0f;    // constant outward speed near the centre
+feedback.begin(strip.length(), transform, 0.93f, iteration);
+feedback.addPixel((strip.length() - 1) / 2, color, 1.0f);
+feedback.render(strip);
+```
+
+Available transforms are `zoom`, `scroll`, `warp_amp`/`warp_freq`/`warp_speed`,
+`mirror`, and `push`. Emission can be added at a fractional position with
+`add()` (anti-aliased) or at an integer pixel with `addPixel()`. Both buffers are
+`3 * N` floats (24 bytes per LED) and are reallocated only when the strip length
+changes.
